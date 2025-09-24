@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "773557992042",
+    "project_id": "poetic-platform",
+    "storage_bucket": "poetic-platform.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:773557992042:android:4dba74552a9d178fdea813",
+        "android_client_info": {
+          "package_name": "com.example.poem_application"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXh6XPS6pJLU6NO4ZbicifxcwIgNWfzIw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "773557992042-emn4s3mi22li6dgafskkn3addn3igce6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.poeticPlatform"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:773557992042:android:2aff0c58fb236c19dea813",
+        "android_client_info": {
+          "package_name": "com.example.poetic_platform"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXh6XPS6pJLU6NO4ZbicifxcwIgNWfzIw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "773557992042-emn4s3mi22li6dgafskkn3addn3igce6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.poeticPlatform"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

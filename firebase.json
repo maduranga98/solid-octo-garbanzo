@@ -1,0 +1,22 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "poetic-platform",
+          "appId": "1:773557992042:android:4dba74552a9d178fdea813",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "poetic-platform",
+          "configurations": {
+            "android": "1:773557992042:android:4dba74552a9d178fdea813",
+            "ios": "1:773557992042:ios:e68d2d09e6baeb04dea813"
+          }
+        }
+      }
+    }
+  }
+}
