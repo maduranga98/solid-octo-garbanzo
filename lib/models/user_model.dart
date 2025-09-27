@@ -29,29 +29,31 @@ class UserModel {
     required this.createdAt,
   });
 
-  // convert firestore documentsnapshot -> model
+  // ✅ FIXED: Added proper null safety handling
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-
+    print(data);
     return UserModel(
-      uid: data['uid'],
-      firstname: data['firstname'],
-      lastname: data['lastname'],
-      email: data['email'],
-      userName: data['userName'],
+      uid: data['uid'] ?? '',
+      firstname: data['firstname'] ?? '',
+      lastname: data['lastname'] ?? '',
+      email: data['email'] ?? '',
+      userName: data['username'] ?? '',
       type: data['type'] != null
           ? List<String>.from(data['type'] as List<dynamic>)
           : <String>[],
-      country: data['country'],
-      photoURl: data['photoURl'] ?? "",
-      postCount: data['postCount'],
-      followersCount: data['followersCount'],
-      followingCount: data['followingCount'],
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      country: data['country'] ?? '',
+      photoURl: data['photoURl'], // This can be null
+      postCount: data['postCount'] ?? 0,
+      followersCount: data['followersCount'] ?? 0,
+      followingCount: data['followingCount'] ?? 0,
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 
-  // convert Map -> userModel
+  // ✅ FIXED: Added proper null safety handling
   factory UserModel.fromMap(Map<String, dynamic> data, String uid) {
     return UserModel(
       uid: uid,
@@ -63,16 +65,17 @@ class UserModel {
           ? List<String>.from(data['type'] as List<dynamic>)
           : <String>[],
       country: data['country'] ?? '',
-      photoURl: data['photoURl'],
+      photoURl: data['photoURl'], // This can be null
       postCount: data['postCount'] ?? 0,
       followersCount: data['followersCount'] ?? 0,
       followingCount: data['followingCount'] ?? 0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 
-  // convert UserModel -> firestore Map
-
+  // Convert UserModel -> firestore Map
   Map<String, dynamic> toFirestore() {
     return {
       "uid": uid,
@@ -90,7 +93,7 @@ class UserModel {
     };
   }
 
-  // for updates
+  // For updates
   UserModel copyWith({
     String? firstname,
     String? lastname,
@@ -105,7 +108,7 @@ class UserModel {
     DateTime? createdAt,
   }) {
     return UserModel(
-      uid: uid,
+      uid: uid, // uid never changes
       firstname: firstname ?? this.firstname,
       lastname: lastname ?? this.lastname,
       email: email ?? this.email,

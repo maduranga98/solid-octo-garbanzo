@@ -46,6 +46,8 @@ dependencies:
   google_sign_in: ^7.2.0
   #country picker
   country_picker: ^2.0.27
+  timeago: ^3.7.1
+  share_plus: ^12.0.0
 
 dev_dependencies:
   flutter_test:
