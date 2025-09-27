@@ -11,6 +11,7 @@ final getUserDataProvider = FutureProvider.family<UserModel?, String>((
   ref,
   uid,
 ) {
+  print("Provider: $uid");
   final repo = ref.watch(userRepositoryProvider);
   return repo.getUserData(uid);
 });
