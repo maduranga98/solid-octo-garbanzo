@@ -8,6 +8,7 @@ class UserModel {
   final String userName;
   final List<String> type;
   final String country;
+  final String? bio;
   final String? photoURl;
   final int postCount;
   final int followersCount;
@@ -22,6 +23,7 @@ class UserModel {
     required this.userName,
     required this.type,
     required this.country,
+    this.bio,
     this.photoURl,
     required this.postCount,
     required this.followersCount,
@@ -32,17 +34,18 @@ class UserModel {
   // ✅ FIXED: Added proper null safety handling
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    print(data);
+
     return UserModel(
       uid: data['uid'] ?? '',
       firstname: data['firstname'] ?? '',
       lastname: data['lastname'] ?? '',
       email: data['email'] ?? '',
-      userName: data['username'] ?? '',
+      userName: data['username'] ?? data['userName'],
       type: data['type'] != null
           ? List<String>.from(data['type'] as List<dynamic>)
           : <String>[],
       country: data['country'] ?? '',
+      bio: data['bio'] ?? '',
       photoURl: data['photoURl'], // This can be null
       postCount: data['postCount'] ?? 0,
       followersCount: data['followersCount'] ?? 0,
@@ -65,6 +68,7 @@ class UserModel {
           ? List<String>.from(data['type'] as List<dynamic>)
           : <String>[],
       country: data['country'] ?? '',
+      bio: data['bio'] ?? '',
       photoURl: data['photoURl'], // This can be null
       postCount: data['postCount'] ?? 0,
       followersCount: data['followersCount'] ?? 0,
@@ -85,6 +89,7 @@ class UserModel {
       "userName": userName,
       "type": type,
       "country": country,
+      "bio": bio,
       "photoURl": photoURl,
       "postCount": postCount,
       "followersCount": followersCount,
@@ -101,6 +106,7 @@ class UserModel {
     String? userName,
     List<String>? type,
     String? country,
+    String? boi,
     String? photoURl,
     int? postCount,
     int? followersCount,
@@ -115,6 +121,7 @@ class UserModel {
       userName: userName ?? this.userName,
       type: type ?? this.type,
       country: country ?? this.country,
+      bio: bio ?? bio,
       photoURl: photoURl ?? this.photoURl,
       postCount: postCount ?? this.postCount,
       followersCount: followersCount ?? this.followersCount,

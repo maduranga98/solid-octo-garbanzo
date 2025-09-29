@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,8 @@ import 'package:poem_application/providers/auth_provider.dart';
 import 'package:poem_application/providers/postRepositoryProvider.dart';
 import 'package:poem_application/providers/post_interaction_provider.dart';
 import 'package:poem_application/providers/user_provider.dart';
+import 'package:poem_application/screens/auth/login.dart';
+import 'package:poem_application/screens/profile/user_profile.dart';
 import 'package:poem_application/widgets/commentsBottomSheet.dart';
 import 'package:poem_application/widgets/fullPostBottomSheet.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -26,7 +29,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
 
     _scrollController.addListener(() {
       if (_scrollController.offset > 10 && !_showAppBarShadow) {
@@ -52,6 +55,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [colorScheme.primary, colorScheme.secondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: colorScheme.onPrimary,
+                    child: Icon(
+                      Icons.person,
+                      size: 40,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      currentUser?.email ?? "Guest User",
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Home'),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.bookmark),
+              title: const Text('Saved'),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_2_sharp),
+              title: const Text('Profile'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => UserProfile()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.message),
+              title: const Text('Chat'),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout_outlined),
+              title: const Text('LogOut'),
+              onTap: () {
+                FirebaseAuth.instance.signOut();
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Login()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
       body: NestedScrollView(
         controller: _scrollController,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -123,8 +210,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     indicatorWeight: 2,
                     indicatorSize: TabBarIndicatorSize.tab,
                     labelColor: colorScheme.primary,
-                    unselectedLabelColor: colorScheme.onSurface.withOpacity(
-                      0.6,
+                    unselectedLabelColor: colorScheme.onSurface.withValues(
+                      alpha: 0.6,
                     ),
                     labelStyle: const TextStyle(
                       fontWeight: FontWeight.w600,
@@ -140,7 +227,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       Tab(text: 'Poetry'),
                       Tab(text: 'Lyrics'),
                       Tab(text: 'Stories'),
-                      Tab(text: 'Following'),
+                      Tab(text: 'Quotes & Aphorisms'),
+                      Tab(text: 'Microfiction'),
                     ],
                   ),
                 ),
@@ -148,6 +236,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ];
         },
+
         body: TabBarView(
           controller: _tabController,
           children: [
@@ -155,18 +244,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             _buildPostFeed(workType: 'poetry'),
             _buildPostFeed(workType: 'lyrics'),
             _buildPostFeed(workType: 'stories'),
-            _buildPostFeed(followingOnly: true),
+            _buildPostFeed(workType: 'Quotes & Aphorisms'),
+            _buildPostFeed(workType: 'Microfiction'),
+            // _buildPostFeed(followingOnly: true),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Navigate to create post
-        },
-        icon: const Icon(Icons.edit_outlined),
-        label: const Text('Create'),
-        elevation: 2,
-      ),
+      // floatingActionButton: FloatingActionButton.extended(
+      //   onPressed: () {
+      //     // Navigate to create post
+      //   },
+      //   icon: const Icon(Icons.edit_outlined),
+      //   label: const Text('Create'),
+      //   elevation: 2,
+      // ),
     );
   }
 
@@ -218,7 +309,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: colorScheme.outline.withOpacity(0.2),
+            color: colorScheme.outline.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -316,13 +407,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 locale: 'en_short',
                               ),
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface.withOpacity(0.6),
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
                               ),
                             ),
                             Text(
                               ' • ',
                               style: TextStyle(
-                                color: colorScheme.onSurface.withOpacity(0.6),
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
                               ),
                             ),
                             Container(
@@ -333,7 +428,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               decoration: BoxDecoration(
                                 color: _getWorkTypeColor(
                                   post.workType,
-                                ).withOpacity(0.1),
+                                ).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -353,7 +448,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   IconButton(
                     icon: Icon(
                       Icons.more_vert,
-                      color: colorScheme.onSurface.withOpacity(0.6),
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     onPressed: () => _showPostOptions(post),
                   ),
@@ -385,7 +480,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     maxLines: 6,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.8),
+                      color: colorScheme.onSurface.withValues(alpha: 0.8),
                       height: 1.5,
                     ),
                   ),
@@ -405,7 +500,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       child: Text(
                         '${post.likeCount} ${post.likeCount == 1 ? 'like' : 'likes'}',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withOpacity(0.6),
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -416,7 +511,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       child: Text(
                         '•',
                         style: TextStyle(
-                          color: colorScheme.onSurface.withOpacity(0.6),
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -425,7 +520,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       child: Text(
                         '${post.commentCount} ${post.commentCount == 1 ? 'comment' : 'comments'}',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withOpacity(0.6),
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -438,13 +533,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         Icon(
                           Icons.visibility_outlined,
                           size: 14,
-                          color: colorScheme.onSurface.withOpacity(0.6),
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${post.viewCount}',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface.withOpacity(0.6),
+                            color: colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -454,7 +549,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
 
             const SizedBox(height: 8),
-            Divider(color: colorScheme.outline.withOpacity(0.2), height: 1),
+            Divider(
+              color: colorScheme.outline.withValues(alpha: 0.2),
+              height: 1,
+            ),
 
             // Action Buttons
             Padding(
@@ -574,7 +672,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 size: 18,
                 color: isActive
                     ? (activeColor ?? colorScheme.primary)
-                    : colorScheme.onSurface.withOpacity(0.7),
+                    : colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 6),
               Text(
@@ -582,7 +680,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: isActive
                       ? (activeColor ?? colorScheme.primary)
-                      : colorScheme.onSurface.withOpacity(0.7),
+                      : colorScheme.onSurface.withValues(alpha: 0.7),
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
@@ -606,7 +704,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withOpacity(0.3),
+                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -629,7 +727,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ? 'Be the first to share your ${workType}!'
                   : 'Start following creators to see their posts',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -652,7 +750,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           decoration: BoxDecoration(
             color: colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+            border: Border.all(
+              color: colorScheme.outline.withValues(alpha: 0.2),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -747,7 +847,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Text(
               error.toString(),
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -802,7 +902,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: colorScheme.outline.withOpacity(0.3),
+                  color: colorScheme.outline.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

@@ -1,3 +1,5 @@
+// ignore_for_file: file_names
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -66,7 +68,10 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             child: Column(
               children: [
                 _buildHeader(theme, colorScheme),
-                Divider(color: colorScheme.outline.withOpacity(0.2), height: 1),
+                Divider(
+                  color: colorScheme.outline.withValues(alpha: 0.2),
+                  height: 1,
+                ),
                 Expanded(
                   child: commentsAsync.when(
                     data: (comments) => _buildCommentsList(
@@ -108,7 +113,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
           IconButton(
             icon: Icon(
               Icons.close,
-              color: colorScheme.onSurface.withOpacity(0.6),
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             onPressed: () => Navigator.pop(context),
           ),
@@ -145,12 +150,14 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
     ColorScheme colorScheme,
   ) {
     final userAsync = ref.watch(getUserDataProvider(comment.authorId));
-    final currentUser = ref.watch(firebaseAuthProvider).currentUser;
-    final likeCountAsync = ref.watch(commentLikeCountProvider(comment.postId));
-    final isLikedAsync = ref.watch(isCommentLikedProvider(comment.postId));
+
+    // Fixed: Use comment.docId for likes and replies, not comment.postId
+    final likeCountAsync = ref.watch(commentLikeCountProvider(comment.docId));
+    final isLikedAsync = ref.watch(isCommentLikedProvider(comment.docId));
+
     final repliesAsync = ref.watch(
       repliesProvider(
-        RepliesParams(postId: widget.post.docId, commentId: comment.postId),
+        RepliesParams(postId: widget.post.docId, commentId: comment.docId),
       ),
     );
 
@@ -173,6 +180,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                     ),
                   );
                 }
+
                 return CircleAvatar(
                   radius: 16,
                   backgroundColor: colorScheme.primaryContainer,
@@ -185,10 +193,9 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                           user.userName.isNotEmpty
                               ? user.userName[0].toUpperCase()
                               : '?',
-                          style: TextStyle(
+                          style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onPrimaryContainer,
                             fontWeight: FontWeight.w600,
-                            fontSize: 12,
                           ),
                         )
                       : null,
@@ -196,11 +203,16 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
               },
               loading: () => CircleAvatar(
                 radius: 16,
-                backgroundColor: colorScheme.surfaceVariant,
+                backgroundColor: colorScheme.surfaceContainerHighest,
               ),
               error: (_, __) => CircleAvatar(
                 radius: 16,
-                backgroundColor: colorScheme.errorContainer,
+                backgroundColor: colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.person,
+                  color: colorScheme.onPrimaryContainer,
+                  size: 16,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -208,55 +220,40 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceVariant.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                comment.authorName,
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              timeago.format(
-                                comment.createdAt,
-                                locale: 'en_short',
-                              ),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          comment.text,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
                   Row(
                     children: [
+                      Expanded(
+                        child: Text(
+                          comment.authorName,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        timeago.format(comment.createdAt),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    comment.text,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      // Like button with count
                       InkWell(
-                        onTap: currentUser != null
-                            ? () => _handleLikeComment(comment.postId)
-                            : null,
+                        onTap: () => _handleLikeComment(
+                          comment.docId,
+                        ), // Fixed: Use comment.docId
                         borderRadius: BorderRadius.circular(8),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -274,60 +271,82 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                                   size: 16,
                                   color: isLiked
                                       ? Colors.red
-                                      : colorScheme.onSurface.withOpacity(0.6),
+                                      : colorScheme.onSurface.withValues(
+                                          alpha: 0.6,
+                                        ),
                                 ),
                                 loading: () => Icon(
                                   Icons.favorite_border,
                                   size: 16,
-                                  color: colorScheme.onSurface.withOpacity(0.6),
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.6,
+                                  ),
                                 ),
                                 error: (_, __) => Icon(
                                   Icons.favorite_border,
                                   size: 16,
-                                  color: colorScheme.onSurface.withOpacity(0.6),
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.6,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 4),
                               likeCountAsync.when(
                                 data: (count) => Text(
-                                  count > 0 ? count.toString() : '',
+                                  count.toString(),
                                   style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurface.withOpacity(
-                                      0.6,
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
                                     ),
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                loading: () => const SizedBox.shrink(),
-                                error: (_, __) => const SizedBox.shrink(),
+                                loading: () => Text(
+                                  '0',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                error: (_, __) => Text(
+                                  '0',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: currentUser != null
-                            ? () => _startReply(
-                                comment.postId,
-                                comment.authorName,
-                              )
-                            : null,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          child: Text(
-                            'Reply',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.6),
-                              fontWeight: FontWeight.w600,
+
+                      // Reply button - Only show if not replying to avoid nested replies
+                      if (_replyingToCommentId == null)
+                        InkWell(
+                          onTap: () =>
+                              _startReply(comment.docId, comment.authorName),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              'Reply',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ],
@@ -355,7 +374,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             );
           },
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (error, _) => const SizedBox.shrink(),
         ),
       ],
     );
@@ -371,7 +390,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
           color: colorScheme.surface,
           border: Border(
             top: BorderSide(
-              color: colorScheme.outline.withOpacity(0.2),
+              color: colorScheme.outline.withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -379,7 +398,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
         child: Text(
           'Please sign in to comment',
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurface.withOpacity(0.6),
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           textAlign: TextAlign.center,
         ),
@@ -392,7 +411,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
         color: colorScheme.surface,
         border: Border(
           top: BorderSide(
-            color: colorScheme.outline.withOpacity(0.2),
+            color: colorScheme.outline.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -405,7 +424,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withOpacity(0.3),
+                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -425,7 +444,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                     icon: Icon(
                       Icons.close,
                       size: 16,
-                      color: colorScheme.onSurface.withOpacity(0.6),
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -450,7 +469,9 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                         ? 'Write a reply...'
                         : 'Add a comment...',
                     filled: true,
-                    fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                    fillColor: colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,
@@ -497,7 +518,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withOpacity(0.3),
+                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -518,7 +539,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             Text(
               'Be the first to share your thoughts!',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -539,14 +560,14 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
           children: [
             CircleAvatar(
               radius: 16,
-              backgroundColor: colorScheme.surfaceVariant,
+              backgroundColor: colorScheme.surfaceContainerHighest,
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Container(
                 height: 80,
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant,
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
@@ -581,7 +602,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             Text(
               error.toString(),
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -644,14 +665,15 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
 
       if (userDataAsync == null) throw Exception('User data not found');
 
+      // Create comment with empty docId - it will be set when saved to Firestore
       final comment = CommentModel(
+        docId: '',
         postId: widget.post.docId,
         authorId: currentUser.uid,
         authorName: userDataAsync.userName,
         text: text,
         createdAt: DateTime.now(),
       );
-
       if (_replyingToCommentId != null) {
         await ref
             .read(commentsRepositoryProvider)
@@ -709,7 +731,6 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
     ColorScheme colorScheme,
   ) {
     final userAsync = ref.watch(getUserDataProvider(reply.authorId));
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -747,10 +768,8 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                   : null,
             );
           },
-          loading: () => CircleAvatar(
-            radius: 12,
-            backgroundColor: colorScheme.surfaceVariant,
-          ),
+          loading: () =>
+              CircleAvatar(radius: 12, backgroundColor: colorScheme.surface),
           error: (_, __) => CircleAvatar(
             radius: 12,
             backgroundColor: colorScheme.errorContainer,
@@ -761,7 +780,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceVariant.withOpacity(0.3),
+              color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
@@ -781,7 +800,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                     Text(
                       timeago.format(reply.createdAt, locale: 'en_short'),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.6),
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
                         fontSize: 11,
                       ),
                     ),

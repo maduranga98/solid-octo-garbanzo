@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CommentModel {
+  final String docId; // Added document ID field
   final String postId;
   final String authorId;
   final String authorName;
@@ -8,6 +9,7 @@ class CommentModel {
   final DateTime createdAt;
 
   CommentModel({
+    required this.docId, // Added to constructor
     required this.postId,
     required this.authorId,
     required this.authorName,
@@ -20,6 +22,7 @@ class CommentModel {
     final data = doc.data() as Map<String, dynamic>;
 
     return CommentModel(
+      docId: doc.id, // Get document ID from snapshot
       postId: data['postId'] ?? '',
       authorId: data['authorId'] ?? '',
       authorName: data['authorName'] ?? '',
@@ -29,8 +32,9 @@ class CommentModel {
   }
 
   /// ✅ Map → CommentModel
-  factory CommentModel.fromMap(Map<String, dynamic> data) {
+  factory CommentModel.fromMap(Map<String, dynamic> data, String docId) {
     return CommentModel(
+      docId: docId, // Pass document ID explicitly
       postId: data['postId'] ?? '',
       authorId: data['authorId'] ?? '',
       authorName: data['authorName'] ?? '',
@@ -52,6 +56,7 @@ class CommentModel {
 
   /// ✅ CopyWith (update only certain fields)
   CommentModel copyWith({
+    String? docId,
     String? postId,
     String? authorId,
     String? authorName,
@@ -59,6 +64,7 @@ class CommentModel {
     DateTime? createdAt,
   }) {
     return CommentModel(
+      docId: docId ?? this.docId,
       postId: postId ?? this.postId,
       authorId: authorId ?? this.authorId,
       authorName: authorName ?? this.authorName,

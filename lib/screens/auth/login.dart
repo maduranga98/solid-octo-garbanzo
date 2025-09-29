@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:poem_application/screens/home/home_screen.dart';
 import 'package:poem_application/services/auth_service.dart';
 import 'package:poem_application/widgets/emailInputField.dart';
 import 'package:poem_application/widgets/passwordInputField.dart';
@@ -69,7 +70,11 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
 
       if (mounted) {
         _showSuccessMessage('Welcome back!');
-        Navigator.of(context).pushReplacementNamed('/home');
+        // Navigator.of(context).pushReplacementNamed('/home');
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -224,7 +229,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: theme.colorScheme.primary.withOpacity(0.3),
+                color: theme.colorScheme.primary.withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -255,7 +260,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
         Text(
           'Welcome back to your poetry journey',
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
           textAlign: TextAlign.center,
         ),
@@ -355,7 +360,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
           children: [
             Expanded(
               child: Divider(
-                color: theme.colorScheme.outline.withOpacity(0.3),
+                color: theme.colorScheme.outline.withValues(alpha: 0.3),
                 thickness: 1,
               ),
             ),
@@ -364,14 +369,14 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
               child: Text(
                 'Or continue with',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   fontSize: 14,
                 ),
               ),
             ),
             Expanded(
               child: Divider(
-                color: theme.colorScheme.outline.withOpacity(0.3),
+                color: theme.colorScheme.outline.withValues(alpha: 0.3),
                 thickness: 1,
               ),
             ),
@@ -391,7 +396,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
                 onPressed: _isLoading ? null : _signInWithGoogle,
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black87,
-                borderColor: theme.colorScheme.outline.withOpacity(0.3),
+                borderColor: theme.colorScheme.outline.withValues(alpha: 0.3),
               ),
             ),
 
@@ -450,7 +455,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
           Text(
             "Don't have an account? ",
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               fontSize: 14,
             ),
           ),
