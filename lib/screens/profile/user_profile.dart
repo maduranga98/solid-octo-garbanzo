@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:poem_application/providers/auth_provider.dart';
 import 'package:poem_application/providers/user_provider.dart';
+import 'package:poem_application/screens/messages/message.dart';
 import 'package:poem_application/screens/profile/followers_following_screen.dart';
 import 'package:poem_application/widgets/draft.dart';
 import 'package:poem_application/widgets/ideas.dart';
@@ -313,7 +314,7 @@ class UserProfile extends ConsumerWidget {
         const SizedBox(width: 12),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => _sendMessage(context, userId),
+            onPressed: () => _sendMessage(context, ref, userId),
             icon: const Icon(Icons.message, size: 18),
             label: const Text('Message'),
             style: OutlinedButton.styleFrom(
@@ -416,14 +417,63 @@ class UserProfile extends ConsumerWidget {
     }
   }
 
-  void _sendMessage(BuildContext context, String userId) {
-    // TODO: Implement messaging functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Messaging feature coming soon!'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  void _sendMessage(BuildContext context, WidgetRef ref, String userId) async {
+    try {
+      final currentUser = ref.read(firebaseAuthProvider).currentUser;
+      if (currentUser == null) return;
+
+      // Get current user data
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+      final currentUserData = currentUserDoc.data();
+
+      // Get other user data
+      final otherUserDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      final otherUserData = otherUserDoc.data();
+
+      if (otherUserData == null) return;
+
+      // Create or get chat
+      final chatId = await getOrCreateChat(
+        currentUserId: currentUser.uid,
+        otherUserId: userId,
+        otherUserName:
+            '${otherUserData['firstname'] ?? ''} ${otherUserData['lastname'] ?? ''}'
+                .trim(),
+        otherUserPhoto: otherUserData['photoURl'],
+        currentUserName:
+            '${currentUserData?['firstname'] ?? ''} ${currentUserData?['lastname'] ?? ''}'
+                .trim(),
+        currentUserPhoto: currentUserData?['photoURl'],
+      );
+
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              chatId: chatId,
+              otherUserId: userId,
+              otherUserName:
+                  '${otherUserData['firstname'] ?? ''} ${otherUserData['lastname'] ?? ''}'
+                      .trim(),
+              otherUserPhoto: otherUserData['photoURl'],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Widget _buildStat(

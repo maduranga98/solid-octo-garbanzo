@@ -10,6 +10,7 @@ import 'package:poem_application/providers/post_interaction_provider.dart';
 import 'package:poem_application/providers/user_provider.dart';
 import 'package:poem_application/screens/auth/login.dart';
 import 'package:poem_application/screens/following/following_feed.dart';
+import 'package:poem_application/screens/messages/message.dart';
 import 'package:poem_application/screens/profile/user_profile.dart'
     hide isFollowingProvider;
 import 'package:poem_application/screens/saved/saved_post.dart';
@@ -106,7 +107,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             ListTile(
               leading: const Icon(Icons.people),
-              title: const Text('Following'),
+              title: const Text('Followers Feed'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -146,6 +147,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               title: const Text('Chat'),
               onTap: () {
                 Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MessageSection(),
+                  ),
+                );
               },
             ),
             const Divider(),
