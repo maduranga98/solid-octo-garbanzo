@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:poem_application/models/post_model.dart';
+import 'package:poem_application/providers/follow_provider.dart';
 import 'package:poem_application/repositories/post_repository.dart';
 
 final postRepositoryProvider = Provider<PostRepository>((ref) {
@@ -20,6 +21,31 @@ final getPostByUidProvider = StreamProvider.family<List<PostModel>, String>((
   return repo.getPostByUid(uid);
 });
 
+final savedPostByUIDProvider = StreamProvider.family<List<SavedPost>, String>((
+  ref,
+  uid,
+) {
+  final service = ref.watch(postRepositoryProvider);
+  return service.getSavedPostByUID(uid);
+});
+
+// Add to postRepositoryProvider.dart
+final followingPostsProvider = StreamProvider.family<List<PostModel>, String>((
+  ref,
+  userId,
+) async* {
+  final followingIdsAsync = await ref.watch(
+    followingUserIdsProvider(userId).future,
+  );
+
+  if (followingIdsAsync.isEmpty) {
+    yield [];
+    return;
+  }
+
+  final repo = ref.watch(postRepositoryProvider);
+  yield* repo.getPostsByUserIds(followingIdsAsync);
+});
 // final createPostProvider = FutureProvider.family<void, PostModel>((ref, data) {
 //   final repo = ref.watch(postRepositoryProvider);
 //   return repo.createPost(data);

@@ -297,7 +297,7 @@ class Posted extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    post.workType ?? 'Poetry',
+                    post.workType,
                     style: TextStyle(
                       fontSize: 12,
                       color: theme.colorScheme.onPrimaryContainer,
@@ -307,7 +307,7 @@ class Posted extends ConsumerWidget {
                 ),
                 const Divider(height: 24),
                 Text(
-                  post.plainText ?? post.richText,
+                  post.plainText,
                   style: TextStyle(
                     fontSize: 15,
                     height: 1.4,
@@ -463,7 +463,21 @@ class Posted extends ConsumerWidget {
     if (confirmed != true) return;
 
     try {
-      await FirebaseFirestore.instance.collection('posts').doc(postId).delete();
+      // Use batch for atomic operations
+      final batch = FirebaseFirestore.instance.batch();
+
+      // Delete the post
+      final postRef = FirebaseFirestore.instance
+          .collection('posts')
+          .doc(postId);
+      batch.delete(postRef);
+
+      // Decrement user's postCount
+      final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+      batch.update(userRef, {'postCount': FieldValue.increment(-1)});
+
+      // Commit all changes atomically
+      await batch.commit();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

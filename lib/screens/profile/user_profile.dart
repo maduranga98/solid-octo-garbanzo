@@ -1,14 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:poem_application/providers/auth_provider.dart';
 import 'package:poem_application/providers/user_provider.dart';
+import 'package:poem_application/screens/profile/followers_following_screen.dart';
 import 'package:poem_application/widgets/draft.dart';
 import 'package:poem_application/widgets/ideas.dart';
 import 'package:poem_application/widgets/posted.dart';
 
-// Provider to check if current user is following another user
 final isFollowingProvider = StreamProvider.family<bool, String>((ref, userId) {
   final currentUser = ref.watch(firebaseAuthProvider).currentUser;
   if (currentUser == null) return Stream.value(false);
@@ -176,7 +175,10 @@ class UserProfile extends ConsumerWidget {
                     : null,
                 child: user.photoURl == null || user.photoURl!.isEmpty
                     ? Text(
-                        user.firstname[0].toUpperCase(),
+                        // FIX: Check if firstname is not empty before accessing index
+                        user.firstname != null && user.firstname.isNotEmpty
+                            ? user.firstname[0].toUpperCase()
+                            : '?',
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
@@ -188,11 +190,11 @@ class UserProfile extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              "${user.firstname} ${user.lastname}",
+              "${user.firstname ?? ''} ${user.lastname ?? ''}",
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
             ),
             Text(
-              "@${user.userName}",
+              "@${user.userName ?? ''}",
               style: TextStyle(
                 fontSize: 15,
                 color: Colors.grey.shade600,
@@ -203,20 +205,43 @@ class UserProfile extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildStat("Posts", user.postCount, context),
+                _buildStat(
+                  "Posts",
+                  user.postCount ?? 0,
+                  context,
+                  profileUserId,
+                  user.userName ?? '',
+                ),
                 _buildStatDivider(),
-                _buildStat("Followers", user.followersCount, context),
+                _buildStat(
+                  "Followers",
+                  user.followersCount ?? 0,
+                  context,
+                  profileUserId,
+                  user.userName ?? '',
+                ),
                 _buildStatDivider(),
-                _buildStat("Following", user.followingCount, context),
+                _buildStat(
+                  "Following",
+                  user.followingCount ?? 0,
+                  context,
+                  profileUserId,
+                  user.userName ?? '',
+                ),
               ],
             ),
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(child: _buildInfo(Icons.email_outlined, user.email)),
+                Expanded(
+                  child: _buildInfo(Icons.email_outlined, user.email ?? ''),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildInfo(Icons.location_on_outlined, user.country),
+                  child: _buildInfo(
+                    Icons.location_on_outlined,
+                    user.country ?? '',
+                  ),
                 ),
               ],
             ),
@@ -401,28 +426,52 @@ class UserProfile extends ConsumerWidget {
     );
   }
 
-  Widget _buildStat(String label, int value, BuildContext context) {
+  Widget _buildStat(
+    String label,
+    int value,
+    BuildContext context,
+    String userId,
+    String userName,
+  ) {
     return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value.toString(),
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
+      child: InkWell(
+        onTap: label == "Posts"
+            ? null
+            : () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FollowersFollowingScreen(
+                      userId: userId,
+                      listType: label == "Followers"
+                          ? ListType.followers
+                          : ListType.following,
+                      userName: userName,
+                    ),
+                  ),
+                );
+              },
+        child: Column(
+          children: [
+            Text(
+              value.toString(),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade500,
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade500,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

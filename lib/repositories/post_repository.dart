@@ -2,6 +2,14 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:poem_application/models/post_model.dart';
+import 'package:poem_application/models/saved_model.dart';
+
+class SavedPost {
+  final SavedModel savedData;
+  final PostModel postData;
+
+  SavedPost({required this.savedData, required this.postData});
+}
 
 class PostRepository {
   final FirebaseFirestore firestore;
@@ -66,5 +74,53 @@ class PostRepository {
       print("Error in updating post: $e");
       return null;
     }
+  }
+
+  // get saved post
+  Stream<List<SavedPost>> getSavedPostByUID(String uid) {
+    return firestore
+        .collection("users")
+        .doc(uid)
+        .collection("bookmarks")
+        .snapshots()
+        .asyncMap((snapshot) async {
+          final savedPosts = await Future.wait(
+            snapshot.docs.map((doc) async {
+              // Parse saved data
+              final savedModel = SavedModel.fromFirestore(doc);
+
+              // Fetch full post
+              final postSnap = await firestore
+                  .collection("posts")
+                  .doc(savedModel.postId)
+                  .get();
+
+              if (!postSnap.exists) return null;
+
+              final postModel = PostModel.fromFirestore(postSnap);
+
+              return SavedPost(savedData: savedModel, postData: postModel);
+            }).toList(),
+          );
+
+          // Remove nulls in case of deleted posts
+          return savedPosts.whereType<SavedPost>().toList();
+        });
+  }
+
+  Stream<List<PostModel>> getPostsByUserIds(List<String> userIds) {
+    if (userIds.isEmpty) {
+      return Stream.value([]);
+    }
+
+    return firestore
+        .collection('posts')
+        .where('createdBy', whereIn: userIds)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => PostModel.fromFirestore(doc)).toList(),
+        );
   }
 }
