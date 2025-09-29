@@ -678,12 +678,15 @@ class _CreateapostState extends ConsumerState<Createapost> {
           _showSnackBar(context, 'Saved as draft!');
         }
       } else if (action == 'publish') {
+        // Use batch for atomic operations
+        final batch = FirebaseFirestore.instance.batch();
+
         if (_mode == PostMode.editPost) {
-          // Update existing post
-          await FirebaseFirestore.instance
+          // Update existing post - no postCount change
+          final postRef = FirebaseFirestore.instance
               .collection('posts')
-              .doc(widget.postId)
-              .update(postData);
+              .doc(widget.postId);
+          batch.update(postRef, postData);
           _showSnackBar(context, 'Post updated successfully!');
         } else {
           // Publish new post or draft
@@ -694,20 +697,31 @@ class _CreateapostState extends ConsumerState<Createapost> {
           postData['shareCount'] = widget.postData?['shareCount'] ?? 0;
           postData['viewCount'] = widget.postData?['viewCount'] ?? 0;
 
-          await FirebaseFirestore.instance.collection('posts').add(postData);
+          // Add new post
+          final postRef = FirebaseFirestore.instance.collection('posts').doc();
+          batch.set(postRef, postData);
+
+          // Increment user's postCount
+          final userRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid);
+          batch.update(userRef, {'postCount': FieldValue.increment(1)});
 
           // Delete draft if publishing from draft
           if (widget.draftId != null) {
-            await FirebaseFirestore.instance
+            final draftRef = FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
                 .collection('drafts')
-                .doc(widget.draftId)
-                .delete();
+                .doc(widget.draftId);
+            batch.delete(draftRef);
           }
 
           _showSnackBar(context, 'Post published successfully!');
         }
+
+        // Commit all changes atomically
+        await batch.commit();
       }
 
       // Clear form and navigate back

@@ -9,6 +9,7 @@ final postInteractionServiceProvider = Provider<PostInteractionService>((ref) {
 // Provider to check if a post is liked by current user (real-time stream)
 final isPostLikedProvider = StreamProvider.family<bool, String>((ref, postId) {
   final service = ref.watch(postInteractionServiceProvider);
+
   return service.likeStatusStream(postId);
 });
 

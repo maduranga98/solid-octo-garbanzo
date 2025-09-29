@@ -4,11 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:poem_application/models/post_model.dart';
 import 'package:poem_application/providers/auth_provider.dart';
+import 'package:poem_application/providers/follow_provider.dart';
 import 'package:poem_application/providers/postRepositoryProvider.dart';
 import 'package:poem_application/providers/post_interaction_provider.dart';
 import 'package:poem_application/providers/user_provider.dart';
 import 'package:poem_application/screens/auth/login.dart';
-import 'package:poem_application/screens/profile/user_profile.dart';
+import 'package:poem_application/screens/following/following_feed.dart';
+import 'package:poem_application/screens/profile/user_profile.dart'
+    hide isFollowingProvider;
+import 'package:poem_application/screens/saved/saved_post.dart';
+import 'package:poem_application/screens/search/user_search_screen.dart';
 import 'package:poem_application/widgets/commentsBottomSheet.dart';
 import 'package:poem_application/widgets/fullPostBottomSheet.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -100,10 +105,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               },
             ),
             ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Following'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FollowingFeedScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.bookmark),
               title: const Text('Saved'),
               onTap: () {
                 Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SavedPostScreen(),
+                  ),
+                );
               },
             ),
             ListTile(
@@ -113,7 +137,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => UserProfile()),
+                  MaterialPageRoute(builder: (context) => const UserProfile()),
                 );
               },
             ),
@@ -124,15 +148,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Navigator.pop(context);
               },
             ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.logout_outlined),
               title: const Text('LogOut'),
               onTap: () {
                 FirebaseAuth.instance.signOut();
-
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => Login()),
+                  MaterialPageRoute(builder: (context) => const Login()),
                 );
               },
             ),
@@ -181,7 +205,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 IconButton(
                   icon: Icon(Icons.search, color: colorScheme.onSurface),
                   onPressed: () {
-                    // Navigate to search screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UserSearchScreen(),
+                      ),
+                    );
                   },
                   tooltip: 'Search',
                 ),
@@ -236,7 +265,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ];
         },
-
         body: TabBarView(
           controller: _tabController,
           children: [
@@ -246,22 +274,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             _buildPostFeed(workType: 'stories'),
             _buildPostFeed(workType: 'Quotes & Aphorisms'),
             _buildPostFeed(workType: 'Microfiction'),
-            // _buildPostFeed(followingOnly: true),
           ],
         ),
       ),
-      // floatingActionButton: FloatingActionButton.extended(
-      //   onPressed: () {
-      //     // Navigate to create post
-      //   },
-      //   icon: const Icon(Icons.edit_outlined),
-      //   label: const Text('Create'),
-      //   elevation: 2,
-      // ),
     );
+
+    // floatingActionButton: FloatingActionButton.extended(
+    //   onPressed: () {
+    //     // Navigate to create post
+    //   },
+    //   icon: const Icon(Icons.edit_outlined),
+    //   label: const Text('Create'),
+    //   elevation: 2,
+    // ),
   }
 
-  Widget _buildPostFeed({String? workType, bool followingOnly = false}) {
+  Widget _buildPostFeed({String? workType}) {
     final postsAsync = ref.watch(postsProvider);
 
     return RefreshIndicator(
@@ -271,7 +299,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       },
       child: postsAsync.when(
         data: (posts) {
-          // Filter posts by workType if specified
           final filteredPosts = workType != null
               ? posts.where((post) => post.workType == workType).toList()
               : posts;
@@ -322,50 +349,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  userAsync.when(
-                    data: (user) {
-                      if (user == null) {
+                  GestureDetector(
+                    onTap: () {
+                      // Navigate to user profile
+                    },
+                    child: userAsync.when(
+                      data: (user) {
+                        if (user == null) {
+                          return CircleAvatar(
+                            radius: 20,
+                            backgroundColor: colorScheme.primaryContainer,
+                            child: Icon(
+                              Icons.person,
+                              color: colorScheme.onPrimaryContainer,
+                              size: 20,
+                            ),
+                          );
+                        }
                         return CircleAvatar(
                           radius: 20,
                           backgroundColor: colorScheme.primaryContainer,
-                          child: Icon(
-                            Icons.person,
-                            color: colorScheme.onPrimaryContainer,
-                            size: 20,
-                          ),
+                          backgroundImage:
+                              user.photoURl != null && user.photoURl!.isNotEmpty
+                              ? NetworkImage(user.photoURl!)
+                              : null,
+                          child: user.photoURl == null || user.photoURl!.isEmpty
+                              ? Text(
+                                  user.userName.isNotEmpty
+                                      ? user.userName[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                    color: colorScheme.onPrimaryContainer,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                )
+                              : null,
                         );
-                      }
-                      return CircleAvatar(
+                      },
+                      loading: () => CircleAvatar(
                         radius: 20,
-                        backgroundColor: colorScheme.primaryContainer,
-                        backgroundImage:
-                            user.photoURl != null && user.photoURl!.isNotEmpty
-                            ? NetworkImage(user.photoURl!)
-                            : null,
-                        child: user.photoURl == null || user.photoURl!.isEmpty
-                            ? Text(
-                                user.userName.isNotEmpty
-                                    ? user.userName[0].toUpperCase()
-                                    : '?',
-                                style: TextStyle(
-                                  color: colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              )
-                            : null,
-                      );
-                    },
-                    loading: () => CircleAvatar(
-                      radius: 20,
-                      backgroundColor: colorScheme.surfaceVariant,
-                    ),
-                    error: (_, __) => CircleAvatar(
-                      radius: 20,
-                      backgroundColor: colorScheme.errorContainer,
-                      child: Icon(
-                        Icons.error_outline,
-                        color: colorScheme.onErrorContainer,
-                        size: 20,
+                        backgroundColor: colorScheme.surfaceVariant,
+                      ),
+                      error: (_, __) => CircleAvatar(
+                        radius: 20,
+                        backgroundColor: colorScheme.errorContainer,
+                        child: Icon(
+                          Icons.error_outline,
+                          color: colorScheme.onErrorContainer,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
@@ -445,6 +477,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ],
                     ),
                   ),
+                  // Follow Button - Only show if not own post
+                  _buildFollowButton(post, colorScheme, theme),
+                  const SizedBox(width: 8),
                   IconButton(
                     icon: Icon(
                       Icons.more_vert,
@@ -455,7 +490,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ],
               ),
             ),
-
             // Content
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -688,6 +722,98 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFollowButton(
+    PostModel post,
+    ColorScheme colorScheme,
+    ThemeData theme,
+  ) {
+    final currentUser = ref.watch(firebaseAuthProvider).currentUser;
+    final isOwnPost = currentUser?.uid == post.createdBy;
+
+    if (isOwnPost || currentUser == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Consumer(
+      builder: (context, ref, child) {
+        final isFollowingAsync = ref.watch(
+          isFollowingProvider(
+            FollowParams(
+              currentUserId: currentUser.uid,
+              targetUserId: post.createdBy,
+            ),
+          ),
+        );
+
+        return isFollowingAsync.when(
+          data: (isFollowing) => TextButton(
+            onPressed: () => _handleFollow(post.createdBy),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              backgroundColor: isFollowing
+                  ? colorScheme.surfaceVariant
+                  : colorScheme.primary,
+              foregroundColor: isFollowing
+                  ? colorScheme.onSurface
+                  : colorScheme.onPrimary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              minimumSize: const Size(0, 0),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              isFollowing ? 'Following' : 'Follow',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
+          loading: () => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceVariant.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ),
+          error: (error, stack) {
+            // Log the error for debugging
+            print('Follow button error: $error');
+            // Show a default "Follow" button on error
+            return TextButton(
+              onPressed: () => _handleFollow(post.createdBy),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Follow',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1020,5 +1146,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       onComment: () => _handleComment(post),
       onShare: () => _handleShare(post),
     );
+  }
+
+  Future<void> _handleFollow(String targetUserId) async {
+    final currentUser = ref.read(firebaseAuthProvider).currentUser;
+    if (currentUser == null) return;
+
+    final service = ref.read(followServiceProvider);
+
+    try {
+      await service.toggleFollow(currentUser.uid, targetUserId);
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to follow user: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
   }
 }
