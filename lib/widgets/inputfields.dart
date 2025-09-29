@@ -171,7 +171,7 @@ class _InputFieldState extends State<InputField> {
             hintStyle:
                 widget.hintStyle ??
                 theme.textTheme.bodyLarge?.copyWith(
-                  color: colorScheme.onSurface.withOpacity(0.6),
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
             prefixIcon: widget.prefixIcon,
             suffixIcon: _buildSuffixIcon(),
@@ -181,8 +181,8 @@ class _InputFieldState extends State<InputField> {
             fillColor:
                 widget.fillColor ??
                 (_isFocused
-                    ? colorScheme.primaryContainer.withOpacity(0.1)
-                    : colorScheme.surfaceVariant.withOpacity(0.5)),
+                    ? colorScheme.primaryContainer.withValues(alpha: 0.1)
+                    : colorScheme.surfaceVariant.withValues(alpha: 0.5)),
             contentPadding:
                 widget.contentPadding ??
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -205,7 +205,7 @@ class _InputFieldState extends State<InputField> {
       return IconButton(
         icon: Icon(
           _obscureText ? Icons.visibility_off : Icons.visibility,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         onPressed: () {
           setState(() {
@@ -220,7 +220,7 @@ class _InputFieldState extends State<InputField> {
   OutlineInputBorder _buildBorder(Color color) {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: color.withOpacity(0.3), width: 1.5),
+      borderSide: BorderSide(color: color.withValues(alpha: 0.3), width: 1.5),
     );
   }
 }

@@ -79,6 +79,7 @@ class RepliesParams {
 // Provider to get replies for a specific comment
 final repliesProvider =
     StreamProvider.family<List<CommentModel>, RepliesParams>((ref, params) {
+      print("Reply Params: ${params.postId}, ${params.commentId}");
       final repository = ref.watch(commentsRepositoryProvider);
       return repository.getReplies(params.postId, params.commentId);
     });

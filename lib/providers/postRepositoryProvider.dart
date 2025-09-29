@@ -12,6 +12,14 @@ final postsProvider = StreamProvider<List<PostModel>>((ref) {
   return repo.getPost();
 });
 
+final getPostByUidProvider = StreamProvider.family<List<PostModel>, String>((
+  ref,
+  uid,
+) {
+  final repo = ref.watch(postRepositoryProvider);
+  return repo.getPostByUid(uid);
+});
+
 // final createPostProvider = FutureProvider.family<void, PostModel>((ref, data) {
 //   final repo = ref.watch(postRepositoryProvider);
 //   return repo.createPost(data);

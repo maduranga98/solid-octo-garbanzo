@@ -55,7 +55,6 @@ class PostModel {
   /// ✅ Firestore → PostModel
   factory PostModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    print("PostModel data: $data");
 
     return PostModel(
       docId: doc.id, // better to use doc.id for unique reference

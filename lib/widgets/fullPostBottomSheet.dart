@@ -64,7 +64,10 @@ class FullPostBottomSheet extends ConsumerWidget {
             children: [
               _buildHandleBar(colorScheme),
               _buildHeader(context, ref, theme, colorScheme),
-              Divider(color: colorScheme.outline.withOpacity(0.2), height: 1),
+              Divider(
+                color: colorScheme.outline.withValues(alpha: 0.2),
+                height: 1,
+              ),
               Expanded(
                 child: _buildContent(scrollController, theme, colorScheme),
               ),
@@ -100,7 +103,7 @@ class FullPostBottomSheet extends ConsumerWidget {
       height: 4,
       margin: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: colorScheme.outline.withOpacity(0.3),
+        color: colorScheme.outline.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(2),
       ),
     );
@@ -200,13 +203,13 @@ class FullPostBottomSheet extends ConsumerWidget {
                     Text(
                       timeago.format(post.createdAt, locale: 'en_short'),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.6),
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     Text(
                       ' • ',
                       style: TextStyle(
-                        color: colorScheme.onSurface.withOpacity(0.6),
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     Container(
@@ -217,7 +220,7 @@ class FullPostBottomSheet extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: _getWorkTypeColor(
                           post.workType,
-                        ).withOpacity(0.1),
+                        ).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -237,7 +240,7 @@ class FullPostBottomSheet extends ConsumerWidget {
           IconButton(
             icon: Icon(
               Icons.close,
-              color: colorScheme.onSurface.withOpacity(0.6),
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             onPressed: () => Navigator.pop(context),
           ),
@@ -275,7 +278,7 @@ class FullPostBottomSheet extends ConsumerWidget {
             Text(
               post.description,
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
                 fontStyle: FontStyle.italic,
                 height: 1.5,
               ),
@@ -309,7 +312,7 @@ class FullPostBottomSheet extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        color: colorScheme.surfaceVariant.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -375,7 +378,7 @@ class FullPostBottomSheet extends ConsumerWidget {
         Text(
           label,
           style: theme.textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurface.withOpacity(0.6),
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -393,7 +396,7 @@ class FullPostBottomSheet extends ConsumerWidget {
         color: colorScheme.surface,
         border: Border(
           top: BorderSide(
-            color: colorScheme.outline.withOpacity(0.2),
+            color: colorScheme.outline.withValues(alpha: 0.2),
             width: 1,
           ),
         ),

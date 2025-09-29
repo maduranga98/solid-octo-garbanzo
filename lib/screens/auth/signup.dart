@@ -332,7 +332,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                   icon: const Icon(Icons.arrow_back),
                   style: IconButton.styleFrom(
                     backgroundColor: theme.colorScheme.surfaceVariant
-                        .withOpacity(0.5),
+                        .withValues(alpha: 0.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -375,7 +375,9 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                           decoration: BoxDecoration(
                             color: isActive
                                 ? theme.colorScheme.primary
-                                : theme.colorScheme.outline.withOpacity(0.2),
+                                : theme.colorScheme.outline.withValues(
+                                    alpha: 0.2,
+                                  ),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -397,7 +399,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -413,7 +415,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                   Text(
                     'Step ${_currentStep + 1} of 3',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -434,7 +436,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
           Text(
             _getStepSubtitle(),
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -635,7 +637,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
           Text(
             'Select all that apply to help us personalize your experience',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
 
@@ -671,12 +673,12 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                       border: Border.all(
                         color: isSelected
                             ? type['color']
-                            : theme.colorScheme.outline.withOpacity(0.3),
+                            : theme.colorScheme.outline.withValues(alpha: 0.3),
                         width: isSelected ? 2 : 1,
                       ),
                       borderRadius: BorderRadius.circular(16),
                       color: isSelected
-                          ? type['color'].withOpacity(0.05)
+                          ? type['color'].withValues(alpha: 0.05)
                           : Colors.transparent,
                     ),
                     child: Row(
@@ -685,9 +687,9 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? type['color'].withOpacity(0.1)
-                                : theme.colorScheme.surfaceVariant.withOpacity(
-                                    0.5,
+                                ? type['color'].withValues(alpha: 0.1)
+                                : theme.colorScheme.surfaceVariant.withValues(
+                                    alpha: 0.5,
                                   ),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -717,8 +719,9 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                               Text(
                                 type['subtitle'],
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.7),
+                                  color: theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.7,
+                                  ),
                                   height: 1.3,
                                 ),
                               ),
@@ -739,8 +742,8 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                               border: Border.all(
                                 color: isSelected
                                     ? type['color']
-                                    : theme.colorScheme.outline.withOpacity(
-                                        0.3,
+                                    : theme.colorScheme.outline.withValues(
+                                        alpha: 0.3,
                                       ),
                                 width: 2,
                               ),
@@ -792,7 +795,9 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                     child: RichText(
                       text: TextSpan(
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
+                          ),
                           height: 1.4,
                         ),
                         children: [
@@ -875,7 +880,9 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                           prefixIcon: const Icon(Icons.search),
                           border: OutlineInputBorder(
                             borderSide: BorderSide(
-                              color: theme.colorScheme.outline.withOpacity(0.3),
+                              color: theme.colorScheme.outline.withValues(
+                                alpha: 0.3,
+                              ),
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -888,17 +895,17 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: theme.colorScheme.outline.withOpacity(0.3),
+                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
                   width: 1.5,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                color: theme.colorScheme.surfaceVariant.withValues(alpha: 0.5),
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.public,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -914,14 +921,14 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                       _selectedCountry?.name ?? 'Select your country',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: _selectedCountry == null
-                            ? theme.colorScheme.onSurface.withOpacity(0.6)
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
                             : theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
                   Icon(
                     Icons.keyboard_arrow_down,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ],
               ),
@@ -939,7 +946,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
         color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.shadow.withOpacity(0.1),
+            color: theme.colorScheme.shadow.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -957,7 +964,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   side: BorderSide(
-                    color: theme.colorScheme.outline.withOpacity(0.5),
+                    color: theme.colorScheme.outline.withValues(alpha: 0.5),
                   ),
                 ),
                 child: Row(
@@ -966,13 +973,15 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                     Icon(
                       Icons.arrow_back,
                       size: 18,
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Previous',
                       style: TextStyle(
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
