@@ -35,6 +35,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
   bool _isSubmitting = false;
   String? _replyingToCommentId;
   String? _replyingToUsername;
+  String? _replyingToUserId; // Added to track original comment user ID
 
   @override
   void dispose() {
@@ -244,16 +245,14 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                     comment.text,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurface,
+                      height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      // Like button with count
                       InkWell(
-                        onTap: () => _handleLikeComment(
-                          comment.docId,
-                        ), // Fixed: Use comment.docId
+                        onTap: () => _handleLikeComment(comment.docId),
                         borderRadius: BorderRadius.circular(8),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -293,120 +292,98 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                               const SizedBox(width: 4),
                               likeCountAsync.when(
                                 data: (count) => Text(
-                                  count.toString(),
+                                  count > 0 ? count.toString() : '',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSurface.withValues(
                                       alpha: 0.6,
                                     ),
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                loading: () => Text(
-                                  '0',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurface.withValues(
-                                      alpha: 0.6,
-                                    ),
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                loading: () => const SizedBox.shrink(),
+                                error: (_, __) => const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () => _startReply(
+                          comment.docId,
+                          comment.authorName,
+                          comment.authorId, // Pass the author ID
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.reply,
+                                size: 16,
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
                                 ),
-                                error: (_, __) => Text(
-                                  '0',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurface.withValues(
-                                      alpha: 0.6,
-                                    ),
-                                    fontWeight: FontWeight.w600,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Reply',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.6,
                                   ),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-
-                      // Reply button - Only show if not replying to avoid nested replies
-                      if (_replyingToCommentId == null)
-                        InkWell(
-                          onTap: () =>
-                              _startReply(comment.docId, comment.authorName),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            child: Text(
-                              'Reply',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
                     ],
+                  ),
+                  // Replies section
+                  repliesAsync.when(
+                    data: (replies) {
+                      if (replies.isEmpty) return const SizedBox.shrink();
+
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 16, top: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: replies.map((reply) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _buildReplyItem(reply, theme, colorScheme),
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
                 ],
               ),
             ),
           ],
         ),
-        // Replies section
-        repliesAsync.when(
-          data: (replies) {
-            if (replies.isEmpty) return const SizedBox.shrink();
-
-            return Padding(
-              padding: const EdgeInsets.only(left: 44, top: 8),
-              child: Column(
-                children: replies
-                    .map(
-                      (reply) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _buildReplyItem(reply, theme, colorScheme),
-                      ),
-                    )
-                    .toList(),
-              ),
-            );
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (error, _) => const SizedBox.shrink(),
-        ),
       ],
     );
   }
 
   Widget _buildCommentInput(ThemeData theme, ColorScheme colorScheme) {
-    final currentUser = ref.watch(firebaseAuthProvider).currentUser;
-
-    if (currentUser == null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          border: Border(
-            top: BorderSide(
-              color: colorScheme.outline.withValues(alpha: 0.2),
-              width: 1,
-            ),
-          ),
-        ),
-        child: Text(
-          'Please sign in to comment',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-          textAlign: TextAlign.center,
-        ),
-      );
-    }
-
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        8,
+        16,
+        16 + MediaQuery.of(context).padding.bottom,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
@@ -417,12 +394,12 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_replyingToCommentId != null) ...[
+          if (_replyingToUsername != null)
             Container(
               padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
                 color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
@@ -435,7 +412,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                     child: Text(
                       'Replying to $_replyingToUsername',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.primary,
+                        color: colorScheme.onSurface,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -446,39 +423,38 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                       size: 16,
                       color: colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
+                    onPressed: _cancelReply,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    onPressed: _cancelReply,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-          ],
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
                 child: TextField(
                   controller: _commentController,
                   focusNode: _commentFocusNode,
-                  enabled: !_isSubmitting,
                   maxLines: null,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
-                    hintText: _replyingToCommentId != null
+                    hintText: _replyingToUsername != null
                         ? 'Write a reply...'
-                        : 'Add a comment...',
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withValues(
-                      alpha: 0.5,
+                        : 'Write a comment...',
+                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,
                     ),
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
+                      horizontal: 20,
+                      vertical: 12,
                     ),
                   ),
                 ),
@@ -492,10 +468,12 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: colorScheme.onPrimary,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            colorScheme.onPrimary,
+                          ),
                         ),
                       )
-                    : const Icon(Icons.send, size: 20),
+                    : const Icon(Icons.send),
                 style: IconButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
@@ -515,19 +493,12 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.chat_bubble_outline,
-                size: 48,
-                color: colorScheme.primary,
-              ),
+            Icon(
+              Icons.chat_bubble_outline,
+              size: 64,
+              color: colorScheme.primary.withValues(alpha: 0.3),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Text(
               'No comments yet',
               style: theme.textTheme.titleMedium?.copyWith(
@@ -537,7 +508,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Be the first to share your thoughts!',
+              'Be the first to share your thoughts',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -550,31 +521,10 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
   }
 
   Widget _buildLoadingState(ThemeData theme, ColorScheme colorScheme) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: 3,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: colorScheme.surfaceContainerHighest,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Container(
-                height: 80,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+    return Center(
+      child: CircularProgressIndicator(
+        valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+      ),
     );
   }
 
@@ -612,10 +562,11 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
     );
   }
 
-  void _startReply(String commentId, String username) {
+  void _startReply(String commentId, String username, String userId) {
     setState(() {
       _replyingToCommentId = commentId;
       _replyingToUsername = username;
+      _replyingToUserId = userId; // Store the user ID
     });
     _commentFocusNode.requestFocus();
   }
@@ -624,6 +575,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
     setState(() {
       _replyingToCommentId = null;
       _replyingToUsername = null;
+      _replyingToUserId = null;
     });
   }
 
@@ -674,14 +626,34 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
         text: text,
         createdAt: DateTime.now(),
       );
-      if (_replyingToCommentId != null) {
+
+      if (_replyingToCommentId != null && _replyingToUserId != null) {
+        // Add reply with all required parameters
         await ref
             .read(commentsRepositoryProvider)
-            .addReply(widget.post.docId, _replyingToCommentId!, comment);
+            .addReply(
+              widget.post.docId, // postId
+              _replyingToCommentId!, // parentCommentId
+              comment, // replyData
+              widget.post.title.isNotEmpty
+                  ? widget.post.title
+                  : widget.post.plainText.substring(
+                      0,
+                      widget.post.plainText.length > 50
+                          ? 50
+                          : widget.post.plainText.length,
+                    ), // postTitle
+              _replyingToUserId!, // originalCommentUserId
+            );
       } else {
+        // Add comment with all required parameters
         await ref
             .read(commentsRepositoryProvider)
-            .addComment(widget.post.docId, comment);
+            .addComment(
+              widget.post.docId, // postId
+              comment, // data
+              widget.post, // post (the full PostModel)
+            );
       }
 
       _commentController.clear();

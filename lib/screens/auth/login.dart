@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:poem_application/screens/auth/signup.dart';
 import 'package:poem_application/screens/home/home_screen.dart';
 import 'package:poem_application/services/auth_service.dart';
 import 'package:poem_application/widgets/emailInputField.dart';
@@ -160,7 +161,6 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -463,7 +463,10 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
             onPressed: _isLoading
                 ? null
                 : () {
-                    Navigator.of(context).pushNamed('/register');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => Signup()),
+                    );
                   },
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

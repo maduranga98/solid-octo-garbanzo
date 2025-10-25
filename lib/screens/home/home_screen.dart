@@ -11,6 +11,7 @@ import 'package:poem_application/providers/user_provider.dart';
 import 'package:poem_application/screens/auth/login.dart';
 import 'package:poem_application/screens/following/following_feed.dart';
 import 'package:poem_application/screens/messages/message.dart';
+import 'package:poem_application/screens/notifications/notifications_screen.dart';
 import 'package:poem_application/screens/profile/user_profile.dart'
     hide isFollowingProvider;
 import 'package:poem_application/screens/saved/saved_post.dart';
@@ -227,7 +228,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     color: colorScheme.onSurface,
                   ),
                   onPressed: () {
-                    // Navigate to notifications
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NotificationsScreen(),
+                      ),
+                    );
                   },
                   tooltip: 'Notifications',
                 ),
@@ -276,9 +282,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           controller: _tabController,
           children: [
             _buildPostFeed(),
-            _buildPostFeed(workType: 'poetry'),
-            _buildPostFeed(workType: 'lyrics'),
-            _buildPostFeed(workType: 'stories'),
+            _buildPostFeed(workType: 'Poetry'),
+            _buildPostFeed(workType: 'Lyrics'),
+            _buildPostFeed(workType: 'Stories'),
             _buildPostFeed(workType: 'Quotes & Aphorisms'),
             _buildPostFeed(workType: 'Microfiction'),
           ],
@@ -310,6 +316,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ? posts.where((post) => post.workType == workType).toList()
               : posts;
 
+          print(filteredPosts);
           if (filteredPosts.isEmpty) {
             return _buildEmptyState(workType);
           }

@@ -1,13 +1,16 @@
+// lib/services/post_interaction_service.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:poem_application/models/post_model.dart';
+import 'package:poem_application/services/notification_service.dart';
 import 'package:share_plus/share_plus.dart';
 
 class PostInteractionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final NotificationService _notificationService = NotificationService();
 
   // ============ LIKE FUNCTIONALITY ============
 
@@ -33,6 +36,13 @@ class PostInteractionService {
         await _firestore.collection('posts').doc(post.docId).update({
           'likeCount': FieldValue.increment(-1),
         });
+
+        // Remove like notification
+        await _notificationService.removeLikeNotification(
+          postOwnerId: post.createdBy,
+          postId: post.docId,
+        );
+
         return false; // Post is now unliked
       } else {
         // Like: Add like and increment count
@@ -43,6 +53,25 @@ class PostInteractionService {
         await _firestore.collection('posts').doc(post.docId).update({
           'likeCount': FieldValue.increment(1),
         });
+
+        // Get current user data for notification
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
+
+        final userData = userDoc.data();
+        final userName =
+            userData?['name'] ?? currentUser.displayName ?? 'Someone';
+        final userPhotoUrl = userData?['photoURl'] ?? currentUser.photoURL;
+
+        // Create like notification
+        await _notificationService.createLikeNotification(
+          post: post,
+          senderName: userName,
+          senderPhotoUrl: userPhotoUrl,
+        );
+
         return true; // Post is now liked
       }
     } catch (e) {

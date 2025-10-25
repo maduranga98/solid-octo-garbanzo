@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:poem_application/models/user_model.dart';
+import 'package:poem_application/screens/auth/login.dart';
+import 'package:poem_application/screens/home/home_screen.dart';
 import 'package:poem_application/services/auth_service.dart';
 import 'package:poem_application/widgets/inputfields.dart';
 
@@ -151,7 +153,10 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
 
       if (mounted) {
         _showSuccessMessage('Welcome to Poetic! Account created successfully.');
-        Navigator.of(context).pushReplacementNamed('/home');
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -342,8 +347,10 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
               TextButton(
                 onPressed: _isLoading
                     ? null
-                    : () =>
-                          Navigator.of(context).pushReplacementNamed('/login'),
+                    : () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Login()),
+                      ),
                 child: Text(
                   'Sign In',
                   style: TextStyle(
