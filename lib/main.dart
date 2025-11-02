@@ -5,6 +5,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:poem_application/config/theme.dart';
+import 'package:poem_application/providers/theme_provider.dart';
 import 'package:poem_application/screens/auth/login.dart';
 import 'package:poem_application/screens/home/home_screen.dart';
 import 'package:poem_application/screens/splash_screen.dart';
@@ -17,18 +19,19 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Poem Application',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       // Add these required localization delegates
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

@@ -23,35 +23,44 @@ final isFollowingProvider = StreamProvider.family<bool, String>((ref, userId) {
 });
 
 class UserProfile extends ConsumerWidget {
-  final String? userId; // If null, show current user's profile
+  final String? userId;
 
   const UserProfile({super.key, this.userId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(firebaseAuthProvider).currentUser;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     if (currentUser == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.person_off, size: 64, color: Colors.grey.shade300),
+              Icon(
+                Icons.person_off,
+                size: 64,
+                color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+              ),
               const SizedBox(height: 16),
               Text(
                 "Not logged in",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade600,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 "Please log in to view your profile",
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
+                ),
               ),
             ],
           ),
@@ -59,27 +68,34 @@ class UserProfile extends ConsumerWidget {
       );
     }
 
-    // Determine which user's profile to show
     final profileUserId = userId ?? currentUser.uid;
     final isOwnProfile = profileUserId == currentUser.uid;
 
     final userAsync = ref.watch(getUserDataProvider(profileUserId));
 
     return DefaultTabController(
-      length: isOwnProfile ? 3 : 1, // Only show Posted tab for other users
+      length: isOwnProfile ? 3 : 1,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: userAsync.when(
           data: (user) {
             if (user == null) {
-              return const Center(child: Text("User Not Found"));
+              return Center(
+                child: Text(
+                  "User Not Found",
+                  style: TextStyle(
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                ),
+              );
             }
             return NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) => [
                 SliverAppBar(
                   centerTitle: true,
                   pinned: true,
-                  backgroundColor: Colors.white,
+                  backgroundColor: theme.scaffoldBackgroundColor,
+                  foregroundColor: theme.textTheme.bodyLarge?.color,
                   elevation: 0,
                   expandedHeight: isOwnProfile ? 320 : 380,
                   flexibleSpace: FlexibleSpaceBar(
@@ -93,15 +109,22 @@ class UserProfile extends ConsumerWidget {
                   ),
                   bottom: isOwnProfile
                       ? TabBar(
-                          indicatorColor: Theme.of(context).primaryColor,
-                          labelColor: Theme.of(context).primaryColor,
-                          unselectedLabelColor: Colors.grey.shade400,
-                          indicator: UnderlineTabIndicator(
-                            borderSide: BorderSide(
-                              width: 3,
-                              color: Theme.of(context).primaryColor,
-                            ),
+                          indicatorColor: theme.primaryColor,
+                          labelColor: isDark
+                              ? Colors.white
+                              : theme.primaryColor,
+                          unselectedLabelColor: isDark
+                              ? Colors.grey.shade500
+                              : Colors.grey.shade400,
+                          labelStyle: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
                           ),
+                          unselectedLabelStyle: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 15,
+                          ),
+                          indicatorWeight: 3,
                           tabs: const [
                             Tab(text: "Posted"),
                             Tab(text: "Draft"),
@@ -109,15 +132,22 @@ class UserProfile extends ConsumerWidget {
                           ],
                         )
                       : TabBar(
-                          indicatorColor: Theme.of(context).primaryColor,
-                          labelColor: Theme.of(context).primaryColor,
-                          unselectedLabelColor: Colors.grey.shade400,
-                          indicator: UnderlineTabIndicator(
-                            borderSide: BorderSide(
-                              width: 3,
-                              color: Theme.of(context).primaryColor,
-                            ),
+                          indicatorColor: theme.primaryColor,
+                          labelColor: isDark
+                              ? Colors.white
+                              : theme.primaryColor,
+                          unselectedLabelColor: isDark
+                              ? Colors.grey.shade500
+                              : Colors.grey.shade400,
+                          labelStyle: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
                           ),
+                          unselectedLabelStyle: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 15,
+                          ),
+                          indicatorWeight: 3,
                           tabs: const [Tab(text: "Posted")],
                         ),
                 ),
@@ -133,7 +163,9 @@ class UserProfile extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: theme.primaryColor),
+          ),
           error: (_, __) => const Center(
             child: Icon(Icons.error, color: Colors.redAccent, size: 32),
           ),
@@ -149,7 +181,9 @@ class UserProfile extends ConsumerWidget {
     bool isOwnProfile,
     String profileUserId,
   ) {
-    final primaryColor = Theme.of(context).primaryColor;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = theme.primaryColor;
 
     return SingleChildScrollView(
       child: Container(
@@ -163,27 +197,39 @@ class UserProfile extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: primaryColor.withOpacity(0.5),
-                  width: 2,
+                  color: primaryColor.withOpacity(isDark ? 0.7 : 0.5),
+                  width: 2.5,
                 ),
+                boxShadow: isDark
+                    ? [
+                        BoxShadow(
+                          color: primaryColor.withOpacity(0.2),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
               child: CircleAvatar(
                 radius: 42,
-                backgroundColor: primaryColor.withOpacity(0.2),
+                backgroundColor: isDark
+                    ? primaryColor.withOpacity(0.25)
+                    : primaryColor.withOpacity(0.15),
                 backgroundImage:
                     user.photoURl != null && user.photoURl!.isNotEmpty
                     ? NetworkImage(user.photoURl!)
                     : null,
                 child: user.photoURl == null || user.photoURl!.isEmpty
                     ? Text(
-                        // FIX: Check if firstname is not empty before accessing index
                         user.firstname != null && user.firstname.isNotEmpty
                             ? user.firstname[0].toUpperCase()
                             : '?',
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
-                          color: primaryColor,
+                          color: isDark
+                              ? primaryColor.withOpacity(0.9)
+                              : primaryColor,
                         ),
                       )
                     : null,
@@ -192,13 +238,17 @@ class UserProfile extends ConsumerWidget {
             const SizedBox(height: 14),
             Text(
               "${user.firstname ?? ''} ${user.lastname ?? ''}",
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: theme.textTheme.bodyLarge?.color,
+              ),
             ),
             Text(
               "@${user.userName ?? ''}",
               style: TextStyle(
                 fontSize: 15,
-                color: Colors.grey.shade600,
+                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -213,7 +263,7 @@ class UserProfile extends ConsumerWidget {
                   profileUserId,
                   user.userName ?? '',
                 ),
-                _buildStatDivider(),
+                _buildStatDivider(isDark),
                 _buildStat(
                   "Followers",
                   user.followersCount ?? 0,
@@ -221,7 +271,7 @@ class UserProfile extends ConsumerWidget {
                   profileUserId,
                   user.userName ?? '',
                 ),
-                _buildStatDivider(),
+                _buildStatDivider(isDark),
                 _buildStat(
                   "Following",
                   user.followingCount ?? 0,
@@ -235,18 +285,22 @@ class UserProfile extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildInfo(Icons.email_outlined, user.email ?? ''),
+                  child: _buildInfo(
+                    Icons.email_outlined,
+                    user.email ?? '',
+                    context,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildInfo(
                     Icons.location_on_outlined,
                     user.country ?? '',
+                    context,
                   ),
                 ),
               ],
             ),
-            // Action buttons for other users' profiles
             if (!isOwnProfile) ...[
               const SizedBox(height: 20),
               _buildActionButtons(context, ref, profileUserId),
@@ -262,6 +316,8 @@ class UserProfile extends ConsumerWidget {
     WidgetRef ref,
     String userId,
   ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isFollowingAsync = ref.watch(isFollowingProvider(userId));
 
     return Row(
@@ -278,27 +334,34 @@ class UserProfile extends ConsumerWidget {
               label: Text(isFollowing ? 'Following' : 'Follow'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isFollowing
-                    ? Colors.grey.shade200
-                    : Theme.of(context).primaryColor,
+                    ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
+                    : theme.primaryColor,
                 foregroundColor: isFollowing
-                    ? Colors.grey.shade700
+                    ? (isDark ? Colors.grey.shade300 : Colors.grey.shade700)
                     : Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
+                elevation: 0,
               ),
             ),
             loading: () => ElevatedButton.icon(
               onPressed: null,
-              icon: const SizedBox(
+              icon: SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: theme.primaryColor,
+                ),
               ),
               label: const Text('Loading'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
             error: (_, __) => ElevatedButton.icon(
@@ -307,6 +370,9 @@ class UserProfile extends ConsumerWidget {
               label: const Text('Follow'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),
@@ -322,6 +388,10 @@ class UserProfile extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
+              side: BorderSide(
+                color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+              ),
+              foregroundColor: theme.textTheme.bodyLarge?.color,
             ),
           ),
         ),
@@ -342,7 +412,6 @@ class UserProfile extends ConsumerWidget {
       final batch = FirebaseFirestore.instance.batch();
 
       if (isCurrentlyFollowing) {
-        // Unfollow
         batch.delete(
           FirebaseFirestore.instance
               .collection('users')
@@ -366,7 +435,6 @@ class UserProfile extends ConsumerWidget {
           {'followersCount': FieldValue.increment(-1)},
         );
       } else {
-        // Follow
         batch.set(
           FirebaseFirestore.instance
               .collection('users')
@@ -401,6 +469,7 @@ class UserProfile extends ConsumerWidget {
             content: Text(isCurrentlyFollowing ? 'Unfollowed' : 'Following'),
             duration: const Duration(seconds: 1),
             behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).primaryColor,
           ),
         );
       }
@@ -422,14 +491,12 @@ class UserProfile extends ConsumerWidget {
       final currentUser = ref.read(firebaseAuthProvider).currentUser;
       if (currentUser == null) return;
 
-      // Get current user data
       final currentUserDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser.uid)
           .get();
       final currentUserData = currentUserDoc.data();
 
-      // Get other user data
       final otherUserDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
@@ -438,7 +505,6 @@ class UserProfile extends ConsumerWidget {
 
       if (otherUserData == null) return;
 
-      // Create or get chat
       final chatId = await getOrCreateChat(
         currentUserId: currentUser.uid,
         otherUserId: userId,
@@ -470,7 +536,11 @@ class UserProfile extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -483,6 +553,9 @@ class UserProfile extends ConsumerWidget {
     String userId,
     String userName,
   ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Expanded(
       child: InkWell(
         onTap: label == "Posts"
@@ -501,6 +574,7 @@ class UserProfile extends ConsumerWidget {
                   ),
                 );
               },
+        borderRadius: BorderRadius.circular(8),
         child: Column(
           children: [
             Text(
@@ -508,7 +582,7 @@ class UserProfile extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
+                color: isDark ? Colors.white : theme.primaryColor,
               ),
             ),
             const SizedBox(height: 4),
@@ -517,7 +591,7 @@ class UserProfile extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey.shade500,
+                color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
               ),
             ),
           ],
@@ -526,21 +600,35 @@ class UserProfile extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatDivider() {
-    return Container(height: 30, width: 1, color: Colors.grey.withOpacity(0.2));
+  Widget _buildStatDivider(bool isDark) {
+    return Container(
+      height: 30,
+      width: 1,
+      color: isDark ? Colors.grey.shade800 : Colors.grey.withOpacity(0.2),
+    );
   }
 
-  Widget _buildInfo(IconData icon, String text) {
+  Widget _buildInfo(IconData icon, String text, BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 18, color: Colors.grey.shade600),
+        Icon(
+          icon,
+          size: 18,
+          color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+        ),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
             text,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+            ),
           ),
         ),
       ],

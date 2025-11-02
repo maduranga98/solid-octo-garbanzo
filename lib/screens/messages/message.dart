@@ -44,17 +44,17 @@ class _MessageSectionState extends State<MessageSection> {
   @override
   Widget build(BuildContext context) {
     final userId = _auth.currentUser?.uid;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Messages',
-          style: TextStyle(
-            color: Colors.black87,
-            fontSize: 20,
+          style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -62,16 +62,24 @@ class _MessageSectionState extends State<MessageSection> {
       body: Column(
         children: [
           Container(
-            color: Colors.white,
+            color: colorScheme.surface,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: TextField(
               controller: _searchController,
               onChanged: (value) => setState(() => _searchQuery = value),
+              style: TextStyle(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: 'Search chats...',
-                prefixIcon: const Icon(Icons.search, size: 20),
+                hintStyle: TextStyle(
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 20,
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
                 filled: true,
-                fillColor: Colors.grey.shade50,
+                fillColor: colorScheme.surfaceContainerHighest,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -89,7 +97,11 @@ class _MessageSectionState extends State<MessageSection> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: colorScheme.primary,
+                    ),
+                  );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -100,22 +112,20 @@ class _MessageSectionState extends State<MessageSection> {
                         Icon(
                           Icons.chat_bubble_outline,
                           size: 64,
-                          color: Colors.grey.shade300,
+                          color: colorScheme.onSurface.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No chats yet',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 16,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Start a conversation from a user profile',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 14,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -140,9 +150,8 @@ class _MessageSectionState extends State<MessageSection> {
                   return Center(
                     child: Text(
                       'No chats found',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 16,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   );
@@ -150,8 +159,10 @@ class _MessageSectionState extends State<MessageSection> {
 
                 return ListView.separated(
                   itemCount: chats.length,
-                  separatorBuilder: (context, index) =>
-                      Divider(height: 1, color: Colors.grey.shade200),
+                  separatorBuilder: (context, index) => Divider(
+                    height: 1,
+                    color: colorScheme.outline.withValues(alpha: 0.2),
+                  ),
                   itemBuilder: (context, index) {
                     final chat = chats[index];
                     final chatData = chat.data() as Map<String, dynamic>;
@@ -174,6 +185,8 @@ class _MessageSectionState extends State<MessageSection> {
                       lastMessage: lastMessage,
                       lastMessageTime: lastMessageTime,
                       unreadCount: unreadCount,
+                      theme: theme,
+                      colorScheme: colorScheme,
                     );
                   },
                 );
@@ -193,12 +206,14 @@ class _MessageSectionState extends State<MessageSection> {
     required String lastMessage,
     required Timestamp? lastMessageTime,
     required int unreadCount,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
   }) {
     return InkWell(
       onTap: () =>
           _openChat(chatId, otherUserId, otherUserName, otherUserPhoto),
       child: Container(
-        color: Colors.white,
+        color: colorScheme.surface,
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
@@ -206,7 +221,7 @@ class _MessageSectionState extends State<MessageSection> {
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: Colors.grey.shade200,
+                  backgroundColor: colorScheme.primaryContainer,
                   backgroundImage:
                       otherUserPhoto != null && otherUserPhoto.isNotEmpty
                       ? NetworkImage(otherUserPhoto)
@@ -216,10 +231,10 @@ class _MessageSectionState extends State<MessageSection> {
                           otherUserName.isNotEmpty
                               ? otherUserName[0].toUpperCase()
                               : '?',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black54,
+                            color: colorScheme.onPrimaryContainer,
                           ),
                         )
                       : null,
@@ -230,8 +245,8 @@ class _MessageSectionState extends State<MessageSection> {
                     top: 0,
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
+                      decoration: BoxDecoration(
+                        color: colorScheme.error,
                         shape: BoxShape.circle,
                       ),
                       constraints: const BoxConstraints(
@@ -240,8 +255,8 @@ class _MessageSectionState extends State<MessageSection> {
                       ),
                       child: Text(
                         unreadCount > 9 ? '9+' : unreadCount.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: colorScheme.onError,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -258,11 +273,11 @@ class _MessageSectionState extends State<MessageSection> {
                 children: [
                   Text(
                     otherUserName,
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: unreadCount > 0
                           ? FontWeight.bold
                           : FontWeight.w600,
+                      color: colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -271,9 +286,8 @@ class _MessageSectionState extends State<MessageSection> {
                     const SizedBox(height: 4),
                     Text(
                       lastMessage,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
                         fontWeight: unreadCount > 0
                             ? FontWeight.w500
                             : FontWeight.normal,
@@ -288,7 +302,9 @@ class _MessageSectionState extends State<MessageSection> {
             if (lastMessageTime != null)
               Text(
                 _formatTime(lastMessageTime),
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
               ),
           ],
         ),
@@ -401,20 +417,23 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: colorScheme.surfaceContainerLow,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
         ),
         title: Row(
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: colorScheme.primaryContainer,
               backgroundImage:
                   widget.otherUserPhoto != null &&
                       widget.otherUserPhoto!.isNotEmpty
@@ -427,10 +446,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       widget.otherUserName.isNotEmpty
                           ? widget.otherUserName[0].toUpperCase()
                           : '?',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black54,
+                        color: colorScheme.onPrimaryContainer,
                       ),
                     )
                   : null,
@@ -439,9 +458,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
               child: Text(
                 widget.otherUserName,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 18,
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -462,14 +479,20 @@ class _ChatScreenState extends State<ChatScreen> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: colorScheme.primary,
+                    ),
+                  );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(
                     child: Text(
                       'No messages yet. Start the conversation!',
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
                   );
                 }
@@ -492,6 +515,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       text: message['text'],
                       isMe: isMe,
                       timestamp: message['timestamp'],
+                      theme: theme,
+                      colorScheme: colorScheme,
                     );
                   },
                 );
@@ -501,10 +526,10 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: colorScheme.shadow.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
@@ -518,10 +543,14 @@ class _ChatScreenState extends State<ChatScreen> {
                       controller: _messageController,
                       maxLines: null,
                       textInputAction: TextInputAction.send,
+                      style: TextStyle(color: colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
+                        hintStyle: TextStyle(
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: colorScheme.surfaceContainerHighest,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
@@ -536,14 +565,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2563EB),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
                       onPressed: _sendMessage,
                       icon: const Icon(Icons.send, size: 20),
-                      color: Colors.white,
+                      color: colorScheme.onPrimary,
                     ),
                   ),
                 ],
@@ -559,6 +588,8 @@ class _ChatScreenState extends State<ChatScreen> {
     required String text,
     required bool isMe,
     required Timestamp? timestamp,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -571,11 +602,13 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isMe ? const Color(0xFF2563EB) : Colors.white,
+                color: isMe
+                    ? colorScheme.primary
+                    : colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: colorScheme.shadow.withValues(alpha: 0.08),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -584,7 +617,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Text(
                 text,
                 style: TextStyle(
-                  color: isMe ? Colors.white : Colors.black87,
+                  color: isMe ? colorScheme.onPrimary : colorScheme.onSurface,
                   fontSize: 15,
                 ),
               ),

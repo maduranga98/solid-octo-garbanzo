@@ -7,6 +7,7 @@ import 'package:poem_application/providers/auth_provider.dart';
 import 'package:poem_application/providers/postRepositoryProvider.dart';
 import 'package:poem_application/providers/post_interaction_provider.dart';
 import 'package:poem_application/providers/user_provider.dart';
+import 'package:poem_application/screens/profile/user_profile.dart';
 import 'package:poem_application/widgets/commentsBottomSheet.dart';
 import 'package:poem_application/widgets/fullPostBottomSheet.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -271,127 +272,149 @@ class _FollowingPostCard extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  userAsync.when(
-                    data: (user) {
-                      if (user == null) {
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              UserProfile(userId: post.createdBy),
+                        ),
+                      );
+                    },
+                    child: userAsync.when(
+                      data: (user) {
+                        if (user == null) {
+                          return CircleAvatar(
+                            radius: 20,
+                            backgroundColor: colorScheme.primaryContainer,
+                            child: Icon(
+                              Icons.person,
+                              color: colorScheme.onPrimaryContainer,
+                              size: 20,
+                            ),
+                          );
+                        }
                         return CircleAvatar(
                           radius: 20,
                           backgroundColor: colorScheme.primaryContainer,
-                          child: Icon(
-                            Icons.person,
-                            color: colorScheme.onPrimaryContainer,
-                            size: 20,
-                          ),
+                          backgroundImage:
+                              user.photoURl != null && user.photoURl!.isNotEmpty
+                              ? NetworkImage(user.photoURl!)
+                              : null,
+                          child: user.photoURl == null || user.photoURl!.isEmpty
+                              ? Text(
+                                  user.userName.isNotEmpty
+                                      ? user.userName[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                    color: colorScheme.onPrimaryContainer,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                )
+                              : null,
                         );
-                      }
-                      return CircleAvatar(
+                      },
+                      loading: () => CircleAvatar(
                         radius: 20,
-                        backgroundColor: colorScheme.primaryContainer,
-                        backgroundImage:
-                            user.photoURl != null && user.photoURl!.isNotEmpty
-                            ? NetworkImage(user.photoURl!)
-                            : null,
-                        child: user.photoURl == null || user.photoURl!.isEmpty
-                            ? Text(
-                                user.userName.isNotEmpty
-                                    ? user.userName[0].toUpperCase()
-                                    : '?',
-                                style: TextStyle(
-                                  color: colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              )
-                            : null,
-                      );
-                    },
-                    loading: () => CircleAvatar(
-                      radius: 20,
-                      backgroundColor: colorScheme.surfaceVariant,
-                    ),
-                    error: (_, __) => CircleAvatar(
-                      radius: 20,
-                      backgroundColor: colorScheme.errorContainer,
-                      child: Icon(
-                        Icons.error_outline,
-                        color: colorScheme.onErrorContainer,
-                        size: 20,
+                        backgroundColor: colorScheme.surfaceVariant,
+                      ),
+                      error: (_, __) => CircleAvatar(
+                        radius: 20,
+                        backgroundColor: colorScheme.errorContainer,
+                        child: Icon(
+                          Icons.error_outline,
+                          color: colorScheme.onErrorContainer,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        userAsync.when(
-                          data: (user) => Text(
-                            user?.userName ?? 'Unknown User',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
-                          loading: () => Container(
-                            height: 14,
-                            width: 100,
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceVariant,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          error: (_, __) => Text(
-                            'Unknown User',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              UserProfile(userId: post.createdBy),
                         ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Text(
-                              timeago.format(
-                                post.createdAt,
-                                locale: 'en_short',
-                              ),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              ' • ',
-                              style: TextStyle(
-                                color: colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
+                      );
+                    },
+                    child: Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          userAsync.when(
+                            data: (user) => Text(
+                              user?.userName ?? 'Unknown User',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
+                            loading: () => Container(
+                              height: 14,
+                              width: 100,
                               decoration: BoxDecoration(
-                                color: _getWorkTypeColor(
-                                  post.workType,
-                                ).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                post.workType.toUpperCase(),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: _getWorkTypeColor(post.workType),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 10,
-                                ),
+                                color: colorScheme.surfaceVariant,
+                                borderRadius: BorderRadius.circular(4),
                               ),
                             ),
-                          ],
-                        ),
-                      ],
+                            error: (_, __) => Text(
+                              'Unknown User',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(
+                                timeago.format(
+                                  post.createdAt,
+                                  locale: 'en_short',
+                                ),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.6,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                ' • ',
+                                style: TextStyle(
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.6,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _getWorkTypeColor(
+                                    post.workType,
+                                  ).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  post.workType.toUpperCase(),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: _getWorkTypeColor(post.workType),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   // Following Badge
