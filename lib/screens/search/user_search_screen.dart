@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:poem_application/providers/auth_provider.dart';
 import 'package:poem_application/providers/follow_provider.dart';
@@ -99,22 +100,18 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Theme.of(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
-        title: const Text(
+        title: Text(
           'Search Artists',
-          style: TextStyle(
-            color: Colors.black87,
-            fontSize: 18,
+          style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: Column(
         children: [
@@ -122,10 +119,10 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: theme.colorScheme.shadow.withValues(alpha: 0.05),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -143,11 +140,22 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               },
               decoration: InputDecoration(
                 hintText: 'Search by name or username...',
-                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 15),
-                prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                hintStyle: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  fontSize: 15,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear, color: Colors.grey[400]),
+                        icon: Icon(
+                          Icons.clear,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.4,
+                          ),
+                        ),
                         onPressed: () {
                           _searchController.clear();
                           setState(() {
@@ -158,7 +166,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                       )
                     : null,
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: theme.colorScheme.surfaceContainerHighest,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -176,14 +184,16 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             child: _isSearching
                 ? const Center(child: CircularProgressIndicator())
                 : _hasSearched && _searchResults.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(theme)
                 : _searchResults.isEmpty
-                ? _buildInitialState()
+                ? _buildInitialState(theme)
                 : ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: _searchResults.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(height: 1),
+                    separatorBuilder: (context, index) => Divider(
+                      height: 1,
+                      color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                    ),
                     itemBuilder: (context, index) {
                       return _UserSearchResultItem(
                         userDoc: _searchResults[index],
@@ -196,50 +206,60 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
     );
   }
 
-  Widget _buildInitialState() {
+  Widget _buildInitialState(ThemeData theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search, size: 64, color: Colors.grey[300]),
+          Icon(
+            Icons.search,
+            size: 64,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+          ),
           const SizedBox(height: 16),
           Text(
             'Search for artists',
-            style: TextStyle(
-              fontSize: 16,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Search by name or username',
-            style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeData theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.person_search, size: 64, color: Colors.grey[300]),
+          Icon(
+            Icons.person_search,
+            size: 64,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+          ),
           const SizedBox(height: 16),
           Text(
             'No users found',
-            style: TextStyle(
-              fontSize: 16,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Try a different search term',
-            style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
           ),
         ],
       ),
@@ -257,6 +277,8 @@ class _UserSearchResultItem extends ConsumerWidget {
     final userData = userDoc.data() as Map<String, dynamic>?;
     if (userData == null) return const SizedBox.shrink();
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final currentUser = ref.watch(firebaseAuthProvider).currentUser;
     final userId = userDoc.id;
     final isOwnProfile = currentUser?.uid == userId;
@@ -269,6 +291,7 @@ class _UserSearchResultItem extends ConsumerWidget {
 
     return InkWell(
       onTap: () {
+        HapticFeedback.lightImpact();
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => UserProfile(userId: userId)),
@@ -281,7 +304,7 @@ class _UserSearchResultItem extends ConsumerWidget {
             // Avatar
             CircleAvatar(
               radius: 28,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+              backgroundColor: colorScheme.primaryContainer,
               backgroundImage: photoUrl.isNotEmpty
                   ? NetworkImage(photoUrl)
                   : null,
@@ -290,13 +313,14 @@ class _UserSearchResultItem extends ConsumerWidget {
                       firstName.isNotEmpty ? firstName[0].toUpperCase() : '?',
                       style: TextStyle(
                         fontSize: 20,
-                        color: Theme.of(context).primaryColor,
+                        color: colorScheme.onPrimaryContainer,
                         fontWeight: FontWeight.bold,
                       ),
                     )
                   : null,
             ),
             const SizedBox(width: 12),
+
             // User Info
             Expanded(
               child: Column(
@@ -304,28 +328,39 @@ class _UserSearchResultItem extends ConsumerWidget {
                 children: [
                   Text(
                     '$firstName $lastName',
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '@$userName',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '$followersCount ${followersCount == 1 ? 'follower' : 'followers'}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
                   ),
                 ],
               ),
             ),
+
             // Follow Button
             if (!isOwnProfile && currentUser != null)
-              _buildFollowButton(context, ref, userId, currentUser.uid),
+              _buildFollowButton(
+                context,
+                ref,
+                userId,
+                currentUser.uid,
+                theme,
+                colorScheme,
+              ),
           ],
         ),
       ),
@@ -337,7 +372,10 @@ class _UserSearchResultItem extends ConsumerWidget {
     WidgetRef ref,
     String targetUserId,
     String currentUserId,
+    ThemeData theme,
+    ColorScheme colorScheme,
   ) {
+    // Watch the follow status with proper parameters
     final isFollowingAsync = ref.watch(
       isFollowingProvider(
         FollowParams(currentUserId: currentUserId, targetUserId: targetUserId),
@@ -347,17 +385,25 @@ class _UserSearchResultItem extends ConsumerWidget {
     return isFollowingAsync.when(
       data: (isFollowing) => SizedBox(
         height: 36,
-        child: ElevatedButton(
-          onPressed: () => _handleFollow(context, ref, targetUserId),
-          style: ElevatedButton.styleFrom(
+        child: FilledButton(
+          onPressed: () =>
+              _handleFollow(context, ref, targetUserId, currentUserId),
+          style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             backgroundColor: isFollowing
-                ? Colors.grey[200]
-                : Theme.of(context).primaryColor,
-            foregroundColor: isFollowing ? Colors.grey[700] : Colors.white,
+                ? colorScheme.surfaceContainerHighest
+                : colorScheme.primary,
+            foregroundColor: isFollowing
+                ? colorScheme.onSurface
+                : colorScheme.onPrimary,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
+              side: isFollowing
+                  ? BorderSide(
+                      color: colorScheme.outline.withValues(alpha: 0.5),
+                    )
+                  : BorderSide.none,
             ),
           ),
           child: Text(
@@ -369,24 +415,31 @@ class _UserSearchResultItem extends ConsumerWidget {
       loading: () => SizedBox(
         height: 36,
         width: 90,
-        child: ElevatedButton(
+        child: FilledButton(
           onPressed: null,
-          style: ElevatedButton.styleFrom(
+          style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 20),
+            backgroundColor: colorScheme.surfaceContainerHighest,
           ),
-          child: const SizedBox(
+          child: SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
           ),
         ),
       ),
       error: (_, __) => SizedBox(
         height: 36,
-        child: ElevatedButton(
-          onPressed: () => _handleFollow(context, ref, targetUserId),
-          style: ElevatedButton.styleFrom(
+        child: FilledButton(
+          onPressed: () =>
+              _handleFollow(context, ref, targetUserId, currentUserId),
+          style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 20),
+            backgroundColor: colorScheme.primary,
+            foregroundColor: colorScheme.onPrimary,
           ),
           child: const Text('Follow'),
         ),
@@ -398,20 +451,29 @@ class _UserSearchResultItem extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String targetUserId,
+    String currentUserId,
   ) async {
-    final currentUser = ref.read(firebaseAuthProvider).currentUser;
-    if (currentUser == null) return;
-
-    final service = ref.read(followServiceProvider);
-
     try {
-      await service.toggleFollow(currentUser.uid, targetUserId);
+      HapticFeedback.lightImpact();
+
+      final followService = ref.read(followServiceProvider);
+      await followService.toggleFollow(currentUserId, targetUserId);
+
+      // Invalidate the follow status to refresh
+      ref.invalidate(
+        isFollowingProvider(
+          FollowParams(
+            currentUserId: currentUserId,
+            targetUserId: targetUserId,
+          ),
+        ),
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );

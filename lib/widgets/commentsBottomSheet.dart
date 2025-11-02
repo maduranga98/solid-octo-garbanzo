@@ -162,137 +162,184 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
       ),
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            userAsync.when(
-              data: (user) {
-                if (user == null) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              userAsync.when(
+                data: (user) {
+                  if (user == null) {
+                    return CircleAvatar(
+                      radius: 16,
+                      backgroundColor: colorScheme.primaryContainer,
+                      child: Icon(
+                        Icons.person,
+                        color: colorScheme.onPrimaryContainer,
+                        size: 16,
+                      ),
+                    );
+                  }
+
                   return CircleAvatar(
                     radius: 16,
                     backgroundColor: colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.person,
-                      color: colorScheme.onPrimaryContainer,
-                      size: 16,
-                    ),
+                    backgroundImage:
+                        user.photoURl != null && user.photoURl!.isNotEmpty
+                        ? NetworkImage(user.photoURl!)
+                        : null,
+                    child: user.photoURl == null || user.photoURl!.isEmpty
+                        ? Text(
+                            user.userName.isNotEmpty
+                                ? user.userName[0].toUpperCase()
+                                : '?',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        : null,
                   );
-                }
-
-                return CircleAvatar(
+                },
+                loading: () => CircleAvatar(
+                  radius: 16,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                ),
+                error: (_, __) => CircleAvatar(
                   radius: 16,
                   backgroundColor: colorScheme.primaryContainer,
-                  backgroundImage:
-                      user.photoURl != null && user.photoURl!.isNotEmpty
-                      ? NetworkImage(user.photoURl!)
-                      : null,
-                  child: user.photoURl == null || user.photoURl!.isEmpty
-                      ? Text(
-                          user.userName.isNotEmpty
-                              ? user.userName[0].toUpperCase()
-                              : '?',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        )
-                      : null,
-                );
-              },
-              loading: () => CircleAvatar(
-                radius: 16,
-                backgroundColor: colorScheme.surfaceContainerHighest,
-              ),
-              error: (_, __) => CircleAvatar(
-                radius: 16,
-                backgroundColor: colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.person,
-                  color: colorScheme.onPrimaryContainer,
-                  size: 16,
+                  child: Icon(
+                    Icons.person,
+                    color: colorScheme.onPrimaryContainer,
+                    size: 16,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          comment.authorName,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurface,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            comment.authorName,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
+                            ),
                           ),
                         ),
-                      ),
-                      Text(
-                        timeago.format(comment.createdAt),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        Text(
+                          timeago.format(comment.createdAt),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    comment.text,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                      height: 1.4,
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: () => _handleLikeComment(comment.docId),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                    const SizedBox(height: 4),
+                    Text(
+                      comment.text,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        InkWell(
+                          onTap: () => _handleLikeComment(comment.docId),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                isLikedAsync.when(
+                                  data: (isLiked) => Icon(
+                                    isLiked
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    size: 16,
+                                    color: isLiked
+                                        ? Colors.red
+                                        : colorScheme.onSurface.withValues(
+                                            alpha: 0.6,
+                                          ),
+                                  ),
+                                  loading: () => Icon(
+                                    Icons.favorite_border,
+                                    size: 16,
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                  ),
+                                  error: (_, __) => Icon(
+                                    Icons.favorite_border,
+                                    size: 16,
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                likeCountAsync.when(
+                                  data: (count) => Text(
+                                    count > 0 ? count.toString() : '',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurface.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  loading: () => const SizedBox.shrink(),
+                                  error: (_, __) => const SizedBox.shrink(),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              isLikedAsync.when(
-                                data: (isLiked) => Icon(
-                                  isLiked
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  size: 16,
-                                  color: isLiked
-                                      ? Colors.red
-                                      : colorScheme.onSurface.withValues(
-                                          alpha: 0.6,
-                                        ),
-                                ),
-                                loading: () => Icon(
-                                  Icons.favorite_border,
-                                  size: 16,
-                                  color: colorScheme.onSurface.withValues(
-                                    alpha: 0.6,
-                                  ),
-                                ),
-                                error: (_, __) => Icon(
-                                  Icons.favorite_border,
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => _startReply(
+                            comment.docId,
+                            comment.authorName,
+                            comment.authorId, // Pass the author ID
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.reply,
                                   size: 16,
                                   color: colorScheme.onSurface.withValues(
                                     alpha: 0.6,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              likeCountAsync.when(
-                                data: (count) => Text(
-                                  count > 0 ? count.toString() : '',
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Reply',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSurface.withValues(
                                       alpha: 0.6,
@@ -300,79 +347,44 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                loading: () => const SizedBox.shrink(),
-                                error: (_, __) => const SizedBox.shrink(),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => _startReply(
-                          comment.docId,
-                          comment.authorName,
-                          comment.authorId, // Pass the author ID
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.reply,
-                                size: 16,
-                                color: colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Reply',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurface.withValues(
-                                    alpha: 0.6,
-                                  ),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Replies section
-                  repliesAsync.when(
-                    data: (replies) {
-                      if (replies.isEmpty) return const SizedBox.shrink();
+                      ],
+                    ),
+                    // Replies section
+                    repliesAsync.when(
+                      data: (replies) {
+                        if (replies.isEmpty) return const SizedBox.shrink();
 
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 16, top: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: replies.map((reply) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: _buildReplyItem(reply, theme, colorScheme),
-                            );
-                          }).toList(),
-                        ),
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ],
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: replies.map((reply) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _buildReplyItem(
+                                  reply,
+                                  theme,
+                                  colorScheme,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -439,6 +451,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                   focusNode: _commentFocusNode,
                   maxLines: null,
                   textCapitalization: TextCapitalization.sentences,
+                  style: TextStyle(color: colorScheme.onSurface),
                   decoration: InputDecoration(
                     hintText: _replyingToUsername != null
                         ? 'Write a reply...'

@@ -18,6 +18,7 @@ import 'package:poem_application/screens/saved/saved_post.dart';
 import 'package:poem_application/screens/search/user_search_screen.dart';
 import 'package:poem_application/widgets/commentsBottomSheet.dart';
 import 'package:poem_application/widgets/fullPostBottomSheet.dart';
+import 'package:poem_application/widgets/theme_switcher.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -98,6 +99,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ],
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.palette),
+              title: const Text('Theme'),
+              trailing: const ThemeToggleSwitch(),
             ),
             ListTile(
               leading: const Icon(Icons.home),
@@ -363,9 +369,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
+                  // Avatar with tap gesture
                   GestureDetector(
                     onTap: () {
-                      // Navigate to user profile
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              UserProfile(userId: post.createdBy),
+                        ),
+                      );
                     },
                     child: userAsync.when(
                       data: (user) {
@@ -417,78 +430,89 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        userAsync.when(
-                          data: (user) => Text(
-                            user?.userName ?? 'Unknown User',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface,
-                            ),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                UserProfile(userId: post.createdBy),
                           ),
-                          loading: () => Container(
-                            height: 14,
-                            width: 100,
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceVariant,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          error: (_, __) => Text(
-                            'Unknown User',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Text(
-                              timeago.format(
-                                post.createdAt,
-                                locale: 'en_short',
-                              ),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
+                        );
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          userAsync.when(
+                            data: (user) => Text(
+                              user?.userName ?? 'Unknown User',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
                               ),
                             ),
-                            Text(
-                              ' • ',
-                              style: TextStyle(
-                                color: colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
+                            loading: () => Container(
+                              height: 14,
+                              width: 100,
                               decoration: BoxDecoration(
-                                color: _getWorkTypeColor(
-                                  post.workType,
-                                ).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                post.workType.toUpperCase(),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: _getWorkTypeColor(post.workType),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 10,
-                                ),
+                                color: colorScheme.surfaceVariant,
+                                borderRadius: BorderRadius.circular(4),
                               ),
                             ),
-                          ],
-                        ),
-                      ],
+                            error: (_, __) => Text(
+                              'Unknown User',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(
+                                timeago.format(
+                                  post.createdAt,
+                                  locale: 'en_short',
+                                ),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.6,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                ' • ',
+                                style: TextStyle(
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.6,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _getWorkTypeColor(
+                                    post.workType,
+                                  ).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  post.workType.toUpperCase(),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: _getWorkTypeColor(post.workType),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   // Follow Button - Only show if not own post
