@@ -15,6 +15,11 @@ class UserModel {
   final int followingCount;
   final DateTime createdAt;
 
+  // New fields for language preferences
+  final List<String> preferredReadingLanguages;
+  final String preferredWritingLanguage;
+  final bool exploreInternational;
+
   UserModel({
     required this.uid,
     required this.firstname,
@@ -29,9 +34,11 @@ class UserModel {
     required this.followersCount,
     required this.followingCount,
     required this.createdAt,
+    this.preferredReadingLanguages = const ['English'],
+    this.preferredWritingLanguage = 'English',
+    this.exploreInternational = true,
   });
 
-  // ✅ FIXED: Added proper null safety handling
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
@@ -46,17 +53,23 @@ class UserModel {
           : <String>[],
       country: data['country'] ?? '',
       bio: data['bio'] ?? '',
-      photoURl: data['photoURl'], // This can be null
+      photoURl: data['photoURl'],
       postCount: data['postCount'] ?? 0,
       followersCount: data['followersCount'] ?? 0,
       followingCount: data['followingCount'] ?? 0,
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
+      preferredReadingLanguages: data['preferredReadingLanguages'] != null
+          ? List<String>.from(
+              data['preferredReadingLanguages'] as List<dynamic>,
+            )
+          : ['English'],
+      preferredWritingLanguage: data['preferredWritingLanguage'] ?? 'English',
+      exploreInternational: data['exploreInternational'] ?? true,
     );
   }
 
-  // ✅ FIXED: Added proper null safety handling
   factory UserModel.fromMap(Map<String, dynamic> data, String uid) {
     return UserModel(
       uid: uid,
@@ -69,17 +82,23 @@ class UserModel {
           : <String>[],
       country: data['country'] ?? '',
       bio: data['bio'] ?? '',
-      photoURl: data['photoURl'], // This can be null
+      photoURl: data['photoURl'],
       postCount: data['postCount'] ?? 0,
       followersCount: data['followersCount'] ?? 0,
       followingCount: data['followingCount'] ?? 0,
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
+      preferredReadingLanguages: data['preferredReadingLanguages'] != null
+          ? List<String>.from(
+              data['preferredReadingLanguages'] as List<dynamic>,
+            )
+          : ['English'],
+      preferredWritingLanguage: data['preferredWritingLanguage'] ?? 'English',
+      exploreInternational: data['exploreInternational'] ?? true,
     );
   }
 
-  // Convert UserModel -> firestore Map
   Map<String, dynamic> toFirestore() {
     return {
       "uid": uid,
@@ -95,10 +114,12 @@ class UserModel {
       "followersCount": followersCount,
       "followingCount": followingCount,
       "createdAt": Timestamp.fromDate(createdAt),
+      "preferredReadingLanguages": preferredReadingLanguages,
+      "preferredWritingLanguage": preferredWritingLanguage,
+      "exploreInternational": exploreInternational,
     };
   }
 
-  // For updates
   UserModel copyWith({
     String? firstname,
     String? lastname,
@@ -106,27 +127,35 @@ class UserModel {
     String? userName,
     List<String>? type,
     String? country,
-    String? boi,
+    String? bio,
     String? photoURl,
     int? postCount,
     int? followersCount,
     int? followingCount,
     DateTime? createdAt,
+    List<String>? preferredReadingLanguages,
+    String? preferredWritingLanguage,
+    bool? exploreInternational,
   }) {
     return UserModel(
-      uid: uid, // uid never changes
+      uid: uid,
       firstname: firstname ?? this.firstname,
       lastname: lastname ?? this.lastname,
       email: email ?? this.email,
       userName: userName ?? this.userName,
       type: type ?? this.type,
       country: country ?? this.country,
-      bio: bio ?? bio,
+      bio: bio ?? this.bio,
       photoURl: photoURl ?? this.photoURl,
       postCount: postCount ?? this.postCount,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       createdAt: createdAt ?? this.createdAt,
+      preferredReadingLanguages:
+          preferredReadingLanguages ?? this.preferredReadingLanguages,
+      preferredWritingLanguage:
+          preferredWritingLanguage ?? this.preferredWritingLanguage,
+      exploreInternational: exploreInternational ?? this.exploreInternational,
     );
   }
 }

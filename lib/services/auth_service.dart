@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:poem_application/models/user_model.dart';
 import 'package:poem_application/repositories/user_repository.dart';
+import 'package:poem_application/screens/auth/user_preferences_intro_screen.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -23,32 +25,15 @@ class AuthService {
     required String email,
     required String password,
     required UserModel userData,
+    required BuildContext context, // Add context parameter
   }) async {
     try {
-      // ✅ STEP 1: Check username availability FIRST
-      print("Checking username availability: ${userData.userName}");
-      final isUsernameAvailable = await _userRepository.isUsernameAvailable(
-        userData.userName,
-      );
-
-      if (!isUsernameAvailable) {
-        throw Exception('Username "${userData.userName}" is already taken');
+      // Validate input
+      if (email.isEmpty || password.isEmpty) {
+        throw Exception('Email and password are required');
       }
-      print("✅ Username is available: ${userData.userName}");
 
-      // ✅ STEP 2: Check if email is already registered
-      // try {
-      //   final signInMethods = await _auth.fetchSignInMethodsForEmail(email);
-      //   if (signInMethods.isNotEmpty) {
-      //     throw Exception('An account already exists with this email address');
-      //   }
-      // } catch (e) {
-      //   // If fetchSignInMethodsForEmail fails, continue (email might be available)
-      //   print("Could not check email availability: $e");
-      // }
-
-      // ✅ STEP 3: Create Firebase user account
-      print("Creating Firebase user account...");
+      // Create Firebase Auth user
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -60,12 +45,12 @@ class AuthService {
 
       print("✅ Firebase user created with UID: ${credential.user!.uid}");
 
-      // ✅ STEP 4: Update display name
+      // Update display name
       await credential.user?.updateDisplayName(
         '${userData.firstname} ${userData.lastname}',
       );
 
-      // ✅ STEP 5: Create user document in Firestore using UserRepository
+      // Create user document in Firestore
       try {
         final userModelWithUid = UserModel(
           uid: credential.user!.uid,
@@ -80,6 +65,10 @@ class AuthService {
           followersCount: userData.followersCount,
           followingCount: userData.followingCount,
           createdAt: userData.createdAt,
+          // Initialize with default values - will be updated in intro screen
+          preferredReadingLanguages: const ['English'],
+          preferredWritingLanguage: 'English',
+          exploreInternational: true,
         );
 
         final createdUser = await _userRepository.createNewUser(
@@ -87,7 +76,6 @@ class AuthService {
         );
 
         if (createdUser == null) {
-          // If Firestore document creation fails, delete the Firebase user
           print(
             "❌ Failed to create user document, cleaning up Firebase user...",
           );
@@ -96,9 +84,22 @@ class AuthService {
         }
 
         print("✅ User registration completed successfully");
+
+        // Navigate to intro screen instead of home
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => UserPreferencesIntroScreen(
+                userId: credential.user!.uid,
+                initialUserData: createdUser,
+              ),
+            ),
+          );
+        }
+
         return credential;
       } catch (firestoreError) {
-        // If Firestore creation fails, clean up the Firebase user
         print("❌ Firestore error, cleaning up Firebase user: $firestoreError");
         try {
           await credential.user?.delete();

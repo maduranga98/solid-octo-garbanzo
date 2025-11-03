@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:country_picker/country_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:poem_application/models/user_model.dart';
 import 'package:poem_application/screens/auth/login.dart';
-import 'package:poem_application/screens/home/home_screen.dart';
 import 'package:poem_application/services/auth_service.dart';
 import 'package:poem_application/widgets/inputfields.dart';
 
@@ -19,6 +21,11 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   final AuthService _authService = AuthService();
 
+  // Scroll controllers
+  final ScrollController _scrollController1 = ScrollController();
+  final ScrollController _scrollController2 = ScrollController();
+  final ScrollController _scrollController3 = ScrollController();
+
   // Controllers
   final TextEditingController _firstnameController = TextEditingController();
   final TextEditingController _lastnameController = TextEditingController();
@@ -31,27 +38,30 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
   // State variables
   int _currentStep = 0;
   bool _isLoading = false;
+  bool _isUploadingImage = false;
   Country? _selectedCountry;
   List<String> _selectedTypes = [];
   bool _acceptTerms = false;
+  File? _selectedImage;
+  String? _uploadedImageUrl;
 
   // Animation
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // User content types with enhanced data
+  // User content types
   final List<Map<String, dynamic>> _contentTypes = [
     {
       'title': 'Poetry',
-      'subtitle': 'Poets, spoken word, haiku, quotes',
+      'subtitle': 'Poets, spoken word, haiku, verses',
       'icon': Icons.auto_stories,
       'value': 'poetry',
       'color': const Color(0xFF6366F1),
     },
     {
       'title': 'Lyrics',
-      'subtitle': 'Songwriters, rap, chants',
+      'subtitle': 'Songwriters, rap, chants, melodies',
       'icon': Icons.music_note,
       'value': 'lyrics',
       'color': const Color(0xFF10B981),
@@ -59,22 +69,22 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
     {
       'title': 'Stories',
       'subtitle': 'Short stories, novels, folklore, prose',
-      'icon': Icons.book,
+      'icon': Icons.menu_book,
       'value': 'stories',
       'color': const Color(0xFF8B5CF6),
     },
     {
-      'title': 'Scripts & Plays',
-      'subtitle': 'Stage, dialogues, performance pieces',
-      'icon': Icons.theater_comedy,
-      'value': 'scripts',
+      'title': 'Quotes & Aphorisms',
+      'subtitle': 'Inspirations, reflections, timeless lines',
+      'icon': Icons.format_quote,
+      'value': 'quotes',
       'color': const Color(0xFFF59E0B),
     },
     {
-      'title': 'Essays & Reflections',
-      'subtitle': 'Philosophy, journals, thought pieces',
-      'icon': Icons.article,
-      'value': 'essays',
+      'title': 'Microfiction',
+      'subtitle': 'Tiny tales, flash fiction, one-liners',
+      'icon': Icons.bolt,
+      'value': 'microfiction',
       'color': const Color(0xFFEF4444),
     },
   ];
@@ -116,8 +126,110 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _pageController.dispose();
+    _scrollController1.dispose();
+    _scrollController2.dispose();
+    _scrollController3.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Choose Profile Photo',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_rounded),
+                  title: const Text('Choose from Gallery'),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_rounded),
+                  title: const Text('Take a Photo'),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+                if (_selectedImage != null)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                    ),
+                    title: const Text(
+                      'Remove Photo',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      setState(() {
+                        _selectedImage = null;
+                      });
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (source != null) {
+        final XFile? image = await picker.pickImage(
+          source: source,
+          maxWidth: 1024,
+          maxHeight: 1024,
+          imageQuality: 85,
+        );
+
+        if (image != null) {
+          setState(() {
+            _selectedImage = File(image.path);
+          });
+          HapticFeedback.mediumImpact();
+        }
+      }
+    } catch (e) {
+      _showErrorMessage('Failed to pick image: $e');
+    }
+  }
+
+  Future<String?> _uploadImage(String userId) async {
+    if (_selectedImage == null) return null;
+
+    setState(() => _isUploadingImage = true);
+
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images')
+          .child('$userId.jpg');
+
+      final uploadTask = await storageRef.putFile(_selectedImage!);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+      setState(() => _uploadedImageUrl = downloadUrl);
+      return downloadUrl;
+    } catch (e) {
+      _showErrorMessage('Failed to upload image: $e');
+      return null;
+    } finally {
+      setState(() => _isUploadingImage = false);
+    }
   }
 
   Future<void> _handleSignup() async {
@@ -128,35 +240,47 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
     HapticFeedback.mediumImpact();
 
     try {
-      // Create user document in Firestore
-      final userData = UserModel(
-        uid: "",
-        firstname: _firstnameController.text.trim(),
-        lastname: _lastnameController.text.trim(),
-        email: _emailController.text.trim(),
-        userName: _usernameController.text.trim(),
-        type: _selectedTypes,
-        country: _selectedCountry!.name,
-        photoURl: null,
-        postCount: 0,
-        followersCount: 0,
-        followingCount: 0,
-        createdAt: DateTime.now(),
-      );
-
-      // await _authService.saveUserData(userData);
-      _authService.signUpWithEmailAndPassword(
+      final credential = await _authService.signUpWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
-        userData: userData,
+        userData: UserModel(
+          uid: "",
+          firstname: _firstnameController.text.trim(),
+          lastname: _lastnameController.text.trim(),
+          email: _emailController.text.trim(),
+          userName: _usernameController.text.trim(),
+          type: _selectedTypes,
+          country: _selectedCountry!.name,
+          photoURl: null,
+          postCount: 0,
+          followersCount: 0,
+          followingCount: 0,
+          createdAt: DateTime.now(),
+        ),
+        context: context,
       );
 
-      if (mounted) {
-        _showSuccessMessage('Welcome to Poetic! Account created successfully.');
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-        );
+      if (_selectedImage != null && credential?.user != null) {
+        final imageUrl = await _uploadImage(credential!.user!.uid);
+        if (imageUrl != null) {
+          await _authService.updateUserData(
+            credential.user!.uid,
+            UserModel(
+              uid: credential.user!.uid,
+              firstname: _firstnameController.text.trim(),
+              lastname: _lastnameController.text.trim(),
+              email: _emailController.text.trim(),
+              userName: _usernameController.text.trim(),
+              type: _selectedTypes,
+              country: _selectedCountry!.name,
+              photoURl: imageUrl,
+              postCount: 0,
+              followersCount: 0,
+              followingCount: 0,
+              createdAt: DateTime.now(),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -196,30 +320,6 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 4),
-      ),
-    );
-  }
-
-  void _showSuccessMessage(String message) {
-    HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -293,6 +393,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -300,7 +401,10 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
             position: _slideAnimation,
             child: Column(
               children: [
-                _buildHeader(theme),
+                // ULTRA COMPACT HEADER - Only ~80px!
+                _buildCompactHeader(theme),
+
+                // Maximum space for content
                 Expanded(
                   child: Form(
                     key: _formKey,
@@ -315,6 +419,8 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
+
+                // Navigation buttons
                 _buildNavigationButtons(theme),
               ],
             ),
@@ -324,461 +430,466 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
+  // ULTRA COMPACT HEADER - YOUR DESIGN!
+  Widget _buildCompactHeader(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // Row with Step Title and Sign In button
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (_currentStep > 0)
-                IconButton(
-                  onPressed: _isLoading ? null : _previousStep,
-                  icon: const Icon(Icons.arrow_back),
-                  style: IconButton.styleFrom(
-                    backgroundColor: theme.colorScheme.surfaceVariant
-                        .withValues(alpha: 0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+              // Step title
+              Text(
+                'Step ${_currentStep + 1}/3 • ${_getStepTitle()}',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
                 ),
-              const Spacer(),
+              ),
+
+              // Sign In button
               TextButton(
                 onPressed: _isLoading
                     ? null
                     : () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => Login()),
+                        MaterialPageRoute(builder: (context) => const Login()),
                       ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                ),
                 child: Text(
                   'Sign In',
                   style: TextStyle(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w600,
+                    fontSize: 14,
                   ),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
-          // Enhanced Progress indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: List.generate(3, (index) {
-                final isActive = index <= _currentStep;
-                final isCompleted = index < _currentStep;
-
-                return Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.outline.withValues(
-                                    alpha: 0.2,
-                                  ),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+          // Progress bar only
+          Row(
+            children: List.generate(3, (index) {
+              final isActive = index <= _currentStep;
+              return Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.outline.withValues(
+                                  alpha: 0.2,
+                                ),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      if (index < 2) const SizedBox(width: 8),
-                    ],
-                  ),
-                );
-              }),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Step indicator with icons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  _getStepIcon(),
-                  color: theme.colorScheme.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Step ${_currentStep + 1} of 3',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      fontWeight: FontWeight.w500,
                     ),
-                  ),
-                  Text(
-                    _getStepTitle(),
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                    if (index < 2) const SizedBox(width: 6),
+                  ],
+                ),
+              );
+            }),
           ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            _getStepSubtitle(),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
   Widget _buildPersonalInfoStep(ThemeData theme) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-
-          InputField(
-            label: 'First Name',
-            hint: 'Enter your first name',
-            controller: _firstnameController,
-            required: true,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
-            prefixIcon: const Icon(Icons.person_outline),
-            enabled: !_isLoading,
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'First name is required';
-              }
-              if (value!.trim().length < 2) {
-                return 'First name must be at least 2 characters';
-              }
-              return null;
-            },
+    return ListView(
+      controller: _scrollController1,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      children: [
+        // Profile image - compact
+        Center(
+          child: GestureDetector(
+            onTap: _isLoading ? null : _pickImage,
+            child: Stack(
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: _selectedImage != null
+                        ? Colors.transparent
+                        : theme.colorScheme.primaryContainer.withValues(
+                            alpha: 0.3,
+                          ),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: theme.colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                  child: _isUploadingImage
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: theme.colorScheme.primary,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : _selectedImage != null
+                      ? ClipOval(
+                          child: Image.file(
+                            _selectedImage!,
+                            fit: BoxFit.cover,
+                            width: 100,
+                            height: 100,
+                          ),
+                        )
+                      : Icon(
+                          Icons.person_outline_rounded,
+                          size: 40,
+                          color: theme.colorScheme.primary,
+                        ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.colorScheme.surface,
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      _selectedImage != null ? Icons.edit : Icons.camera_alt,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-
-          const SizedBox(height: 20),
-
-          InputField(
-            label: 'Last Name',
-            hint: 'Enter your last name',
-            controller: _lastnameController,
-            required: true,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.done,
-            prefixIcon: const Icon(Icons.person_outline),
-            enabled: !_isLoading,
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'Last name is required';
-              }
-              if (value!.trim().length < 2) {
-                return 'Last name must be at least 2 characters';
-              }
-              return null;
-            },
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            _selectedImage != null ? 'Tap to change' : 'Add photo (optional)',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
+        ),
+        const SizedBox(height: 20),
 
-          const SizedBox(height: 20),
+        InputField(
+          label: 'First Name',
+          hint: 'Enter your first name',
+          controller: _firstnameController,
+          required: true,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+          prefixIcon: const Icon(Icons.person_outline),
+          enabled: !_isLoading,
+          validator: (value) {
+            if (value?.trim().isEmpty ?? true) {
+              return 'First name is required';
+            }
+            if (value!.trim().length < 2) {
+              return 'First name must be at least 2 characters';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 14),
 
-          _buildCountryPicker(theme),
+        InputField(
+          label: 'Last Name',
+          hint: 'Enter your last name',
+          controller: _lastnameController,
+          required: true,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+          prefixIcon: const Icon(Icons.person_outline),
+          enabled: !_isLoading,
+          validator: (value) {
+            if (value?.trim().isEmpty ?? true) {
+              return 'Last name is required';
+            }
+            if (value!.trim().length < 2) {
+              return 'Last name must be at least 2 characters';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 14),
 
-          const SizedBox(height: 32),
-        ],
-      ),
+        _buildCountryPicker(theme),
+        const SizedBox(height: 120),
+      ],
     );
   }
 
   Widget _buildAccountInfoStep(ThemeData theme) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
+    return ListView(
+      controller: _scrollController2,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      children: [
+        InputField(
+          label: 'Username',
+          hint: 'Choose a unique username',
+          controller: _usernameController,
+          required: true,
+          textInputAction: TextInputAction.next,
+          prefixIcon: const Icon(Icons.alternate_email),
+          enabled: !_isLoading,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
+            LengthLimitingTextInputFormatter(20),
+          ],
+          validator: (value) {
+            if (value?.trim().isEmpty ?? true) {
+              return 'Username is required';
+            }
+            if (value!.length < 3) {
+              return 'Username must be at least 3 characters';
+            }
+            if (value.length > 20) {
+              return 'Username must be less than 20 characters';
+            }
+            if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
+              return 'Username can only contain letters, numbers, and underscores';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 14),
 
-          InputField(
-            label: 'Username',
-            hint: 'Choose a unique username',
-            controller: _usernameController,
-            required: true,
-            textInputAction: TextInputAction.next,
-            prefixIcon: const Icon(Icons.alternate_email),
-            enabled: !_isLoading,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
-              LengthLimitingTextInputFormatter(20),
-            ],
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'Username is required';
-              }
-              if (value!.length < 3) {
-                return 'Username must be at least 3 characters';
-              }
-              if (value.length > 20) {
-                return 'Username must be less than 20 characters';
-              }
-              if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
-                return 'Username can only contain letters, numbers, and underscores';
-              }
-              return null;
-            },
-          ),
+        InputField(
+          label: 'Email',
+          hint: 'Enter your email address',
+          controller: _emailController,
+          required: true,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          prefixIcon: const Icon(Icons.email_outlined),
+          enabled: !_isLoading,
+          validator: (value) {
+            if (value?.trim().isEmpty ?? true) {
+              return 'Email is required';
+            }
+            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
+              return 'Enter a valid email address';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 14),
 
-          const SizedBox(height: 20),
+        InputField(
+          label: 'Password',
+          hint: 'Create a strong password (min. 6 characters)',
+          controller: _passwordController,
+          required: true,
+          obscureText: true,
+          textInputAction: TextInputAction.next,
+          prefixIcon: const Icon(Icons.lock_outline),
+          enabled: !_isLoading,
+          validator: (value) {
+            if (value?.trim().isEmpty ?? true) {
+              return 'Password is required';
+            }
+            if (value!.length < 6) {
+              return 'Password must be at least 6 characters';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 14),
 
-          InputField(
-            label: 'Email',
-            hint: 'Enter your email address',
-            controller: _emailController,
-            required: true,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            prefixIcon: const Icon(Icons.email_outlined),
-            enabled: !_isLoading,
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'Email is required';
-              }
-              if (!RegExp(
-                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-              ).hasMatch(value!)) {
-                return 'Enter a valid email address';
-              }
-              return null;
-            },
-          ),
-
-          const SizedBox(height: 20),
-
-          InputField(
-            label: 'Password',
-            hint: 'Create a strong password (min. 6 characters)',
-            controller: _passwordController,
-            required: true,
-            obscureText: true,
-            textInputAction: TextInputAction.next,
-            prefixIcon: const Icon(Icons.lock_outline),
-            enabled: !_isLoading,
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'Password is required';
-              }
-              if (value!.length < 6) {
-                return 'Password must be at least 6 characters';
-              }
-              return null;
-            },
-          ),
-
-          const SizedBox(height: 20),
-
-          InputField(
-            label: 'Confirm Password',
-            hint: 'Confirm your password',
-            controller: _confirmPasswordController,
-            required: true,
-            obscureText: true,
-            textInputAction: TextInputAction.done,
-            prefixIcon: const Icon(Icons.lock_outline),
-            enabled: !_isLoading,
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'Please confirm your password';
-              }
-              if (value != _passwordController.text) {
-                return 'Passwords do not match';
-              }
-              return null;
-            },
-          ),
-
-          const SizedBox(height: 32),
-        ],
-      ),
+        InputField(
+          label: 'Confirm Password',
+          hint: 'Confirm your password',
+          controller: _confirmPasswordController,
+          required: true,
+          obscureText: true,
+          textInputAction: TextInputAction.done,
+          prefixIcon: const Icon(Icons.lock_outline),
+          enabled: !_isLoading,
+          validator: (value) {
+            if (value?.trim().isEmpty ?? true) {
+              return 'Please confirm your password';
+            }
+            if (value != _passwordController.text) {
+              return 'Passwords do not match';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 180), // EXTRA space for keyboard
+      ],
     );
   }
 
   Widget _buildPreferencesStep(ThemeData theme) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-
-          Text(
-            'What type of content do you create?',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface,
-            ),
+    return ListView(
+      controller: _scrollController3,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      children: [
+        Text(
+          'What type of content do you create?',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
           ),
+        ),
+        const SizedBox(height: 16),
 
-          const SizedBox(height: 8),
+        ...List.generate(_contentTypes.length, (index) {
+          final type = _contentTypes[index];
+          final isSelected = _selectedTypes.contains(type['value']);
 
-          Text(
-            'Select all that apply to help us personalize your experience',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Content types with enhanced styling
-          ...List.generate(_contentTypes.length, (index) {
-            final type = _contentTypes[index];
-            final isSelected = _selectedTypes.contains(type['value']);
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _isLoading
-                      ? null
-                      : () {
-                          HapticFeedback.lightImpact();
-                          setState(() {
-                            if (isSelected) {
-                              _selectedTypes.remove(type['value']);
-                            } else {
-                              _selectedTypes.add(type['value']);
-                            }
-                          });
-                        },
-                  borderRadius: BorderRadius.circular(16),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: isSelected
-                            ? type['color']
-                            : theme.colorScheme.outline.withValues(alpha: 0.3),
-                        width: isSelected ? 2 : 1,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isLoading
+                    ? null
+                    : () {
+                        HapticFeedback.lightImpact();
+                        setState(() {
+                          if (isSelected) {
+                            _selectedTypes.remove(type['value']);
+                          } else {
+                            _selectedTypes.add(type['value']);
+                          }
+                        });
+                      },
+                borderRadius: BorderRadius.circular(14),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    border: Border.all(
                       color: isSelected
-                          ? type['color'].withValues(alpha: 0.05)
-                          : Colors.transparent,
+                          ? type['color']
+                          : theme.colorScheme.outline.withValues(alpha: 0.3),
+                      width: isSelected ? 2 : 1,
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
+                    borderRadius: BorderRadius.circular(14),
+                    color: isSelected
+                        ? type['color'].withValues(alpha: 0.05)
+                        : Colors.transparent,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? type['color'].withValues(alpha: 0.1)
+                              : theme.colorScheme.surfaceVariant.withValues(
+                                  alpha: 0.5,
+                                ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          type['icon'],
+                          color: isSelected
+                              ? type['color']
+                              : theme.colorScheme.onSurfaceVariant,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              type['title'],
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurface,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              type['subtitle'],
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.7,
+                                ),
+                                fontSize: 12,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      AnimatedScale(
+                        scale: isSelected ? 1.0 : 0.8,
+                        duration: const Duration(milliseconds: 200),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? type['color'].withValues(alpha: 0.1)
-                                : theme.colorScheme.surfaceVariant.withValues(
-                                    alpha: 0.5,
-                                  ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            type['icon'],
-                            color: isSelected
                                 ? type['color']
-                                : theme.colorScheme.onSurfaceVariant,
-                            size: 24,
-                          ),
-                        ),
-
-                        const SizedBox(width: 16),
-
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                type['title'],
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                type['subtitle'],
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(
-                                    alpha: 0.7,
-                                  ),
-                                  height: 1.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        AnimatedScale(
-                          scale: isSelected ? 1.0 : 0.8,
-                          duration: const Duration(milliseconds: 200),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
                               color: isSelected
                                   ? type['color']
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSelected
-                                    ? type['color']
-                                    : theme.colorScheme.outline.withValues(
-                                        alpha: 0.3,
-                                      ),
-                                width: 2,
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.check,
-                              color: isSelected
-                                  ? Colors.white
-                                  : Colors.transparent,
-                              size: 16,
+                                  : theme.colorScheme.outline.withValues(
+                                      alpha: 0.3,
+                                    ),
+                              width: 2,
                             ),
                           ),
+                          child: Icon(
+                            Icons.check,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.transparent,
+                            size: 14,
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            );
-          }),
+            ),
+          );
+        }),
 
-          const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
-          // Terms and conditions
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Checkbox(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: Checkbox(
                 value: _acceptTerms,
                 onChanged: _isLoading
                     ? null
@@ -790,52 +901,48 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: _isLoading
-                      ? null
-                      : () {
-                          setState(() => _acceptTerms = !_acceptTerms);
-                        },
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12, right: 8),
-                    child: RichText(
-                      text: TextSpan(
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.7,
-                          ),
-                          height: 1.4,
-                        ),
-                        children: [
-                          const TextSpan(text: 'I agree to the '),
-                          TextSpan(
-                            text: 'Terms and Conditions',
-                            style: TextStyle(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const TextSpan(text: ' and '),
-                          TextSpan(
-                            text: 'Privacy Policy',
-                            style: TextStyle(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                onTap: _isLoading
+                    ? null
+                    : () {
+                        setState(() => _acceptTerms = !_acceptTerms);
+                      },
+                child: RichText(
+                  text: TextSpan(
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      height: 1.3,
+                      fontSize: 12,
                     ),
+                    children: [
+                      const TextSpan(text: 'I agree to the '),
+                      TextSpan(
+                        text: 'Terms',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const TextSpan(text: ' and '),
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 100),
+      ],
     );
   }
 
@@ -899,7 +1006,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                   },
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
                 border: Border.all(
                   color: theme.colorScheme.outline.withValues(alpha: 0.3),
@@ -913,20 +1020,20 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                   Icon(
                     Icons.public,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    size: 20,
+                    size: 18,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   if (_selectedCountry != null) ...[
                     Text(
                       _selectedCountry!.flagEmoji,
-                      style: const TextStyle(fontSize: 20),
+                      style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(width: 8),
                   ],
                   Expanded(
                     child: Text(
                       _selectedCountry?.name ?? 'Select your country',
-                      style: theme.textTheme.bodyLarge?.copyWith(
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         color: _selectedCountry == null
                             ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
                             : theme.colorScheme.onSurface,
@@ -936,6 +1043,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                   Icon(
                     Icons.keyboard_arrow_down,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    size: 18,
                   ),
                 ],
               ),
@@ -948,7 +1056,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
 
   Widget _buildNavigationButtons(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         boxShadow: [
@@ -966,7 +1074,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
               child: OutlinedButton(
                 onPressed: _isLoading ? null : _previousStep,
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -979,10 +1087,10 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                   children: [
                     Icon(
                       Icons.arrow_back,
-                      size: 18,
+                      size: 16,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
                       'Previous',
                       style: TextStyle(
@@ -990,33 +1098,33 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                           alpha: 0.7,
                         ),
                         fontWeight: FontWeight.w500,
+                        fontSize: 14,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-
-          if (_currentStep > 0) const SizedBox(width: 16),
+          if (_currentStep > 0) const SizedBox(width: 12),
 
           Expanded(
             flex: _currentStep == 0 ? 1 : 1,
             child: FilledButton(
               onPressed: _isLoading ? null : _nextStep,
               style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: _isLoading ? 0 : 2,
               ),
               child: _isLoading
-                  ? SizedBox(
-                      height: 20,
-                      width: 20,
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: theme.colorScheme.onPrimary,
+                        color: Colors.white,
                       ),
                     )
                   : Row(
@@ -1025,17 +1133,13 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                         Text(
                           _getButtonText(),
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         if (_currentStep < 2) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_forward,
-                            size: 18,
-                            color: theme.colorScheme.onPrimary,
-                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward, size: 16),
                         ],
                       ],
                     ),
@@ -1046,40 +1150,14 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
     );
   }
 
-  IconData _getStepIcon() {
-    switch (_currentStep) {
-      case 0:
-        return Icons.person_outline;
-      case 1:
-        return Icons.account_circle_outlined;
-      case 2:
-        return Icons.tune;
-      default:
-        return Icons.person_outline;
-    }
-  }
-
   String _getStepTitle() {
     switch (_currentStep) {
       case 0:
-        return 'Personal Information';
+        return 'Profile & Details';
       case 1:
-        return 'Account Details';
+        return 'Account';
       case 2:
-        return 'Content Preferences';
-      default:
-        return '';
-    }
-  }
-
-  String _getStepSubtitle() {
-    switch (_currentStep) {
-      case 0:
-        return 'Tell us about yourself';
-      case 1:
-        return 'Create your account credentials';
-      case 2:
-        return 'Customize your creative journey';
+        return 'Preferences';
       default:
         return '';
     }
