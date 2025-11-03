@@ -4,10 +4,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:poem_application/models/comment_model.dart';
 import 'package:poem_application/models/post_model.dart';
 import 'package:poem_application/services/notification_service.dart';
+import 'package:poem_application/services/fcm_service.dart';
 
 class CommentsRepository {
   final FirebaseFirestore firestore;
   final NotificationService _notificationService = NotificationService();
+  final FCMService _fcmService = FCMService();
 
   CommentsRepository(this.firestore);
 
@@ -69,6 +71,17 @@ class CommentsRepository {
         senderPhotoUrl: userPhotoUrl,
         commentId: docRef.id,
       );
+
+      // Send push notification to post owner
+      if (post.createdBy != currentUser.uid) {
+        // Don't send notification if user comments on their own post
+        await _fcmService.sendCommentNotification(
+          postOwnerId: post.createdBy,
+          commenterName: userName,
+          postTitle: post.title.isNotEmpty ? post.title : 'your post',
+          commentText: data.text,
+        );
+      }
 
       final snapshot = await docRef.get();
       return CommentModel.fromFirestore(snapshot);

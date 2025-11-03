@@ -1,22 +1,24 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:poem_application/models/user_model.dart';
 import 'package:poem_application/screens/auth/login.dart';
 import 'package:poem_application/services/auth_service.dart';
+import 'package:poem_application/services/fcm_service.dart';
 import 'package:poem_application/widgets/inputfields.dart';
 
-class Signup extends StatefulWidget {
+class Signup extends ConsumerStatefulWidget {
   const Signup({super.key});
 
   @override
-  State<Signup> createState() => _SignupState();
+  ConsumerState<Signup> createState() => _SignupState();
 }
 
-class _SignupState extends State<Signup> with TickerProviderStateMixin {
+class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final PageController _pageController = PageController();
   final AuthService _authService = AuthService();
@@ -240,6 +242,11 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
     HapticFeedback.mediumImpact();
 
     try {
+      // Get FCM token
+      final fcmService = FCMService();
+      await fcmService.initialize();
+      final fcmToken = await fcmService.getToken();
+
       final credential = await _authService.signUpWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -256,30 +263,40 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
           followersCount: 0,
           followingCount: 0,
           createdAt: DateTime.now(),
+          fcmToken: fcmToken,
         ),
         context: context,
       );
 
-      if (_selectedImage != null && credential?.user != null) {
-        final imageUrl = await _uploadImage(credential!.user!.uid);
-        if (imageUrl != null) {
-          await _authService.updateUserData(
-            credential.user!.uid,
-            UserModel(
-              uid: credential.user!.uid,
-              firstname: _firstnameController.text.trim(),
-              lastname: _lastnameController.text.trim(),
-              email: _emailController.text.trim(),
-              userName: _usernameController.text.trim(),
-              type: _selectedTypes,
-              country: _selectedCountry!.name,
-              photoURl: imageUrl,
-              postCount: 0,
-              followersCount: 0,
-              followingCount: 0,
-              createdAt: DateTime.now(),
-            ),
-          );
+      if (credential?.user != null) {
+        // Start listening to token refresh
+        if (fcmToken != null) {
+          fcmService.listenToTokenRefresh(credential!.user!.uid);
+        }
+
+        // Upload profile image if selected
+        if (_selectedImage != null) {
+          final imageUrl = await _uploadImage(credential.user!.uid);
+          if (imageUrl != null) {
+            await _authService.updateUserData(
+              credential.user!.uid,
+              UserModel(
+                uid: credential.user!.uid,
+                firstname: _firstnameController.text.trim(),
+                lastname: _lastnameController.text.trim(),
+                email: _emailController.text.trim(),
+                userName: _usernameController.text.trim(),
+                type: _selectedTypes,
+                country: _selectedCountry!.name,
+                photoURl: imageUrl,
+                postCount: 0,
+                followersCount: 0,
+                followingCount: 0,
+                createdAt: DateTime.now(),
+                fcmToken: fcmToken,
+              ),
+            );
+          }
         }
       }
     } catch (e) {

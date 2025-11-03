@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:poem_application/screens/auth/signup.dart';
+import 'package:poem_application/screens/auth/google_user_info_screen.dart';
 import 'package:poem_application/screens/home/home_screen.dart';
 import 'package:poem_application/services/auth_service.dart';
 import 'package:poem_application/widgets/emailInputField.dart';
@@ -92,15 +93,47 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
 
     try {
-      await _authService.signInWithGoogle();
+      final credential = await _authService.signInWithGoogle();
+
+      if (credential == null) {
+        // User cancelled the sign-in
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+
+      if (credential.user == null) {
+        throw Exception('Failed to sign in with Google');
+      }
+
+      // Check if user document exists in Firestore
+      final userExists = await _authService.doesUserDocumentExist(credential.user!.uid);
 
       if (mounted) {
-        _showSuccessMessage('Welcome back!');
-        Navigator.of(context).pushReplacementNamed('/home');
+        if (userExists) {
+          // User already has a profile, go to home
+          _showSuccessMessage('Welcome back!');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          // New Google user, collect additional info
+          _showSuccessMessage('Please complete your profile');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => GoogleUserInfoScreen(
+                firebaseUser: credential.user!,
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        _showErrorMessage(e.toString());
+        _showErrorMessage(e.toString().replaceAll('Exception: ', ''));
       }
     } finally {
       if (mounted) {

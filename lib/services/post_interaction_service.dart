@@ -5,12 +5,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:poem_application/models/post_model.dart';
 import 'package:poem_application/services/notification_service.dart';
+import 'package:poem_application/services/fcm_service.dart';
 import 'package:share_plus/share_plus.dart';
 
 class PostInteractionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final NotificationService _notificationService = NotificationService();
+  final FCMService _fcmService = FCMService();
 
   // ============ LIKE FUNCTIONALITY ============
 
@@ -71,6 +73,16 @@ class PostInteractionService {
           senderName: userName,
           senderPhotoUrl: userPhotoUrl,
         );
+
+        // Send push notification to post owner
+        if (post.createdBy != currentUser.uid) {
+          // Don't send notification if user likes their own post
+          await _fcmService.sendLikeNotification(
+            postOwnerId: post.createdBy,
+            likerName: userName,
+            postTitle: post.title.isNotEmpty ? post.title : 'your post',
+          );
+        }
 
         return true; // Post is now liked
       }
