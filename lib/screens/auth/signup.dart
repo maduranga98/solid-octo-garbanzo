@@ -805,7 +805,7 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? type['color'].withValues(alpha: 0.1)
-                              : theme.colorScheme.surfaceVariant.withValues(
+                              : theme.colorScheme.surfaceContainer.withValues(
                                   alpha: 0.5,
                                 ),
                           borderRadius: BorderRadius.circular(10),
@@ -1013,7 +1013,9 @@ class _SignupState extends State<Signup> with TickerProviderStateMixin {
                   width: 1.5,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                color: theme.colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                color: theme.colorScheme.surfaceContainer.withValues(
+                  alpha: 0.5,
+                ),
               ),
               child: Row(
                 children: [

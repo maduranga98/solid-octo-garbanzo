@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:poem_application/providers/auth_provider.dart';
 import 'package:poem_application/providers/user_provider.dart';
 import 'package:poem_application/screens/messages/message.dart';
+import 'package:poem_application/screens/profile/edit_profile_screen.dart';
 import 'package:poem_application/screens/profile/followers_following_screen.dart';
 import 'package:poem_application/widgets/draft.dart';
 import 'package:poem_application/widgets/ideas.dart';
@@ -97,7 +98,7 @@ class UserProfile extends ConsumerWidget {
                   backgroundColor: theme.scaffoldBackgroundColor,
                   foregroundColor: theme.textTheme.bodyLarge?.color,
                   elevation: 0,
-                  expandedHeight: isOwnProfile ? 320 : 380,
+                  expandedHeight: isOwnProfile ? 380 : 380,
                   flexibleSpace: FlexibleSpaceBar(
                     background: _buildProfileHeader(
                       user,
@@ -197,15 +198,17 @@ class UserProfile extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: primaryColor.withOpacity(isDark ? 0.7 : 0.5),
-                  width: 2.5,
+                  color: isDark
+                      ? Colors.grey.shade600
+                      : primaryColor.withValues(alpha: 0.5),
+                  width: 3,
                 ),
                 boxShadow: isDark
                     ? [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.2),
-                          blurRadius: 8,
-                          spreadRadius: 1,
+                          color: Colors.grey.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          spreadRadius: 2,
                         ),
                       ]
                     : null,
@@ -213,8 +216,8 @@ class UserProfile extends ConsumerWidget {
               child: CircleAvatar(
                 radius: 42,
                 backgroundColor: isDark
-                    ? primaryColor.withOpacity(0.25)
-                    : primaryColor.withOpacity(0.15),
+                    ? Colors.grey.shade800
+                    : primaryColor.withValues(alpha: 0.15),
                 backgroundImage:
                     user.photoURl != null && user.photoURl!.isNotEmpty
                     ? NetworkImage(user.photoURl!)
@@ -227,9 +230,7 @@ class UserProfile extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? primaryColor.withOpacity(0.9)
-                              : primaryColor,
+                          color: isDark ? Colors.white : primaryColor,
                         ),
                       )
                     : null,
@@ -301,11 +302,43 @@ class UserProfile extends ConsumerWidget {
                 ),
               ],
             ),
-            if (!isOwnProfile) ...[
-              const SizedBox(height: 20),
+            const SizedBox(height: 20),
+            if (isOwnProfile) ...[
+              _buildEditProfileButton(context, theme),
+            ] else ...[
               _buildActionButtons(context, ref, profileUserId),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditProfileButton(BuildContext context, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 0),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const EditProfileScreen(),
+              ),
+            );
+          },
+          icon: const Icon(Icons.edit_outlined, size: 18),
+          label: const Text('Edit Profile'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: theme.colorScheme.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            elevation: 0,
+          ),
         ),
       ),
     );
@@ -604,7 +637,7 @@ class UserProfile extends ConsumerWidget {
     return Container(
       height: 30,
       width: 1,
-      color: isDark ? Colors.grey.shade800 : Colors.grey.withOpacity(0.2),
+      color: isDark ? Colors.grey.shade800 : Colors.grey.withValues(alpha: 0.2),
     );
   }
 

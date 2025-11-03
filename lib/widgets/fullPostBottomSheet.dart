@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_quill/quill_delta.dart';
 import 'package:poem_application/models/post_model.dart';
 import 'package:poem_application/providers/auth_provider.dart';
 import 'package:poem_application/providers/user_provider.dart';
@@ -311,18 +314,10 @@ class FullPostBottomSheet extends ConsumerWidget {
             const SizedBox(height: 24),
           ],
 
-          // Main content
-          SelectableText(
-            post.plainText,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurface,
-              height: 1.8,
-              fontSize: post.fontSize?.toDouble() ?? 16,
-              fontFamily: post.fontFamily,
-            ),
-          ),
+          // Main content with rich text formatting
+          _buildRichTextContent(theme, colorScheme),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           // Engagement stats
           _buildEngagementStats(theme, colorScheme),
@@ -330,6 +325,143 @@ class FullPostBottomSheet extends ConsumerWidget {
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+
+  Widget _buildRichTextContent(ThemeData theme, ColorScheme colorScheme) {
+    try {
+      if (post.richText != null && post.richText!.isNotEmpty) {
+        final delta = Delta.fromJson(jsonDecode(post.richText!) as List);
+        final controller = QuillController(
+          document: Document.fromDelta(delta),
+          selection: const TextSelection.collapsed(offset: 0),
+        );
+
+        return QuillEditor(
+          controller: controller,
+          focusNode: FocusNode(),
+          scrollController: ScrollController(),
+          config: QuillEditorConfig(
+            padding: EdgeInsets.zero,
+            enableInteractiveSelection: true,
+            expands: false,
+            autoFocus: false,
+            showCursor: false,
+            scrollable: false,
+            customStyles: DefaultStyles(
+              paragraph: DefaultTextBlockStyle(
+                TextStyle(
+                  fontSize: 16,
+                  color: colorScheme.onSurface,
+                  height: 1.8,
+                ),
+                const HorizontalSpacing(0, 0),
+                const VerticalSpacing(6, 0),
+                const VerticalSpacing(0, 0),
+                null,
+              ),
+              h1: DefaultTextBlockStyle(
+                TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                  height: 1.4,
+                ),
+                const HorizontalSpacing(0, 0),
+                const VerticalSpacing(12, 8),
+                const VerticalSpacing(0, 0),
+                null,
+              ),
+              h2: DefaultTextBlockStyle(
+                TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                  height: 1.4,
+                ),
+                const HorizontalSpacing(0, 0),
+                const VerticalSpacing(10, 6),
+                const VerticalSpacing(0, 0),
+                null,
+              ),
+              h3: DefaultTextBlockStyle(
+                TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                  height: 1.4,
+                ),
+                const HorizontalSpacing(0, 0),
+                const VerticalSpacing(8, 4),
+                const VerticalSpacing(0, 0),
+                null,
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error rendering rich text: $e');
+    }
+
+    // Fallback to plain text if rich text fails
+    return SelectableText(
+      post.plainText,
+      style: theme.textTheme.bodyLarge?.copyWith(
+        color: colorScheme.onSurface,
+        height: 1.8,
+        fontSize: 16,
+      ),
+    );
+  }
+
+  Widget _buildTagsSection(ThemeData theme, ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.tag,
+              size: 16,
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Tags',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
+        // const SizedBox(height: 12),
+        // Wrap(
+        //   spacing: 8,
+        //   runSpacing: 8,
+        //   children: post.tags!.map((tag) {
+        //     return Container(
+        //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        //       decoration: BoxDecoration(
+        //         color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+        //         borderRadius: BorderRadius.circular(16),
+        //         border: Border.all(
+        //           color: colorScheme.primary.withValues(alpha: 0.3),
+        //           width: 1,
+        //         ),
+        //       ),
+        //       child: Text(
+        //         tag,
+        //         style: theme.textTheme.bodySmall?.copyWith(
+        //           color: colorScheme.onPrimaryContainer,
+        //           fontWeight: FontWeight.w500,
+        //         ),
+        //       ),
+        //     );
+        //   }).toList(),
+        // ),
+      ],
     );
   }
 
@@ -476,9 +608,9 @@ class FullPostBottomSheet extends ConsumerWidget {
         return const Color(0xFF10B981);
       case 'stories':
         return const Color(0xFF8B5CF6);
-      case 'scripts':
+      case 'microfiction':
         return const Color(0xFFF59E0B);
-      case 'essays':
+      case 'quotes & aphorisms':
         return const Color(0xFFEF4444);
       default:
         return const Color(0xFF6366F1);
