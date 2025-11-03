@@ -46,7 +46,7 @@ dependencies:
   firebase_messaging: ^16.0.3
   #dotnev
   flutter_dotenv: ^6.0.0
-  google_sign_in: ^7.2.0
+  google_sign_in: ^6.2.1
   #country picker
   country_picker: ^2.0.27
   timeago: ^3.7.1
