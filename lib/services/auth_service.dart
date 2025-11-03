@@ -189,7 +189,13 @@ class AuthService {
       print("✅ Google user signed in: ${googleUser.email}");
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Verify we have the required tokens
+      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+        throw Exception('Failed to obtain Google authentication tokens');
+      }
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
