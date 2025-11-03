@@ -165,7 +165,10 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
   }
 
   Future<void> _completeRegistration() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Validate form if it's currently mounted (username step)
+    if (_formKey.currentState != null && !_formKey.currentState!.validate()) {
+      return;
+    }
 
     if (_selectedCountry == null) {
       _showErrorMessage('Please select your country');
