@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:poem_application/models/user_model.dart';
 import 'package:poem_application/repositories/user_repository.dart';
 import 'package:poem_application/screens/auth/user_preferences_intro_screen.dart';
@@ -8,6 +9,7 @@ import 'package:poem_application/screens/auth/user_preferences_intro_screen.dart
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
   late final UserRepository _userRepository;
 
   AuthService() {
@@ -176,31 +178,48 @@ class AuthService {
   Future<UserCredential?> signInWithGoogle() async {
     try {
       // Trigger the authentication flow
-      // final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      // if (googleUser == null) return null;
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      // User cancelled the sign-in
+      if (googleUser == null) {
+        print("⚠️ User cancelled Google Sign-In");
+        return null;
+      }
+
+      print("✅ Google user signed in: ${googleUser.email}");
 
       // Obtain the auth details from the request
-      // final GoogleSignInAuthentication googleAuth =
-      //     await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
       // Create a new credential
-      // final credential = GoogleAuthProvider.credential(
-      //   accessToken: googleAuth.accessToken,
-      //   idToken: googleAuth.idToken,
-      // );
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
 
       // Sign in to Firebase with the Google credential
-      // final userCredential = await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
 
-      // Create user document if doesn't exist
-      // if (userCredential.user != null) {
-      //   await _ensureUserDocument(userCredential.user!);
-      // }
+      print("✅ Firebase authentication successful");
 
-      // return userCredential;
-      return null;
+      return userCredential;
     } on FirebaseAuthException catch (e) {
+      print("❌ Firebase Auth error during Google Sign-In: ${e.code} - ${e.message}");
       throw _handleAuthError(e);
+    } catch (e) {
+      print("❌ General error during Google Sign-In: $e");
+      throw Exception('Failed to sign in with Google: $e');
+    }
+  }
+
+  // Check if user document exists in Firestore
+  Future<bool> doesUserDocumentExist(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      return doc.exists;
+    } catch (e) {
+      print("❌ Error checking user document: $e");
+      return false;
     }
   }
 
@@ -218,8 +237,10 @@ class AuthService {
   Future<void> signOut() async {
     try {
       await _auth.signOut();
-      // await _googleSignIn.signOut();
+      await _googleSignIn.signOut();
+      print("✅ User signed out successfully");
     } catch (e) {
+      print("❌ Error signing out: $e");
       throw Exception('Failed to sign out: $e');
     }
   }

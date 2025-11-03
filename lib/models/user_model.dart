@@ -20,6 +20,9 @@ class UserModel {
   final String preferredWritingLanguage;
   final bool exploreInternational;
 
+  // FCM token for push notifications
+  final String? fcmToken;
+
   UserModel({
     required this.uid,
     required this.firstname,
@@ -37,6 +40,7 @@ class UserModel {
     this.preferredReadingLanguages = const ['English'],
     this.preferredWritingLanguage = 'English',
     this.exploreInternational = true,
+    this.fcmToken,
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -96,6 +100,7 @@ class UserModel {
           : ['English'],
       preferredWritingLanguage: data['preferredWritingLanguage'] ?? 'English',
       exploreInternational: data['exploreInternational'] ?? true,
+      fcmToken: data['fcmToken'],
     );
   }
 
@@ -117,6 +122,7 @@ class UserModel {
       "preferredReadingLanguages": preferredReadingLanguages,
       "preferredWritingLanguage": preferredWritingLanguage,
       "exploreInternational": exploreInternational,
+      "fcmToken": fcmToken,
     };
   }
 
@@ -136,6 +142,7 @@ class UserModel {
     List<String>? preferredReadingLanguages,
     String? preferredWritingLanguage,
     bool? exploreInternational,
+    String? fcmToken,
   }) {
     return UserModel(
       uid: uid,
@@ -156,6 +163,7 @@ class UserModel {
       preferredWritingLanguage:
           preferredWritingLanguage ?? this.preferredWritingLanguage,
       exploreInternational: exploreInternational ?? this.exploreInternational,
+      fcmToken: fcmToken ?? this.fcmToken,
     );
   }
 }
