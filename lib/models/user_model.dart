@@ -71,6 +71,7 @@ class UserModel {
           : ['English'],
       preferredWritingLanguage: data['preferredWritingLanguage'] ?? 'English',
       exploreInternational: data['exploreInternational'] ?? true,
+      fcmToken: data['fcmToken'],
     );
   }
 
