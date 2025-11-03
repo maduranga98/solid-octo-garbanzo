@@ -165,7 +165,12 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
   }
 
   Future<void> _completeRegistration() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Validation is already handled in _nextPage for each step
+    // Final validation check before creating the user
+    if (_usernameController.text.trim().isEmpty) {
+      _showErrorMessage('Username is required');
+      return;
+    }
 
     if (_selectedCountry == null) {
       _showErrorMessage('Please select your country');
