@@ -269,21 +269,19 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
       );
 
       if (credential?.user != null) {
-        final user = credential!.user!;
-
         // Start listening to token refresh
         if (fcmToken != null) {
-          fcmService.listenToTokenRefresh(user.uid);
+          fcmService.listenToTokenRefresh(credential!.user!.uid);
         }
 
         // Upload profile image if selected
         if (_selectedImage != null) {
-          final imageUrl = await _uploadImage(user.uid);
+          final imageUrl = await _uploadImage(credential!.user!.uid);
           if (imageUrl != null) {
             await _authService.updateUserData(
-              user.uid,
+              credential!.user!.uid,
               UserModel(
-                uid: user.uid,
+                uid: credential.user!.uid,
                 firstname: _firstnameController.text.trim(),
                 lastname: _lastnameController.text.trim(),
                 email: _emailController.text.trim(),

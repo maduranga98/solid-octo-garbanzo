@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:poem_application/models/user_model.dart';
 import 'package:poem_application/repositories/user_repository.dart';
 import 'package:poem_application/screens/auth/user_preferences_intro_screen.dart';
@@ -9,7 +10,8 @@ import 'package:poem_application/screens/auth/user_preferences_intro_screen.dart
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   late final UserRepository _userRepository;
 
   AuthService() {
@@ -22,12 +24,52 @@ class AuthService {
   // Auth state stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  // Get FCM Token
+  Future<String?> getFCMToken() async {
+    try {
+      // Request permission for notifications
+      NotificationSettings settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        String? token = await _messaging.getToken();
+        print("✅ FCM Token obtained: $token");
+        return token;
+      } else {
+        print("⚠️ Notification permission denied");
+        return null;
+      }
+    } catch (e) {
+      print("❌ Error getting FCM token: $e");
+      return null;
+    }
+  }
+
+  // Update FCM Token in Firestore
+  Future<void> updateFCMToken(String uid) async {
+    try {
+      String? fcmToken = await getFCMToken();
+      if (fcmToken != null) {
+        await _firestore.collection('users').doc(uid).update({
+          'fcmToken': fcmToken,
+          'lastTokenUpdate': FieldValue.serverTimestamp(),
+        });
+        print("✅ FCM Token updated in Firestore");
+      }
+    } catch (e) {
+      print("❌ Error updating FCM token: $e");
+    }
+  }
+
   // Sign up with email and password
   Future<UserCredential?> signUpWithEmailAndPassword({
     required String email,
     required String password,
     required UserModel userData,
-    required BuildContext context, // Add context parameter
+    required BuildContext context,
   }) async {
     try {
       // Validate input
@@ -52,6 +94,9 @@ class AuthService {
         '${userData.firstname} ${userData.lastname}',
       );
 
+      // Get FCM Token
+      String? fcmToken = await getFCMToken();
+
       // Create user document in Firestore
       try {
         final userModelWithUid = UserModel(
@@ -62,11 +107,12 @@ class AuthService {
           userName: userData.userName,
           type: userData.type,
           country: userData.country,
-          photoURl: userData.photoURl,
+          photoURl: userData.photoURl ?? '', // Ensure it's not null
           postCount: userData.postCount,
           followersCount: userData.followersCount,
           followingCount: userData.followingCount,
           createdAt: userData.createdAt,
+          fcmToken: fcmToken, // Add FCM token
           // Initialize with default values - will be updated in intro screen
           preferredReadingLanguages: const ['English'],
           preferredWritingLanguage: 'English',
@@ -168,15 +214,22 @@ class AuthService {
         password: password,
       );
 
+      // Update FCM token on sign in
+      if (credential.user != null) {
+        await updateFCMToken(credential.user!.uid);
+      }
+
       return credential;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthError(e);
     }
   }
 
-  // Sign in with Google
   Future<UserCredential?> signInWithGoogle() async {
     try {
+      // Sign out first to ensure account picker shows
+      await _googleSignIn.signOut();
+
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
@@ -193,9 +246,15 @@ class AuthService {
           await googleUser.authentication;
 
       // Verify we have the required tokens
-      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+      if (googleAuth.accessToken == null && googleAuth.idToken == null) {
         throw Exception('Failed to obtain Google authentication tokens');
       }
+
+      print("✅ Google Auth tokens obtained");
+      print(
+        "Access Token: ${googleAuth.accessToken != null ? 'Present' : 'Missing'}",
+      );
+      print("ID Token: ${googleAuth.idToken != null ? 'Present' : 'Missing'}");
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
@@ -208,10 +267,94 @@ class AuthService {
 
       print("✅ Firebase authentication successful");
 
+      // Check if this is a new user
+      if (userCredential.user != null) {
+        final userExists = await doesUserDocumentExist(
+          userCredential.user!.uid,
+        );
+
+        if (!userExists) {
+          print("📝 Creating new user document for Google Sign-In user");
+
+          // Get FCM Token
+          String? fcmToken = await getFCMToken();
+
+          // Extract name parts
+          String displayName = userCredential.user!.displayName ?? '';
+          List<String> nameParts = displayName.split(' ');
+          String firstName = nameParts.isNotEmpty ? nameParts[0] : '';
+          String lastName = nameParts.length > 1
+              ? nameParts.sublist(1).join(' ')
+              : '';
+
+          // Generate username from email
+          String baseUsername = userCredential.user!.email!
+              .split('@')[0]
+              .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+          String username = baseUsername;
+          int counter = 1;
+
+          // Ensure username is unique
+          while (!await isUsernameAvailable(username)) {
+            username = '${baseUsername}_$counter';
+            counter++;
+          }
+
+          // Create user model with correct types
+          final newUser = UserModel(
+            uid: userCredential.user!.uid,
+            firstname: firstName,
+            lastname: lastName,
+            email: userCredential.user!.email ?? '',
+            userName: username,
+            type: [], // Default type
+            country: '', // Will be updated later
+            photoURl:
+                userCredential.user!.photoURL ?? '', // Get Google profile photo
+            postCount: 0,
+            followersCount: 0,
+            followingCount: 0,
+            createdAt:
+                DateTime.now(), // Changed from Timestamp.now() to DateTime.now()
+            fcmToken: fcmToken,
+            preferredReadingLanguages: [
+              'English',
+            ], // Changed from const ['English'] to ['English']
+            preferredWritingLanguage: 'English',
+            exploreInternational: true,
+          );
+
+          await _userRepository.createNewUser(newUser);
+          print("✅ New user document created successfully");
+        } else {
+          // Update FCM token for existing user
+          await updateFCMToken(userCredential.user!.uid);
+
+          // Update photo URL if it's empty in Firestore but exists in Google profile
+          final userData = await getUserData(userCredential.user!.uid);
+          if (userData != null &&
+              (userData.photoURl == null || userData.photoURl!.isEmpty) &&
+              userCredential.user!.photoURL != null) {
+            await _firestore
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .update({'photoURl': userCredential.user!.photoURL});
+            print("✅ Updated photo URL from Google profile");
+          }
+        }
+      }
+
       return userCredential;
     } on FirebaseAuthException catch (e) {
-      print("❌ Firebase Auth error during Google Sign-In: ${e.code} - ${e.message}");
+      print(
+        "❌ Firebase Auth error during Google Sign-In: ${e.code} - ${e.message}",
+      );
       throw _handleAuthError(e);
+    } on Exception catch (e) {
+      print("❌ Platform error during Google Sign-In: $e");
+      throw Exception(
+        'Failed to sign in with Google. Please check your internet connection and try again.',
+      );
     } catch (e) {
       print("❌ General error during Google Sign-In: $e");
       throw Exception('Failed to sign in with Google: $e');
@@ -368,8 +511,6 @@ class AuthService {
         return Exception('The provided credentials are invalid.');
       case 'network-request-failed':
         return Exception('Network error. Please check your connection.');
-      // case 'too-many-requests':
-      //   return Exception('Too many attempts. Please try again later.');
       default:
         return Exception('Authentication failed: ${e.message}');
     }
