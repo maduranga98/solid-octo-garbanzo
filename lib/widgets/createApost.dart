@@ -198,7 +198,7 @@ class _CreateapostState extends ConsumerState<Createapost> {
           Expanded(
             flex: _mode == PostMode.editPost ? 1 : 2,
             child: ElevatedButton.icon(
-              onPressed: _isLoading ? null : () => _savePost('publish'),
+              onPressed: _isLoading ? null : () => _handlePublishClick(),
               icon: _isLoading
                   ? const SizedBox(
                       width: 18,
@@ -599,7 +599,35 @@ class _CreateapostState extends ConsumerState<Createapost> {
     }
   }
 
-  Future<void> _savePost(String action) async {
+  Future<void> _handlePublishClick() async {
+    // Validate first
+    final title = ref.read(titleProvider);
+    final controller = ref.read(quillControllerProvider);
+    final plainTextContent = controller.document.toPlainText();
+
+    if (title.trim().isEmpty) {
+      _showSnackBar(context, 'Please add a title', isError: true);
+      return;
+    }
+
+    if (plainTextContent.trim().isEmpty) {
+      _showSnackBar(context, 'Please add some content', isError: true);
+      return;
+    }
+
+    // Show tag selection dialog
+    final selectedTags = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => const TagSelectionDialog(),
+    );
+
+    if (selectedTags != null) {
+      // User confirmed, proceed with publish
+      _savePost('publish', tags: selectedTags);
+    }
+  }
+
+  Future<void> _savePost(String action, {List<String>? tags}) async {
     if (_isLoading) return;
 
     setState(() => _isLoading = true);
@@ -656,6 +684,7 @@ class _CreateapostState extends ConsumerState<Createapost> {
             .where((word) => word.isNotEmpty)
             .length,
         'characterCount': plainTextContent.length,
+        if (action == 'publish' && tags != null) 'tags': tags,
       };
 
       if (action == 'draft') {
@@ -753,6 +782,343 @@ class _CreateapostState extends ConsumerState<Createapost> {
         backgroundColor: isError ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+}
+
+// Tag Selection Dialog
+class TagSelectionDialog extends StatefulWidget {
+  const TagSelectionDialog({super.key});
+
+  @override
+  State<TagSelectionDialog> createState() => _TagSelectionDialogState();
+}
+
+class _TagSelectionDialogState extends State<TagSelectionDialog> {
+  final List<String> _selectedTags = [];
+  final TextEditingController _customTagController = TextEditingController();
+  bool _isLoadingTags = true;
+  List<String> _availableTags = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTags();
+  }
+
+  @override
+  void dispose() {
+    _customTagController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadTags() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('app_settings')
+          .doc('tags')
+          .get();
+
+      if (doc.exists && doc.data()?['available_tags'] != null) {
+        setState(() {
+          _availableTags = List<String>.from(doc.data()!['available_tags']);
+          _isLoadingTags = false;
+        });
+      } else {
+        // Default tags if none exist
+        setState(() {
+          _availableTags = [
+            'Love',
+            'Nature',
+            'Life',
+            'Emotions',
+            'Inspiration',
+            'Sadness',
+            'Joy',
+            'Hope',
+            'Dreams',
+            'Memories',
+          ];
+          _isLoadingTags = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _availableTags = ['Love', 'Nature', 'Life', 'Emotions', 'Inspiration'];
+        _isLoadingTags = false;
+      });
+    }
+  }
+
+  Future<void> _addCustomTag() async {
+    final tag = _customTagController.text.trim();
+    if (tag.isEmpty) return;
+
+    // Validate tag
+    if (tag.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tag must be at least 2 characters'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (tag.length > 20) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tag must be less than 20 characters'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Check if tag already exists
+    if (_availableTags.contains(tag) || _selectedTags.contains(tag)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tag already exists'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      _customTagController.clear();
+      return;
+    }
+
+    // Add to selected tags
+    setState(() {
+      _selectedTags.add(tag);
+      _availableTags.add(tag);
+    });
+
+    // Save to Firebase
+    try {
+      await FirebaseFirestore.instance
+          .collection('app_settings')
+          .doc('tags')
+          .set({
+            'available_tags': FieldValue.arrayUnion([tag]),
+          }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error saving tag: $e');
+    }
+
+    _customTagController.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxDialogHeight = screenHeight - keyboardHeight - 100;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: 500,
+          maxHeight: maxDialogHeight.clamp(300.0, 600.0),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.tag, color: theme.colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Add Tags',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'Cancel',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Select existing tags or create new ones',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Selected tags
+                    if (_selectedTags.isNotEmpty) ...[
+                      Text(
+                        'Selected (${_selectedTags.length})',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _selectedTags.map((tag) {
+                          return Chip(
+                            label: Text(tag),
+                            deleteIcon: const Icon(Icons.close, size: 18),
+                            onDeleted: () {
+                              setState(() => _selectedTags.remove(tag));
+                            },
+                            backgroundColor: theme.colorScheme.primaryContainer,
+                            labelStyle: TextStyle(
+                              color: theme.colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Add custom tag
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _customTagController,
+                            decoration: InputDecoration(
+                              hintText: 'Create new tag...',
+                              prefixIcon: const Icon(Icons.add),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              counterText: '',
+                            ),
+                            maxLength: 20,
+                            textCapitalization: TextCapitalization.words,
+                            onSubmitted: (_) => _addCustomTag(),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filled(
+                          onPressed: _addCustomTag,
+                          icon: const Icon(Icons.add),
+                          tooltip: 'Add tag',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Available tags
+                    Text(
+                      'Available Tags',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    _isLoadingTags
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        : Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _availableTags.map((tag) {
+                              final isSelected = _selectedTags.contains(tag);
+                              return FilterChip(
+                                label: Text(tag),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      _selectedTags.add(tag);
+                                    } else {
+                                      _selectedTags.remove(tag);
+                                    }
+                                  });
+                                },
+                                backgroundColor:
+                                    theme.colorScheme.surfaceContainerHighest,
+                                selectedColor:
+                                    theme.colorScheme.primaryContainer,
+                                checkmarkColor:
+                                    theme.colorScheme.onPrimaryContainer,
+                                labelStyle: TextStyle(
+                                  color: isSelected
+                                      ? theme.colorScheme.onPrimaryContainer
+                                      : theme.colorScheme.onSurface,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                    const SizedBox(height: 80),
+                  ],
+                ),
+              ),
+            ),
+
+            // Action buttons (fixed at bottom)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, _selectedTags),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(_selectedTags.isEmpty ? 'Skip' : 'Continue'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -67,53 +68,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
+            // Enhanced Drawer Header
+            Container(
+              height: 210,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [colorScheme.primary, colorScheme.secondary],
+                  colors: [
+                    colorScheme.primary,
+                    colorScheme.primary.withValues(alpha: 0.8),
+                    colorScheme.secondary,
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: colorScheme.onPrimary,
-                    child: Icon(
-                      Icons.person,
-                      size: 40,
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      currentUser?.email ?? "Guest User",
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onPrimary,
-                        fontWeight: FontWeight.bold,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Avatar
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          radius: 35,
+                          backgroundColor: Colors.white,
+                          child: Icon(
+                            Icons.person,
+                            size: 40,
+                            color: colorScheme.primary,
+                          ),
+                        ),
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      const SizedBox(height: 16),
+                      // Email
+                      Text(
+                        currentUser?.email ?? "Guest User",
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      // App name
+                      Text(
+                        'Poetic Platform',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
+
+            // Theme Toggle
             ListTile(
-              leading: const Icon(Icons.palette),
+              leading: const Icon(Icons.palette_outlined),
               title: const Text('Theme'),
               trailing: const ThemeToggleSwitch(),
             ),
+            const Divider(height: 1),
+
+            // Navigation Items
             ListTile(
-              leading: const Icon(Icons.home),
+              leading: const Icon(Icons.home_outlined),
               title: const Text('Home'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.people),
+              leading: const Icon(Icons.people_outline),
               title: const Text('Followers Feed'),
               onTap: () {
                 Navigator.pop(context);
@@ -126,7 +165,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.bookmark),
+              leading: const Icon(Icons.bookmark_border),
               title: const Text('Saved'),
               onTap: () {
                 Navigator.pop(context);
@@ -139,7 +178,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.person_2_sharp),
+              leading: const Icon(Icons.person_outline),
               title: const Text('Profile'),
               onTap: () {
                 Navigator.pop(context);
@@ -150,8 +189,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.message),
-              title: const Text('Chat'),
+              leading: const Icon(Icons.message_outlined),
+              title: const Text('Messages'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -162,17 +201,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 );
               },
             ),
-            const Divider(),
+            const Divider(height: 1),
+
+            // App Info Section
             ListTile(
-              leading: const Icon(Icons.logout_outlined),
-              title: const Text('LogOut'),
+              leading: const Icon(Icons.info_outline),
+              title: const Text('About App'),
               onTap: () {
-                FirebaseAuth.instance.signOut();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const Login()),
-                );
+                Navigator.pop(context);
+                _showAboutDialog();
               },
+            ),
+            ListTile(
+              leading: const Icon(Icons.contact_support_outlined),
+              title: const Text('Contact Us'),
+              onTap: () {
+                Navigator.pop(context);
+                _showContactDialog();
+              },
+            ),
+            const Divider(height: 1),
+
+            // Logout
+            ListTile(
+              leading: Icon(Icons.logout_outlined, color: colorScheme.error),
+              title: Text(
+                'Log Out',
+                style: TextStyle(color: colorScheme.error),
+              ),
+              onTap: () {
+                _showLogoutConfirmation();
+              },
+            ),
+
+            // Version Info
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Version 1.0.0',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
@@ -415,7 +486,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       },
                       loading: () => CircleAvatar(
                         radius: 20,
-                        backgroundColor: colorScheme.surfaceVariant,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                       ),
                       error: (_, __) => CircleAvatar(
                         radius: 20,
@@ -455,7 +526,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               height: 14,
                               width: 100,
                               decoration: BoxDecoration(
-                                color: colorScheme.surfaceVariant,
+                                color: colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),
@@ -501,7 +572,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  post.workType.toUpperCase(),
+                                  post.workType,
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: _getWorkTypeColor(post.workType),
                                     fontWeight: FontWeight.w600,
@@ -792,7 +863,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               backgroundColor: isFollowing
-                  ? colorScheme.surfaceVariant
+                  ? colorScheme.surfaceContainerHighest
                   : colorScheme.primary,
               foregroundColor: isFollowing
                   ? colorScheme.onSurface
@@ -811,7 +882,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           loading: () => Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceVariant.withValues(alpha: 0.5),
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(20),
             ),
             child: SizedBox(
@@ -925,7 +996,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: colorScheme.surfaceVariant,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -936,7 +1007,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           height: 14,
                           width: 120,
                           decoration: BoxDecoration(
-                            color: colorScheme.surfaceVariant,
+                            color: colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -945,7 +1016,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           height: 12,
                           width: 80,
                           decoration: BoxDecoration(
-                            color: colorScheme.surfaceVariant,
+                            color: colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -959,7 +1030,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 height: 16,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant,
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -968,7 +1039,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 height: 16,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant,
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -977,7 +1048,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 height: 16,
                 width: 200,
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant,
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -1049,6 +1120,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void _showPostOptions(PostModel post) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final currentUser = ref.read(firebaseAuthProvider).currentUser;
 
     showModalBottomSheet(
       context: context,
@@ -1086,20 +1158,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 title: const Text('Copy link'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Copy link logic
+                  _handleCopyLink(post);
                 },
               ),
-              ListTile(
-                leading: Icon(Icons.report_outlined, color: colorScheme.error),
-                title: Text(
-                  'Report post',
-                  style: TextStyle(color: colorScheme.error),
+              if (currentUser?.uid != post.createdBy) ...[
+                ListTile(
+                  leading: Icon(
+                    Icons.report_outlined,
+                    color: colorScheme.error,
+                  ),
+                  title: Text(
+                    'Report post',
+                    style: TextStyle(color: colorScheme.error),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showReportDialog(post);
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Report logic
-                },
-              ),
+              ],
               const SizedBox(height: 16),
             ],
           ),
@@ -1210,5 +1287,571 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         );
       }
     }
+  }
+
+  void _showAboutDialog() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [colorScheme.primary, colorScheme.secondary],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.auto_stories, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            const Text('About Poetic'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Version 1.0.0',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Poetic is a platform for writers and poets to share their creative works with the world.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.8),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Features:',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildFeatureItem('📝 Create and share poetry, lyrics, stories'),
+              _buildFeatureItem('💬 Comment and engage with other writers'),
+              _buildFeatureItem('❤️ Like and save your favorite posts'),
+              _buildFeatureItem('👥 Follow your favorite creators'),
+              _buildFeatureItem('🏷️ Organize content with tags'),
+              _buildFeatureItem('✨ Rich text formatting support'),
+              const SizedBox(height: 16),
+              Text(
+                '© 2025 Poetic Platform. All rights reserved.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(String text) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(text.substring(0, 2), style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text.substring(3),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showContactDialog() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final subjectController = TextEditingController();
+    final messageController = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.contact_support, color: colorScheme.primary),
+              const SizedBox(width: 12),
+              const Text('Contact Us'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'We\'d love to hear from you!',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: subjectController,
+                  enabled: !isSubmitting,
+                  decoration: InputDecoration(
+                    labelText: 'Subject',
+                    hintText: 'How can we help?',
+                    prefixIcon: const Icon(Icons.subject),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  maxLength: 100,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: messageController,
+                  enabled: !isSubmitting,
+                  decoration: InputDecoration(
+                    labelText: 'Message',
+                    hintText: 'Tell us what\'s on your mind...',
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(bottom: 80),
+                      child: Icon(Icons.message),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 5,
+                  maxLength: 500,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.email_outlined,
+                      size: 16,
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'support@poetic.app',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final currentUser = ref
+                          .read(firebaseAuthProvider)
+                          .currentUser;
+                      if (currentUser == null) return;
+
+                      final subject = subjectController.text.trim();
+                      final message = messageController.text.trim();
+
+                      if (subject.isEmpty || message.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Please fill in all fields'),
+                            backgroundColor: Colors.orange,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            margin: const EdgeInsets.all(16),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setState(() => isSubmitting = true);
+
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection('contacts')
+                            .add({
+                              'userId': currentUser.uid,
+                              'userEmail': currentUser.email,
+                              'subject': subject,
+                              'message': message,
+                              'status': 'new',
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+
+                        if (mounted) {
+                          Navigator.pop(dialogContext);
+                          HapticFeedback.mediumImpact();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.white),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Message sent! We\'ll get back to you soon.',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              margin: const EdgeInsets.all(16),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setState(() => isSubmitting = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to send message: $e'),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              margin: const EdgeInsets.all(16),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Send Message'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutConfirmation() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context); // Close drawer
+              FirebaseAuth.instance.signOut();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const Login()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colorScheme.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleCopyLink(PostModel post) async {
+    try {
+      final link = 'https://poetic.app/post/${post.docId}';
+
+      await Clipboard.setData(ClipboardData(text: link));
+
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('Link copied to clipboard'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to copy link: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showReportDialog(PostModel post) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final currentUser = ref.read(firebaseAuthProvider).currentUser;
+
+    if (currentUser == null) return;
+
+    final subjectController = TextEditingController();
+    final bodyController = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.report_outlined, color: colorScheme.error),
+              const SizedBox(width: 12),
+              const Text('Report Post'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Help us understand the problem',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: subjectController,
+                  enabled: !isSubmitting,
+                  decoration: InputDecoration(
+                    labelText: 'Subject',
+                    hintText: 'e.g., Inappropriate content',
+                    prefixIcon: const Icon(Icons.subject),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  maxLength: 100,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: bodyController,
+                  enabled: !isSubmitting,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Explain why you\'re reporting this post...',
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(bottom: 80),
+                      child: Icon(Icons.description),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 5,
+                  maxLength: 500,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final subject = subjectController.text.trim();
+                      final body = bodyController.text.trim();
+
+                      if (subject.isEmpty || body.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Please fill in all fields'),
+                            backgroundColor: Colors.orange,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            margin: const EdgeInsets.all(16),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setState(() => isSubmitting = true);
+
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection('reports')
+                            .add({
+                              'reportedBy': currentUser.uid,
+                              'reporterEmail': currentUser.email,
+                              'postId': post.docId,
+                              'postTitle': post.title,
+                              'postAuthor': post.createdBy,
+                              'subject': subject,
+                              'description': body,
+                              'status': 'pending',
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+
+                        if (mounted) {
+                          Navigator.pop(dialogContext);
+                          HapticFeedback.mediumImpact();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Row(
+                                children: [
+                                  Icon(Icons.check_circle, color: Colors.white),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Report submitted. We\'ll review it soon.',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              margin: const EdgeInsets.all(16),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setState(() => isSubmitting = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to submit report: $e'),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              margin: const EdgeInsets.all(16),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.error,
+                foregroundColor: Colors.white,
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Submit Report'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

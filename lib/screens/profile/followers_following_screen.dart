@@ -177,7 +177,7 @@ class UserListItem extends ConsumerWidget {
                   radius: 24,
                   backgroundColor: Theme.of(
                     context,
-                  ).primaryColor.withOpacity(0.2),
+                  ).primaryColor.withValues(alpha: 0.2),
                   backgroundImage: photoUrl.isNotEmpty
                       ? NetworkImage(photoUrl)
                       : null,

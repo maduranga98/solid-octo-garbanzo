@@ -172,7 +172,7 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: colorScheme.outlineVariant.withOpacity(0.5),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -196,7 +196,9 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer.withOpacity(0.5),
+                        color: colorScheme.primaryContainer.withValues(
+                          alpha: 0.5,
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -222,13 +224,13 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
                     Icon(
                       Icons.bookmark_rounded,
                       size: 16,
-                      color: colorScheme.primary.withOpacity(0.6),
+                      color: colorScheme.primary.withValues(alpha: 0.6),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       timeago.format(savedPost.savedData.bookmarkedAt.toDate()),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.6),
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -248,9 +250,9 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  savedPost.postData.richText,
+                  savedPost.postData.plainText,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(0.8),
+                    color: colorScheme.onSurface.withValues(alpha: 0.8),
                     height: 1.5,
                   ),
                   maxLines: 3,
@@ -261,7 +263,7 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
                 // Divider
                 Divider(
                   height: 1,
-                  color: colorScheme.outlineVariant.withOpacity(0.3),
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
                 ),
                 const SizedBox(height: 12),
 
@@ -325,18 +327,18 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHigh.withOpacity(0.5),
+          color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: color.withOpacity(0.9)),
+            Icon(icon, size: 18, color: color.withValues(alpha: 0.9)),
             const SizedBox(width: 6),
             Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: color.withOpacity(0.9),
+                color: color.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -361,7 +363,7 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHigh.withOpacity(0.5),
+            color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, size: 20, color: color),
@@ -378,7 +380,7 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withOpacity(0.3),
+              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -402,7 +404,7 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
               'Posts you bookmark will appear here for easy access later',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.6),
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.5,
               ),
             ),
@@ -427,7 +429,7 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
             Container(
               padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
-                color: colorScheme.errorContainer.withOpacity(0.3),
+                color: colorScheme.errorContainer.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -449,7 +451,7 @@ class _SavedPostScreenState extends ConsumerState<SavedPostScreen> {
               error.toString(),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.6),
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 24),

@@ -148,14 +148,14 @@ class _UserPreferencesIntroScreenState
             "Let's personalize your experience",
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withOpacity(0.3),
+              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -189,7 +189,7 @@ class _UserPreferencesIntroScreenState
             "Select all languages you'd like to read content in",
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 24),
@@ -251,7 +251,7 @@ class _UserPreferencesIntroScreenState
             "Select the primary language you'll create content in",
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 24),
@@ -313,7 +313,7 @@ class _UserPreferencesIntroScreenState
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withOpacity(0.3),
+              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -336,7 +336,7 @@ class _UserPreferencesIntroScreenState
             "Discover poetry, stories, and more from creators worldwide",
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 32),
@@ -398,7 +398,7 @@ class _UserPreferencesIntroScreenState
           border: Border.all(
             color: isSelected
                 ? colorScheme.primary
-                : colorScheme.outline.withOpacity(0.3),
+                : colorScheme.outline.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -409,7 +409,7 @@ class _UserPreferencesIntroScreenState
               size: 48,
               color: isSelected
                   ? colorScheme.primary
-                  : colorScheme.onSurface.withOpacity(0.6),
+                  : colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             const SizedBox(height: 12),
             Text(
