@@ -2,16 +2,22 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 
 /// Service for managing Firebase Cloud Messaging (FCM) tokens and push notifications
 class FCMService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   /// Initialize FCM and request notification permissions
   Future<void> initialize() async {
     try {
+      // Initialize local notifications
+      await _initializeLocalNotifications();
+
       // Request permission for notifications (iOS)
       NotificationSettings settings = await _firebaseMessaging.requestPermission(
         alert: true,
@@ -45,6 +51,7 @@ class FCMService {
 
         if (message.notification != null) {
           debugPrint('Message also contained a notification: ${message.notification}');
+          _showLocalNotification(message);
         }
       });
 
@@ -52,6 +59,7 @@ class FCMService {
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         debugPrint('📬 A notification was tapped and opened the app!');
         debugPrint('Message data: ${message.data}');
+        _handleNotificationTap(message);
       });
 
       // Handle messages when app is terminated
@@ -59,12 +67,94 @@ class FCMService {
       if (initialMessage != null) {
         debugPrint('📭 App opened from terminated state via notification!');
         debugPrint('Message data: ${initialMessage.data}');
+        _handleNotificationTap(initialMessage);
       }
 
       debugPrint('✅ FCM Service initialized successfully');
     } catch (e) {
       debugPrint('❌ Error initializing FCM Service: $e');
     }
+  }
+
+  /// Initialize local notifications
+  Future<void> _initializeLocalNotifications() async {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        debugPrint('Local notification tapped: ${response.payload}');
+        // Handle notification tap
+      },
+    );
+
+    // Create Android notification channel
+    const androidChannel = AndroidNotificationChannel(
+      'high_importance_channel',
+      'High Importance Notifications',
+      description: 'This channel is used for important notifications.',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(androidChannel);
+  }
+
+  /// Show local notification for foreground messages
+  Future<void> _showLocalNotification(RemoteMessage message) async {
+    const androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      channelDescription: 'This channel is used for important notifications.',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _localNotifications.show(
+      message.hashCode,
+      message.notification?.title ?? 'New Notification',
+      message.notification?.body ?? '',
+      notificationDetails,
+      payload: json.encode(message.data),
+    );
+  }
+
+  /// Handle notification tap
+  void _handleNotificationTap(RemoteMessage message) {
+    final data = message.data;
+    final type = data['type'];
+
+    debugPrint('Handling notification of type: $type');
+    // TODO: Navigate to appropriate screen based on notification type
+    // This can be implemented based on your app's routing logic
   }
 
   /// Get the current FCM token for this device

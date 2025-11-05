@@ -263,7 +263,7 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
           userName: _usernameController.text.trim(),
           type: _selectedTypes,
           country: _selectedCountry!.name,
-          photoURl: null,
+          photoURl: '', // Set to empty string instead of null
           postCount: 0,
           followersCount: 0,
           followingCount: 0,
@@ -274,28 +274,14 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
         selectedImageUrl: _selectedImage,
       );
       print(
-        "User Credentials: ${credential?.user} **************************************s",
+        "User Credentials: ${credential?.user} **************************************",
       );
       if (credential?.user != null) {
         // Start listening to token refresh
         if (fcmToken != null) {
           fcmService.listenToTokenRefresh(credential!.user!.uid);
         }
-
-        // Upload profile image if selected and update Firestore directly
-        // if (_selectedImage != null) {
-        //   final imageUrl = await _uploadImage(credential!.user!.uid);
-        //   print("Image URL : ${imageUrl}");
-        //   if (imageUrl != null) {
-        //     // Update the photoURl field in Firestore
-        //     await FirebaseFirestore.instance
-        //         .collection('users')
-        //         .doc(credential.user!.uid)
-        //         .update({'photoURl': imageUrl});
-
-        //     print("✅ Profile picture URL updated in Firestore: $imageUrl");
-        //   }
-        // }
+        print("✅ Signup completed successfully");
       }
     } catch (e) {
       if (mounted) {
