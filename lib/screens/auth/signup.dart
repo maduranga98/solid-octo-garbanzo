@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:poem_application/models/user_model.dart';
 import 'package:poem_application/screens/auth/login.dart';
+import 'package:poem_application/screens/auth/user_preferences_intro_screen.dart';
 import 'package:poem_application/services/auth_service.dart';
 import 'package:poem_application/services/fcm_service.dart';
 import 'package:poem_application/widgets/inputfields.dart';
@@ -246,50 +248,159 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
     HapticFeedback.mediumImpact();
 
+    UserCredential? credential;
+
     try {
-      // Get FCM token
+      // Step 1: Get FCM token first
       final fcmService = FCMService();
       await fcmService.initialize();
       final fcmToken = await fcmService.getToken();
 
-      final credential = await _authService.signUpWithEmailAndPassword(
+      // Step 2: Create Firebase Auth user
+      credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
-        userData: UserModel(
-          uid: "",
-          firstname: _firstnameController.text.trim(),
-          lastname: _lastnameController.text.trim(),
-          email: _emailController.text.trim(),
-          userName: _usernameController.text.trim(),
-          type: _selectedTypes,
-          country: _selectedCountry!.name,
-          photoURl: '', // Set to empty string instead of null
-          postCount: 0,
-          followersCount: 0,
-          followingCount: 0,
-          createdAt: DateTime.now(),
-          fcmToken: fcmToken,
-        ),
-        context: context,
-        selectedImageUrl: _selectedImage,
       );
-      print(
-        "User Credentials: ${credential?.user} **************************************",
-      );
-      if (credential?.user != null) {
-        // Start listening to token refresh
-        if (fcmToken != null) {
-          fcmService.listenToTokenRefresh(credential!.user!.uid);
+
+      if (credential.user == null) {
+        throw Exception('Failed to create user account');
+      }
+
+      print("✅ Firebase user created with UID: ${credential.user!.uid}");
+
+      // Step 3: Upload image BEFORE creating Firestore document
+      String photoUrl = '';
+      if (_selectedImage != null) {
+        print("📤 Uploading profile picture...");
+        final uploadedUrl = await _uploadImage(credential.user!.uid);
+        if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
+          photoUrl = uploadedUrl;
+          print("✅ Profile picture uploaded: $photoUrl");
+        } else {
+          print("⚠️ Failed to upload profile picture");
         }
-        print("✅ Signup completed successfully");
+      } else {
+        print("ℹ️ No profile picture selected");
+      }
+
+      // Step 4: Update Firebase Auth profile
+      await credential.user!.updateDisplayName(
+        '${_firstnameController.text.trim()} ${_lastnameController.text.trim()}',
+      );
+
+      if (photoUrl.isNotEmpty) {
+        await credential.user!.updatePhotoURL(photoUrl);
+        print("✅ Firebase Auth photo URL updated");
+      }
+
+      // Step 5: Create Firestore document with the photo URL
+      final userModel = UserModel(
+        uid: credential.user!.uid,
+        firstname: _firstnameController.text.trim(),
+        lastname: _lastnameController.text.trim(),
+        email: _emailController.text.trim(),
+        userName: _usernameController.text.trim(),
+        type: _selectedTypes,
+        country: _selectedCountry!.name,
+        photoURl: photoUrl, // Now has the actual URL
+        postCount: 0,
+        followersCount: 0,
+        followingCount: 0,
+        createdAt: DateTime.now(),
+        fcmToken: fcmToken,
+        preferredReadingLanguages: const ['English'],
+        preferredWritingLanguage: 'English',
+        exploreInternational: true,
+      );
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(credential.user!.uid)
+          .set(userModel.toFirestore());
+
+      print("✅ User document created with photoURL: $photoUrl");
+
+      // Step 6: Start FCM token listener
+      if (fcmToken != null) {
+        fcmService.listenToTokenRefresh(credential.user!.uid);
+      }
+
+      print("✅ Signup completed successfully");
+
+      // Step 7: Navigate only after everything is done
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => UserPreferencesIntroScreen(
+              userId: credential!.user!.uid,
+              initialUserData: userModel,
+            ),
+          ),
+        );
       }
     } catch (e) {
+      print("❌ Signup error: $e");
+
+      // Cleanup: Delete Firebase Auth user if anything fails
+      if (credential?.user != null) {
+        try {
+          await credential!.user!.delete();
+          print("🧹 Cleaned up Firebase Auth user after error");
+        } catch (deleteError) {
+          print("❌ Failed to cleanup user: $deleteError");
+        }
+      }
+
       if (mounted) {
         _showErrorMessage(_getErrorMessage(e.toString()));
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<String?> _uploadImage(String userId) async {
+    if (_selectedImage == null) return null;
+
+    setState(() => _isUploadingImage = true);
+
+    try {
+      print("📤 Starting image upload for user: $userId");
+
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images')
+          .child('$userId.jpg');
+
+      // Upload with metadata
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {'userId': userId},
+      );
+
+      final uploadTask = await storageRef.putFile(_selectedImage!, metadata);
+
+      if (uploadTask.state == TaskState.success) {
+        final downloadUrl = await uploadTask.ref.getDownloadURL();
+        print("✅ Image uploaded successfully: $downloadUrl");
+        setState(() => _uploadedImageUrl = downloadUrl);
+        return downloadUrl;
+      } else {
+        print("❌ Upload failed with state: ${uploadTask.state}");
+        return null;
+      }
+    } catch (e) {
+      print("❌ Error uploading image: $e");
+      if (mounted) {
+        _showErrorMessage('Failed to upload image: $e');
+      }
+      return null;
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingImage = false);
       }
     }
   }

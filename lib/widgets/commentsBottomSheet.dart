@@ -35,7 +35,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
   bool _isSubmitting = false;
   String? _replyingToCommentId;
   String? _replyingToUsername;
-  String? _replyingToUserId; // Added to track original comment user ID
+  String? _replyingToUserId;
 
   @override
   void dispose() {
@@ -49,49 +49,43 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final commentsAsync = ref.watch(commentsProvider(widget.post.docId));
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
-    return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: keyboardHeight),
-      duration: const Duration(milliseconds: 100),
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) {
-          return Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildHeader(theme, colorScheme),
+              Divider(
+                color: colorScheme.outline.withValues(alpha: 0.2),
+                height: 1,
               ),
-            ),
-            child: Column(
-              children: [
-                _buildHeader(theme, colorScheme),
-                Divider(
-                  color: colorScheme.outline.withValues(alpha: 0.2),
-                  height: 1,
-                ),
-                Expanded(
-                  child: commentsAsync.when(
-                    data: (comments) => _buildCommentsList(
-                      comments,
-                      scrollController,
-                      theme,
-                      colorScheme,
-                    ),
-                    loading: () => _buildLoadingState(theme, colorScheme),
-                    error: (error, _) =>
-                        _buildErrorState(error, theme, colorScheme),
+              Flexible(
+                child: commentsAsync.when(
+                  data: (comments) => _buildCommentsList(
+                    comments,
+                    scrollController,
+                    theme,
+                    colorScheme,
                   ),
+                  loading: () => _buildLoadingState(theme, colorScheme),
+                  error: (error, _) =>
+                      _buildErrorState(error, theme, colorScheme),
                 ),
-                _buildCommentInput(theme, colorScheme),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+              _buildCommentInput(theme, colorScheme),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -151,11 +145,8 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
     ColorScheme colorScheme,
   ) {
     final userAsync = ref.watch(getUserDataProvider(comment.authorId));
-
-    // Fixed: Use comment.docId for likes and replies, not comment.postId
     final likeCountAsync = ref.watch(commentLikeCountProvider(comment.docId));
     final isLikedAsync = ref.watch(isCommentLikedProvider(comment.docId));
-
     final repliesAsync = ref.watch(
       repliesProvider(
         RepliesParams(postId: widget.post.docId, commentId: comment.docId),
@@ -321,7 +312,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                           onTap: () => _startReply(
                             comment.docId,
                             comment.authorName,
-                            comment.authorId, // Pass the author ID
+                            comment.authorId,
                           ),
                           borderRadius: BorderRadius.circular(8),
                           child: Padding(
@@ -355,7 +346,6 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                         ),
                       ],
                     ),
-                    // Replies section
                     repliesAsync.when(
                       data: (replies) {
                         if (replies.isEmpty) return const SizedBox.shrink();
@@ -396,7 +386,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
         16,
         8,
         16,
-        16 + MediaQuery.of(context).padding.bottom,
+        16 + MediaQuery.of(context).viewInsets.bottom,
       ),
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -448,28 +438,31 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: TextField(
-                  controller: _commentController,
-                  focusNode: _commentFocusNode,
-                  maxLines: null,
-                  textCapitalization: TextCapitalization.sentences,
-                  style: TextStyle(color: colorScheme.onSurface),
-                  decoration: InputDecoration(
-                    hintText: _replyingToUsername != null
-                        ? 'Write a reply...'
-                        : 'Write a comment...',
-                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  child: TextField(
+                    controller: _commentController,
+                    focusNode: _commentFocusNode,
+                    maxLines: null,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: InputDecoration(
+                      hintText: _replyingToUsername != null
+                          ? 'Write a reply...'
+                          : 'Write a comment...',
+                      hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -581,7 +574,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
     setState(() {
       _replyingToCommentId = commentId;
       _replyingToUsername = username;
-      _replyingToUserId = userId; // Store the user ID
+      _replyingToUserId = userId;
     });
     _commentFocusNode.requestFocus();
   }
@@ -632,7 +625,6 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
 
       if (userDataAsync == null) throw Exception('User data not found');
 
-      // Create comment with empty docId - it will be set when saved to Firestore
       final comment = CommentModel(
         docId: '',
         postId: widget.post.docId,
@@ -643,13 +635,12 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
       );
 
       if (_replyingToCommentId != null && _replyingToUserId != null) {
-        // Add reply with all required parameters
         await ref
             .read(commentsRepositoryProvider)
             .addReply(
-              widget.post.docId, // postId
-              _replyingToCommentId!, // parentCommentId
-              comment, // replyData
+              widget.post.docId,
+              _replyingToCommentId!,
+              comment,
               widget.post.title.isNotEmpty
                   ? widget.post.title
                   : widget.post.plainText.substring(
@@ -657,18 +648,13 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                       widget.post.plainText.length > 50
                           ? 50
                           : widget.post.plainText.length,
-                    ), // postTitle
-              _replyingToUserId!, // originalCommentUserId
+                    ),
+              _replyingToUserId!,
             );
       } else {
-        // Add comment with all required parameters
         await ref
             .read(commentsRepositoryProvider)
-            .addComment(
-              widget.post.docId, // postId
-              comment, // data
-              widget.post, // post (the full PostModel)
-            );
+            .addComment(widget.post.docId, comment, widget.post);
       }
 
       _commentController.clear();
