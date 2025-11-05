@@ -1229,24 +1229,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final service = ref.read(postInteractionServiceProvider);
 
     try {
-      await service.toggleBookmark(post);
+      final isBookmarked = await service.toggleBookmark(post);
 
       if (mounted) {
         HapticFeedback.mediumImpact();
-        // UI updates automatically via stream
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    isBookmarked
+                        ? 'Saved to your collection'
+                        : 'Removed from saved posts',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: isBookmarked ? Colors.green : Colors.grey[700],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+            action: isBookmarked
+                ? SnackBarAction(
+                    label: 'View',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SavedPostScreen(),
+                        ),
+                      );
+                    },
+                  )
+                : null,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save post: $e'),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Failed to save post: $e')),
+              ],
+            ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
           ),
         );
       }

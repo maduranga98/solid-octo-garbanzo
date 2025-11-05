@@ -129,17 +129,20 @@ class AuthService {
 
         // Upload profile image if provided
         if (selectedImageUrl != null) {
+          print("📤 Uploading profile picture...");
           final imageUrl = await _uploadImage(
             selectedImageUrl,
             credential.user!.uid,
           );
 
           if (imageUrl != null && imageUrl.isNotEmpty) {
+            // Update both Firebase Auth profile photo and Firestore
+            await credential.user!.updatePhotoURL(imageUrl);
             await FirebaseFirestore.instance
                 .collection('users')
                 .doc(credential.user!.uid)
                 .update({'photoURl': imageUrl});
-            print("✅ Profile picture URL updated in Firestore: $imageUrl");
+            print("✅ Profile picture URL updated: $imageUrl");
           } else {
             print("⚠️ Failed to upload profile picture");
           }

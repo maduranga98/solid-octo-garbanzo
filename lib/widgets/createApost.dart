@@ -91,12 +91,42 @@ class _CreateapostState extends ConsumerState<Createapost> {
 
     if (data['richText'] != null && data['richText'].isNotEmpty) {
       try {
-        final delta = Delta.fromJson(jsonDecode(data['richText']) as List);
-        final controller = ref.read(quillControllerProvider);
-        controller.document = Document.fromDelta(delta);
+        // Parse the richText safely
+        dynamic richTextData;
+        if (data['richText'] is String) {
+          richTextData = jsonDecode(data['richText']);
+        } else {
+          richTextData = data['richText'];
+        }
+
+        if (richTextData is List) {
+          final delta = Delta.fromJson(richTextData);
+          final controller = ref.read(quillControllerProvider);
+          controller.document = Document.fromDelta(delta);
+          debugPrint('✅ Rich text loaded successfully');
+        } else {
+          debugPrint('⚠️ Rich text is not in the expected format');
+          _loadPlainTextAsFallback(data);
+        }
       } catch (e) {
-        debugPrint('Error loading rich text: $e');
+        debugPrint('❌ Error loading rich text: $e');
+        _loadPlainTextAsFallback(data);
       }
+    } else if (data['plainText'] != null && data['plainText'].isNotEmpty) {
+      _loadPlainTextAsFallback(data);
+    }
+  }
+
+  void _loadPlainTextAsFallback(Map<String, dynamic> data) {
+    try {
+      final plainText = data['plainText'] ?? '';
+      if (plainText.isNotEmpty) {
+        final controller = ref.read(quillControllerProvider);
+        controller.document = Document()..insert(0, plainText);
+        debugPrint('ℹ️ Loaded plain text as fallback');
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading plain text: $e');
     }
   }
 
@@ -648,11 +678,13 @@ class _CreateapostState extends ConsumerState<Createapost> {
                         color: theme.colorScheme.primary,
                       ),
                       const SizedBox(width: 12),
-                      Text(
-                        'Add tags to help people discover your work',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.6,
+                      Expanded(
+                        child: Text(
+                          'Add tags to help people discover your work',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
                           ),
                         ),
                       ),
@@ -704,15 +736,15 @@ class _CreateapostState extends ConsumerState<Createapost> {
   String _getPlaceholder(String selectedType) {
     switch (selectedType) {
       case 'Poetry':
-        return 'Let your verses flow...\n\nStart writing your poem here. Use the toolbar above to format your text.';
+        return '✍️ Let your verses flow...\n\nStart writing your poem here. Express your emotions, paint with words, and let your creativity shine.';
       case 'Lyrics':
-        return 'Write your song...\n\nAdd verses, chorus, bridge. Express your melody in words.';
+        return '🎵 Write your song...\n\nAdd verses, chorus, bridge. Express your melody in words and create something unforgettable.';
       case 'Stories':
-        return 'Once upon a time...\n\nBegin your story here. Take your readers on a journey.';
+        return '📖 Once upon a time...\n\nBegin your story here. Take your readers on an unforgettable journey through your imagination.';
       case 'Quotes & Aphorisms':
-        return 'Share your wisdom...\n\nWrite your thoughts, quotes, or aphorisms here.';
+        return '💭 Share your wisdom...\n\nWrite your thoughts, quotes, or aphorisms here. Inspire others with your insights.';
       case 'Microfiction':
-        return 'Tell your micro story...\n\n(Maximum 55 words)\n\nEvery word counts. Make them meaningful.';
+        return '⚡ Tell your micro story... (Maximum 55 words)\n\nEvery word counts. Make them meaningful. Craft a complete narrative in just a few sentences.';
       default:
         return 'Start writing...';
     }
@@ -754,22 +786,59 @@ class _CreateapostState extends ConsumerState<Createapost> {
       final controller = ref.read(quillControllerProvider);
 
       final plainTextContent = controller.document.toPlainText();
-      final richTextContent = jsonEncode(
-        controller.document.toDelta().toJson(),
-      );
+
+      // Safely encode rich text content
+      String richTextContent;
+      try {
+        richTextContent = jsonEncode(
+          controller.document.toDelta().toJson(),
+        );
+      } catch (e) {
+        debugPrint('❌ Error encoding rich text: $e');
+        // Fallback to plain text if encoding fails
+        richTextContent = jsonEncode([
+          {'insert': plainTextContent}
+        ]);
+      }
 
       // Validation for publish only
       if (action == 'publish') {
         if (title.trim().isEmpty) {
-          _showSnackBar(context, 'Please add a title', isError: true);
+          _showSnackBar(
+            context,
+            '📝 Please add a title to your ${postType.toLowerCase()}',
+            isError: true,
+          );
           setState(() => _isLoading = false);
           return;
         }
 
         if (plainTextContent.trim().isEmpty) {
-          _showSnackBar(context, 'Please add some content', isError: true);
+          _showSnackBar(
+            context,
+            '✍️ Your ${postType.toLowerCase()} needs some content before publishing',
+            isError: true,
+          );
           setState(() => _isLoading = false);
           return;
+        }
+
+        // Additional validation for Microfiction
+        if (postType == 'Microfiction') {
+          final wordCount = plainTextContent
+              .trim()
+              .split(RegExp(r'\s+'))
+              .where((word) => word.isNotEmpty)
+              .length;
+          if (wordCount > 55) {
+            _showSnackBar(
+              context,
+              '⚡ Microfiction must be 55 words or less. Your story has $wordCount words.',
+              isError: true,
+            );
+            setState(() => _isLoading = false);
+            return;
+          }
         }
       }
 
@@ -811,7 +880,7 @@ class _CreateapostState extends ConsumerState<Createapost> {
               .collection('drafts')
               .doc(widget.draftId)
               .update(postData);
-          _showSnackBar(context, 'Draft updated successfully!');
+          _showSnackBar(context, '💾 Draft updated successfully!');
         } else {
           postData['createdAt'] = FieldValue.serverTimestamp();
           await FirebaseFirestore.instance
@@ -819,7 +888,7 @@ class _CreateapostState extends ConsumerState<Createapost> {
               .doc(user.uid)
               .collection('drafts')
               .add(postData);
-          _showSnackBar(context, 'Saved as draft!');
+          _showSnackBar(context, '💾 Saved as draft!');
         }
       } else if (action == 'publish') {
         // Use batch for atomic operations
@@ -831,7 +900,7 @@ class _CreateapostState extends ConsumerState<Createapost> {
               .collection('posts')
               .doc(widget.postId);
           batch.update(postRef, postData);
-          _showSnackBar(context, 'Post updated successfully!');
+          _showSnackBar(context, '✅ Post updated successfully!');
         } else {
           // Publish new post
           postData['createdAt'] =
@@ -860,7 +929,7 @@ class _CreateapostState extends ConsumerState<Createapost> {
             batch.delete(draftRef);
           }
 
-          _showSnackBar(context, 'Post published successfully!');
+          _showSnackBar(context, '🎉 Post published successfully!');
         }
 
         await batch.commit();
