@@ -39,11 +39,11 @@ class PostInteractionService {
           'likeCount': FieldValue.increment(-1),
         });
 
-        // Remove like notification
-        await _notificationService.removeLikeNotification(
+        // Remove like notification (async, don't wait)
+        _notificationService.removeLikeNotification(
           postOwnerId: post.createdBy,
           postId: post.docId,
-        );
+        ).catchError((e) => print('Error removing notification: $e'));
 
         return false; // Post is now unliked
       } else {
@@ -56,33 +56,8 @@ class PostInteractionService {
           'likeCount': FieldValue.increment(1),
         });
 
-        // Get current user data for notification
-        final userDoc = await _firestore
-            .collection('users')
-            .doc(currentUser.uid)
-            .get();
-
-        final userData = userDoc.data();
-        final userName =
-            userData?['name'] ?? currentUser.displayName ?? 'Someone';
-        final userPhotoUrl = userData?['photoURl'] ?? currentUser.photoURL;
-
-        // Create like notification
-        await _notificationService.createLikeNotification(
-          post: post,
-          senderName: userName,
-          senderPhotoUrl: userPhotoUrl,
-        );
-
-        // Send push notification to post owner
-        if (post.createdBy != currentUser.uid) {
-          // Don't send notification if user likes their own post
-          await _fcmService.sendLikeNotification(
-            postOwnerId: post.createdBy,
-            likerName: userName,
-            postTitle: post.title.isNotEmpty ? post.title : 'your post',
-          );
-        }
+        // Create notifications asynchronously (fire and forget)
+        _createLikeNotificationsAsync(currentUser, post);
 
         return true; // Post is now liked
       }
@@ -385,5 +360,41 @@ class PostInteractionService {
     } catch (e) {
       return [];
     }
+  }
+
+  // Helper method to create notifications asynchronously
+  void _createLikeNotificationsAsync(User currentUser, PostModel post) {
+    () async {
+      try {
+        // Get current user data for notification
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
+
+        final userData = userDoc.data();
+        final userName =
+            userData?['name'] ?? currentUser.displayName ?? 'Someone';
+        final userPhotoUrl = userData?['photoURl'] ?? currentUser.photoURL;
+
+        // Create like notification
+        await _notificationService.createLikeNotification(
+          post: post,
+          senderName: userName,
+          senderPhotoUrl: userPhotoUrl,
+        );
+
+        // Send push notification to post owner
+        if (post.createdBy != currentUser.uid) {
+          await _fcmService.sendLikeNotification(
+            postOwnerId: post.createdBy,
+            likerName: userName,
+            postTitle: post.title.isNotEmpty ? post.title : 'your post',
+          );
+        }
+      } catch (e) {
+        print('Error creating like notifications: $e');
+      }
+    }();
   }
 }

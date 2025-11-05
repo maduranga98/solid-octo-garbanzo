@@ -52,36 +52,13 @@ class CommentsRepository {
         'commentCount': FieldValue.increment(1),
       });
 
-      // Get current user data for notification
-      final userDoc = await firestore
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
-
-      final userData = userDoc.data();
-      final userName =
-          userData?['name'] ?? currentUser.displayName ?? 'Someone';
-      final userPhotoUrl = userData?['photoURl'] ?? currentUser.photoURL;
-
-      // Create comment notification
-      await _notificationService.createCommentNotification(
-        post: post,
-        commentText: data.text,
-        senderName: userName,
-        senderPhotoUrl: userPhotoUrl,
-        commentId: docRef.id,
+      // Create notifications asynchronously (fire and forget)
+      _createCommentNotificationsAsync(
+        currentUser.uid,
+        docRef.id,
+        post,
+        data.text,
       );
-
-      // Send push notification to post owner
-      if (post.createdBy != currentUser.uid) {
-        // Don't send notification if user comments on their own post
-        await _fcmService.sendCommentNotification(
-          postOwnerId: post.createdBy,
-          commenterName: userName,
-          postTitle: post.title.isNotEmpty ? post.title : 'your post',
-          commentText: data.text,
-        );
-      }
 
       final snapshot = await docRef.get();
       return CommentModel.fromFirestore(snapshot);
@@ -232,5 +209,50 @@ class CommentsRepository {
     } catch (e) {
       throw Exception('Failed to update comment: $e');
     }
+  }
+
+  // Helper method to create comment notifications asynchronously
+  void _createCommentNotificationsAsync(
+    String currentUserId,
+    String commentId,
+    PostModel post,
+    String commentText,
+  ) {
+    () async {
+      try {
+        // Get current user data for notification
+        final userDoc = await firestore
+            .collection('users')
+            .doc(currentUserId)
+            .get();
+
+        final userData = userDoc.data();
+        final currentUser = FirebaseAuth.instance.currentUser;
+        final userName =
+            userData?['name'] ?? currentUser?.displayName ?? 'Someone';
+        final userPhotoUrl = userData?['photoURl'] ?? currentUser?.photoURL;
+
+        // Create comment notification
+        await _notificationService.createCommentNotification(
+          post: post,
+          commentText: commentText,
+          senderName: userName,
+          senderPhotoUrl: userPhotoUrl,
+          commentId: commentId,
+        );
+
+        // Send push notification to post owner
+        if (post.createdBy != currentUserId) {
+          await _fcmService.sendCommentNotification(
+            postOwnerId: post.createdBy,
+            commenterName: userName,
+            postTitle: post.title.isNotEmpty ? post.title : 'your post',
+            commentText: commentText,
+          );
+        }
+      } catch (e) {
+        print('Error creating comment notifications: $e');
+      }
+    }();
   }
 }

@@ -658,34 +658,42 @@ class _CreateapostState extends ConsumerState<Createapost> {
                       ),
                     ],
                   )
-                : Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ...tags.map(
-                        (tag) => Chip(
-                          label: Text(tag),
-                          deleteIcon: const Icon(Icons.close, size: 16),
-                          onDeleted: () {
-                            final updatedTags = List<String>.from(tags);
-                            updatedTags.remove(tag);
-                            ref.read(tagsProvider.notifier).state = updatedTags;
-                          },
-                          backgroundColor: theme.colorScheme.primaryContainer,
-                          labelStyle: TextStyle(
-                            color: theme.colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.w500,
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ...tags.map(
+                          (tag) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Chip(
+                              label: Text(
+                                tag,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              deleteIcon: const Icon(Icons.close, size: 16),
+                              onDeleted: () {
+                                final updatedTags = List<String>.from(tags);
+                                updatedTags.remove(tag);
+                                ref.read(tagsProvider.notifier).state = updatedTags;
+                              },
+                              backgroundColor: theme.colorScheme.primaryContainer,
+                              labelStyle: TextStyle(
+                                color: theme.colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      ActionChip(
-                        label: const Text('Add more'),
-                        avatar: const Icon(Icons.add, size: 16),
-                        onPressed: _showTagDialog,
-                        backgroundColor:
-                            theme.colorScheme.surfaceContainerHighest,
-                      ),
-                    ],
+                        ActionChip(
+                          label: const Text('Add more'),
+                          avatar: const Icon(Icons.add, size: 16),
+                          onPressed: _showTagDialog,
+                          backgroundColor:
+                              theme.colorScheme.surfaceContainerHighest,
+                        ),
+                      ],
+                    ),
                   ),
           ),
         ),

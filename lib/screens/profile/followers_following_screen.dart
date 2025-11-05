@@ -30,23 +30,24 @@ class _FollowersFollowingScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         title: Text(
           widget.listType == ListType.followers
               ? '${widget.userName}\'s  Followers'
               : '${widget.userName}  Following',
-          style: const TextStyle(
-            color: Colors.black87,
+          style: TextStyle(
+            color: theme.textTheme.bodyLarge?.color,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: IconThemeData(color: theme.textTheme.bodyLarge?.color),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -67,11 +68,17 @@ class _FollowersFollowingScreenState
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: theme.colorScheme.error.withValues(alpha: 0.6),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Error loading users',
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                    ),
                   ),
                 ],
               ),
@@ -88,17 +95,16 @@ class _FollowersFollowingScreenState
                         ? Icons.people_outline
                         : Icons.person_add_outlined,
                     size: 64,
-                    color: Colors.grey[300],
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     widget.listType == ListType.followers
                         ? 'No followers yet'
                         : 'Not following anyone yet',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w500,
-                      color: Colors.grey[600],
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -141,12 +147,17 @@ class UserListItem extends ConsumerWidget {
       future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const ListTile(
-            leading: CircleAvatar(backgroundColor: Colors.grey),
+          final theme = Theme.of(context);
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            ),
             title: SizedBox(
               height: 14,
               width: 100,
-              child: ColoredBox(color: Colors.grey),
+              child: ColoredBox(
+                color: theme.colorScheme.surfaceContainerHighest,
+              ),
             ),
           );
         }
@@ -158,6 +169,7 @@ class UserListItem extends ConsumerWidget {
         final lastName = userData['lastname'] ?? '';
         final userName = userData['username'] ?? '';
         final photoUrl = userData['photoURl'] ?? '';
+        final theme = Theme.of(context);
 
         return InkWell(
           onTap: () {
@@ -175,9 +187,7 @@ class UserListItem extends ConsumerWidget {
                 // Avatar
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).primaryColor.withValues(alpha: 0.2),
+                  backgroundColor: theme.primaryColor.withValues(alpha: 0.2),
                   backgroundImage: photoUrl.isNotEmpty
                       ? NetworkImage(photoUrl)
                       : null,
@@ -187,7 +197,7 @@ class UserListItem extends ConsumerWidget {
                               ? firstName[0].toUpperCase()
                               : '?',
                           style: TextStyle(
-                            color: Theme.of(context).primaryColor,
+                            color: theme.primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                         )
@@ -201,16 +211,18 @@ class UserListItem extends ConsumerWidget {
                     children: [
                       Text(
                         '$firstName $lastName',
-                        style: const TextStyle(
+                        style: theme.textTheme.bodyLarge?.copyWith(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '@$userName',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 13,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                        ),
                       ),
                     ],
                   ),
@@ -238,6 +250,9 @@ class UserListItem extends ConsumerWidget {
       ),
     );
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return isFollowingAsync.when(
       data: (isFollowing) => SizedBox(
         height: 32,
@@ -246,13 +261,15 @@ class UserListItem extends ConsumerWidget {
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             backgroundColor: isFollowing
-                ? Colors.grey[100]
-                : Theme.of(context).primaryColor,
-            foregroundColor: isFollowing ? Colors.grey[700] : Colors.white,
+                ? (isDark ? theme.colorScheme.surfaceContainerHigh : theme.colorScheme.surfaceContainerHighest)
+                : theme.primaryColor,
+            foregroundColor: isFollowing
+                ? theme.textTheme.bodyLarge?.color
+                : Colors.white,
             side: BorderSide(
               color: isFollowing
-                  ? Colors.grey[300]!
-                  : Theme.of(context).primaryColor,
+                  ? theme.colorScheme.outline.withValues(alpha: 0.3)
+                  : theme.primaryColor,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
