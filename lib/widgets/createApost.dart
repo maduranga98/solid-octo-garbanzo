@@ -707,9 +707,11 @@ class _CreateapostState extends ConsumerState<Createapost> {
                               onDeleted: () {
                                 final updatedTags = List<String>.from(tags);
                                 updatedTags.remove(tag);
-                                ref.read(tagsProvider.notifier).state = updatedTags;
+                                ref.read(tagsProvider.notifier).state =
+                                    updatedTags;
                               },
-                              backgroundColor: theme.colorScheme.primaryContainer,
+                              backgroundColor:
+                                  theme.colorScheme.primaryContainer,
                               labelStyle: TextStyle(
                                 color: theme.colorScheme.onPrimaryContainer,
                                 fontWeight: FontWeight.w500,
@@ -736,15 +738,15 @@ class _CreateapostState extends ConsumerState<Createapost> {
   String _getPlaceholder(String selectedType) {
     switch (selectedType) {
       case 'Poetry':
-        return '✍️ Let your verses flow...\n\nStart writing your poem here. Express your emotions, paint with words, and let your creativity shine.';
+        return '✍️ Let your verses flow... Start writing your poem here. Express your emotions, paint with words, and let your creativity shine.';
       case 'Lyrics':
-        return '🎵 Write your song...\n\nAdd verses, chorus, bridge. Express your melody in words and create something unforgettable.';
+        return '🎵 Write your song... Add verses, chorus, bridge. Express your melody in words and create something unforgettable.';
       case 'Stories':
-        return '📖 Once upon a time...\n\nBegin your story here. Take your readers on an unforgettable journey through your imagination.';
+        return '📖 Once upon a time... Begin your story here. Take your readers on an unforgettable journey through your imagination.';
       case 'Quotes & Aphorisms':
-        return '💭 Share your wisdom...\n\nWrite your thoughts, quotes, or aphorisms here. Inspire others with your insights.';
+        return '💭 Share your wisdom... Write your thoughts, quotes, or aphorisms here. Inspire others with your insights.';
       case 'Microfiction':
-        return '⚡ Tell your micro story... (Maximum 55 words)\n\nEvery word counts. Make them meaningful. Craft a complete narrative in just a few sentences.';
+        return '⚡ Tell your micro story... (Maximum 55 words) Every word counts. Make them meaningful. Craft a complete narrative in just a few sentences.';
       default:
         return 'Start writing...';
     }
@@ -790,14 +792,12 @@ class _CreateapostState extends ConsumerState<Createapost> {
       // Safely encode rich text content
       String richTextContent;
       try {
-        richTextContent = jsonEncode(
-          controller.document.toDelta().toJson(),
-        );
+        richTextContent = jsonEncode(controller.document.toDelta().toJson());
       } catch (e) {
         debugPrint('❌ Error encoding rich text: $e');
         // Fallback to plain text if encoding fails
         richTextContent = jsonEncode([
-          {'insert': plainTextContent}
+          {'insert': plainTextContent},
         ]);
       }
 

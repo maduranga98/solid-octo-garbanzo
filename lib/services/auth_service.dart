@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -72,7 +71,7 @@ class AuthService {
     required String email,
     required String password,
     required UserModel userData,
-    required File? selectedImageUrl,
+
     required BuildContext context,
   }) async {
     try {
@@ -127,28 +126,6 @@ class AuthService {
           userModelWithUid,
         );
 
-        // Upload profile image if provided
-        if (selectedImageUrl != null) {
-          print("📤 Uploading profile picture...");
-          final imageUrl = await _uploadImage(
-            selectedImageUrl,
-            credential.user!.uid,
-          );
-
-          if (imageUrl != null && imageUrl.isNotEmpty) {
-            // Update both Firebase Auth profile photo and Firestore
-            await credential.user!.updatePhotoURL(imageUrl);
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(credential.user!.uid)
-                .update({'photoURl': imageUrl});
-            print("✅ Profile picture URL updated: $imageUrl");
-          } else {
-            print("⚠️ Failed to upload profile picture");
-          }
-        } else {
-          print("ℹ️ No profile picture selected");
-        }
         if (createdUser == null) {
           print(
             "❌ Failed to create user document, cleaning up Firebase user...",
@@ -188,30 +165,6 @@ class AuthService {
     } catch (e) {
       print("❌ General signup error: $e");
       throw Exception(e.toString().replaceAll('Exception: ', ''));
-    }
-  }
-
-  Future<String?> _uploadImage(File? _selectedImage, String userId) async {
-    if (_selectedImage == null) return null;
-
-    // setState(() => _isUploadingImage = true);
-
-    try {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('profile_images')
-          .child('$userId.jpg');
-
-      final uploadTask = await storageRef.putFile(_selectedImage);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-
-      // setState(() => _uploadedImageUrl = downloadUrl);
-      return downloadUrl;
-    } catch (e) {
-      // _showErrorMessage('Failed to upload image: $e');
-      return null;
-    } finally {
-      // setState(() => _isUploadingImage = false);
     }
   }
 
@@ -340,7 +293,9 @@ class AuthService {
           }
         } else {
           // New user - don't create document yet, let GoogleUserInfoScreen handle it
-          print("📝 New Google user - will collect info in GoogleUserInfoScreen");
+          print(
+            "📝 New Google user - will collect info in GoogleUserInfoScreen",
+          );
         }
       }
 
