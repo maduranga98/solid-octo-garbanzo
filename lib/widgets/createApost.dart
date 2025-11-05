@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/legacy.dart';
 final titleProvider = StateProvider<String>((ref) => '');
 final descriptionProvider = StateProvider<String>((ref) => '');
 final postTypeProvider = StateProvider<String>((ref) => 'Poetry');
+final tagsProvider = StateProvider<List<String>>((ref) => []);
 
 // Quill controller provider
 final quillControllerProvider = StateProvider<QuillController>((ref) {
@@ -48,16 +49,13 @@ class Createapost extends ConsumerStatefulWidget {
 }
 
 class _CreateapostState extends ConsumerState<Createapost> {
-  late FocusNode _contentFocusNode;
-  late ScrollController _scrollController;
+  bool _showEditor = false;
   bool _isLoading = false;
   late PostMode _mode;
 
   @override
   void initState() {
     super.initState();
-    _contentFocusNode = FocusNode();
-    _scrollController = ScrollController();
 
     // Determine mode
     if (widget.postId != null && widget.postData != null) {
@@ -72,8 +70,10 @@ class _CreateapostState extends ConsumerState<Createapost> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_mode == PostMode.editPost && widget.postData != null) {
         _loadPostData(widget.postData!);
+        setState(() => _showEditor = true);
       } else if (_mode == PostMode.editDraft && widget.draftData != null) {
         _loadPostData(widget.draftData!);
+        setState(() => _showEditor = true);
       } else if (widget.type != null) {
         ref.read(postTypeProvider.notifier).state = widget.type!;
       }
@@ -85,6 +85,10 @@ class _CreateapostState extends ConsumerState<Createapost> {
     ref.read(descriptionProvider.notifier).state = data['description'] ?? '';
     ref.read(postTypeProvider.notifier).state = data['workType'] ?? 'Poetry';
 
+    if (data['tags'] != null) {
+      ref.read(tagsProvider.notifier).state = List<String>.from(data['tags']);
+    }
+
     if (data['richText'] != null && data['richText'].isNotEmpty) {
       try {
         final delta = Delta.fromJson(jsonDecode(data['richText']) as List);
@@ -94,13 +98,6 @@ class _CreateapostState extends ConsumerState<Createapost> {
         debugPrint('Error loading rich text: $e');
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _contentFocusNode.dispose();
-    _scrollController.dispose();
-    super.dispose();
   }
 
   String get _appBarTitle {
@@ -116,6 +113,11 @@ class _CreateapostState extends ConsumerState<Createapost> {
 
   @override
   Widget build(BuildContext context) {
+    return _showEditor ? _buildEditorView() : _buildDetailsView();
+  }
+
+  // Step 1: Post Details
+  Widget _buildDetailsView() {
     final theme = Theme.of(context);
     final screenSize = MediaQuery.of(context).size;
     final isTablet = screenSize.width > 600;
@@ -134,96 +136,288 @@ class _CreateapostState extends ConsumerState<Createapost> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isTablet ? 32 : 16,
-                  vertical: 8,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildPostTypeSelector(context),
-                    const SizedBox(height: 24),
-                    _buildTitleInput(context),
-                    const SizedBox(height: 20),
-                    _buildDescriptionInput(context),
-                    const SizedBox(height: 24),
-                    _buildRichTextEditor(context),
-                    const SizedBox(height: 32),
-                  ],
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            horizontal: isTablet ? 48 : 20,
+            vertical: 24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPostTypeSelector(theme),
+              const SizedBox(height: 32),
+              _buildTitleInput(theme),
+              const SizedBox(height: 24),
+              _buildDescriptionInput(theme),
+              const SizedBox(height: 24),
+              _buildTagsSection(theme),
+              const SizedBox(height: 48),
+
+              // Continue button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _validateAndContinue,
+                  icon: const Icon(Icons.edit_note_rounded, size: 24),
+                  label: const Text(
+                    'Continue to Editor',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            _buildBottomActionBar(context, theme),
-          ],
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  'Fill in the details above to start writing',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBottomActionBar(BuildContext context, ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(
-            color: theme.colorScheme.outline.withValues(alpha: 0.2),
-          ),
+  // Step 2: Full Page Editor
+  Widget _buildEditorView() {
+    final theme = Theme.of(context);
+    final controller = ref.watch(quillControllerProvider);
+
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: theme.colorScheme.surface,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            setState(() => _showEditor = false);
+          },
+          tooltip: 'Back to details',
         ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              ref.watch(titleProvider),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              ref.watch(postTypeProvider),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          // Draft button
+          if (_mode != PostMode.editPost)
+            TextButton.icon(
+              onPressed: _isLoading ? null : () => _savePost('draft'),
+              icon: const Icon(Icons.save_outlined, size: 20),
+              label: const Text('Draft'),
+              style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            ),
+          const SizedBox(width: 8),
+          // Publish/Update button
+          FilledButton.icon(
+            onPressed: _isLoading ? null : () => _savePost('publish'),
+            icon: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Icon(
+                    _mode == PostMode.editPost ? Icons.check : Icons.publish,
+                    size: 20,
+                  ),
+            label: Text(_mode == PostMode.editPost ? 'Update' : 'Publish'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 16),
+        ],
       ),
-      child: Row(
+      body: Column(
         children: [
-          // Draft button (only show if not editing an existing post)
-          if (_mode != PostMode.editPost) ...[
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _isLoading ? null : () => _savePost('draft'),
-                icon: const Icon(Icons.drafts, size: 18),
-                label: const Text('Draft'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: Colors.orange.withValues(alpha: 0.5)),
-                  foregroundColor: Colors.orange,
+          // Fixed Toolbar
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.5,
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-          ],
-          // Publish/Update button
+            child: QuillSimpleToolbar(
+              controller: controller,
+              config: const QuillSimpleToolbarConfig(
+                multiRowsDisplay: false,
+                showDividers: true,
+                showFontFamily: false,
+                showFontSize: false,
+                showBoldButton: true,
+                showItalicButton: true,
+                showUnderLineButton: true,
+                showStrikeThrough: true,
+                showInlineCode: false,
+                showColorButton: true,
+                showBackgroundColorButton: true,
+                showListNumbers: true,
+                showListBullets: true,
+                showListCheck: false,
+                showCodeBlock: false,
+                showQuote: true,
+                showIndent: true,
+                showLink: false,
+                showUndo: true,
+                showRedo: true,
+                showDirection: false,
+                showSearchButton: false,
+                toolbarSize: 40,
+              ),
+            ),
+          ),
+
+          // Scrollable Editor
           Expanded(
-            flex: _mode == PostMode.editPost ? 1 : 2,
-            child: ElevatedButton.icon(
-              onPressed: _isLoading ? null : () => _handlePublishClick(),
-              icon: _isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Icon(
-                      _mode == PostMode.editPost ? Icons.update : Icons.publish,
-                      size: 18,
+            child: QuillEditor.basic(
+              controller: controller,
+              config: QuillEditorConfig(
+                padding: const EdgeInsets.all(24),
+                placeholder: _getPlaceholder(ref.watch(postTypeProvider)),
+                scrollable: true,
+                autoFocus: true,
+                expands: true,
+                customStyles: DefaultStyles(
+                  placeHolder: DefaultTextBlockStyle(
+                    theme.textTheme.bodyLarge!.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      height: 1.8,
+                      fontSize: 17,
                     ),
-              label: Text(
-                _isLoading
-                    ? 'Saving...'
-                    : _mode == PostMode.editPost
-                    ? 'Update'
-                    : 'Publish',
+                    const HorizontalSpacing(0, 0),
+                    const VerticalSpacing(8, 0),
+                    const VerticalSpacing(0, 0),
+                    null,
+                  ),
+                  paragraph: DefaultTextBlockStyle(
+                    TextStyle(
+                      fontSize: 17,
+                      color: theme.colorScheme.onSurface,
+                      height: 1.8,
+                    ),
+                    const HorizontalSpacing(0, 0),
+                    const VerticalSpacing(8, 0),
+                    const VerticalSpacing(0, 0),
+                    null,
+                  ),
+                ),
               ),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
+            ),
+          ),
+
+          // Word count footer
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.5,
               ),
+              border: Border(
+                top: BorderSide(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                ),
+              ),
+            ),
+            child: Consumer(
+              builder: (context, ref, child) {
+                final text = controller.document.toPlainText();
+                final wordCount = text
+                    .trim()
+                    .split(RegExp(r'\s+'))
+                    .where((word) => word.isNotEmpty)
+                    .length;
+                final charCount = text.length;
+                final selectedType = ref.watch(postTypeProvider);
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.article_outlined,
+                          size: 16,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$wordCount words  •  $charCount characters',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (selectedType == 'Microfiction')
+                      Row(
+                        children: [
+                          Icon(
+                            wordCount <= 55
+                                ? Icons.check_circle
+                                : Icons.warning,
+                            size: 16,
+                            color: wordCount <= 55
+                                ? Colors.green
+                                : theme.colorScheme.error,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            wordCount <= 55
+                                ? 'Perfect length'
+                                : '${wordCount - 55} words over',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: wordCount <= 55
+                                  ? Colors.green
+                                  : theme.colorScheme.error,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -231,8 +425,7 @@ class _CreateapostState extends ConsumerState<Createapost> {
     );
   }
 
-  Widget _buildPostTypeSelector(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget _buildPostTypeSelector(ThemeData theme) {
     final selectedType = ref.watch(postTypeProvider);
 
     final postTypes = [
@@ -247,69 +440,78 @@ class _CreateapostState extends ConsumerState<Createapost> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Post Type',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface,
+          'What are you creating?',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 40,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: postTypes.length,
-            itemBuilder: (context, index) {
-              final type = postTypes[index];
-              final isSelected = selectedType == type;
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: postTypes.map((type) {
+            final isSelected = selectedType == type;
 
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(
-                    type,
-                    style: TextStyle(
-                      color: isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      ref.read(postTypeProvider.notifier).state = type;
-                    }
-                  },
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  selectedColor: theme.colorScheme.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide.none,
-                  ),
+            return FilterChip(
+              label: Text(
+                type,
+                style: TextStyle(
+                  color: isSelected
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.onSurface,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
-              );
-            },
-          ),
+              ),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  ref.read(postTypeProvider.notifier).state = type;
+                }
+              },
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              selectedColor: theme.colorScheme.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: BorderSide.none,
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
-  Widget _buildTitleInput(BuildContext context) {
-    final theme = Theme.of(context);
-
+  Widget _buildTitleInput(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Title',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface,
-          ),
+        Row(
+          children: [
+            Text(
+              'Title',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'Required',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onErrorContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         TextField(
           controller: TextEditingController(text: ref.watch(titleProvider))
             ..selection = TextSelection.collapsed(
@@ -319,53 +521,53 @@ class _CreateapostState extends ConsumerState<Createapost> {
             ref.read(titleProvider.notifier).state = value;
           },
           style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
           decoration: InputDecoration(
-            hintText: 'Enter your title...',
+            hintText: 'Give your work a compelling title...',
             hintStyle: theme.textTheme.headlineSmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
               fontWeight: FontWeight.w400,
             ),
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            filled: true,
+            fillColor: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.5,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.all(20),
+            counterStyle: theme.textTheme.bodySmall,
           ),
           maxLength: 100,
-          buildCounter:
-              (
-                context, {
-                required currentLength,
-                required isFocused,
-                maxLength,
-              }) {
-                return Text(
-                  '$currentLength/${maxLength ?? 0}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                );
-              },
         ),
       ],
     );
   }
 
-  Widget _buildDescriptionInput(BuildContext context) {
-    final theme = Theme.of(context);
-
+  Widget _buildDescriptionInput(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Description',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface,
-          ),
+        Row(
+          children: [
+            Text(
+              'Description',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '(Optional)',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         TextField(
           controller:
               TextEditingController(text: ref.watch(descriptionProvider))
@@ -377,40 +579,30 @@ class _CreateapostState extends ConsumerState<Createapost> {
           },
           style: theme.textTheme.bodyLarge,
           decoration: InputDecoration(
-            hintText: 'Add a brief description about your post...',
+            hintText: 'Add a brief description or context...',
             hintStyle: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
             ),
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            filled: true,
+            fillColor: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.5,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.all(20),
+            counterStyle: theme.textTheme.bodySmall,
           ),
-          maxLines: 2,
+          maxLines: 3,
           maxLength: 200,
-          buildCounter:
-              (
-                context, {
-                required currentLength,
-                required isFocused,
-                maxLength,
-              }) {
-                return Text(
-                  '$currentLength/${maxLength ?? 0}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                );
-              },
         ),
       ],
     );
   }
 
-  Widget _buildRichTextEditor(BuildContext context) {
-    final theme = Theme.of(context);
-    final selectedType = ref.watch(postTypeProvider);
-    final controller = ref.watch(quillControllerProvider);
+  Widget _buildTagsSection(ThemeData theme) {
+    final tags = ref.watch(tagsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,165 +610,84 @@ class _CreateapostState extends ConsumerState<Createapost> {
         Row(
           children: [
             Text(
-              'Content',
+              'Tags',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
               ),
             ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                selectedType,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w500,
-                ),
+            const SizedBox(width: 8),
+            Text(
+              '(Optional)',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: theme.colorScheme.outline.withValues(alpha: 0.2),
-            ),
-          ),
-          child: Column(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface.withValues(alpha: 0.8),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: theme.colorScheme.outline.withValues(alpha: 0.2),
-                    ),
-                  ),
-                ),
-                child: QuillSimpleToolbar(
-                  controller: controller,
-                  config: const QuillSimpleToolbarConfig(
-                    multiRowsDisplay: false,
-                    showDividers: false,
-                    showFontFamily: false,
-                    showFontSize: false,
-                    showBoldButton: true,
-                    showItalicButton: true,
-                    showUnderLineButton: true,
-                    showStrikeThrough: true,
-                    showInlineCode: false,
-                    showColorButton: true,
-                    showBackgroundColorButton: true,
-                    showListNumbers: true,
-                    showListBullets: true,
-                    showListCheck: false,
-                    showCodeBlock: false,
-                    showQuote: true,
-                    showIndent: true,
-                    showLink: false,
-                    showUndo: true,
-                    showRedo: true,
-                    showDirection: false,
-                    showSearchButton: false,
-                    toolbarSize: 36,
-                  ),
-                ),
+        InkWell(
+          onTap: _showTagDialog,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.5,
               ),
-              SizedBox(
-                height: 300,
-                child: QuillEditor(
-                  focusNode: _contentFocusNode,
-                  scrollController: _scrollController,
-                  controller: controller,
-                  config: QuillEditorConfig(
-                    padding: const EdgeInsets.all(20),
-                    showCursor: true,
-                    enableInteractiveSelection: true,
-                    scrollable: true,
-                    autoFocus: false,
-                    expands: false,
-                    placeholder: _getPlaceholder(selectedType),
-                    customStyles: DefaultStyles(
-                      placeHolder: DefaultTextBlockStyle(
-                        theme.textTheme.bodyLarge!.copyWith(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+            child: tags.isEmpty
+                ? Row(
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Add tags to help people discover your work',
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.4,
+                            alpha: 0.6,
                           ),
-                          height: 1.6,
                         ),
-                        const HorizontalSpacing(0, 0),
-                        const VerticalSpacing(6, 0),
-                        const VerticalSpacing(0, 0),
-                        null,
                       ),
-                      paragraph: DefaultTextBlockStyle(
-                        TextStyle(
-                          fontSize: 16,
-                          color: theme.colorScheme.onSurface,
-                          height: 1.6,
+                    ],
+                  )
+                : Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ...tags.map(
+                        (tag) => Chip(
+                          label: Text(tag),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                          onDeleted: () {
+                            final updatedTags = List<String>.from(tags);
+                            updatedTags.remove(tag);
+                            ref.read(tagsProvider.notifier).state = updatedTags;
+                          },
+                          backgroundColor: theme.colorScheme.primaryContainer,
+                          labelStyle: TextStyle(
+                            color: theme.colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        const HorizontalSpacing(0, 0),
-                        const VerticalSpacing(6, 0),
-                        const VerticalSpacing(0, 0),
-                        null,
                       ),
-                    ),
+                      ActionChip(
+                        label: const Text('Add more'),
+                        avatar: const Icon(Icons.add, size: 16),
+                        onPressed: _showTagDialog,
+                        backgroundColor:
+                            theme.colorScheme.surfaceContainerHighest,
+                      ),
+                    ],
                   ),
-                ),
-              ),
-            ],
           ),
-        ),
-        const SizedBox(height: 8),
-        Consumer(
-          builder: (context, ref, child) {
-            final controller = ref.watch(quillControllerProvider);
-            final text = controller.document.toPlainText();
-            final wordCount = text
-                .trim()
-                .split(RegExp(r'\s+'))
-                .where((word) => word.isNotEmpty)
-                .length;
-            final charCount = text.length;
-
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Words: $wordCount • Characters: $charCount',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                if (selectedType == 'Microfiction')
-                  Text(
-                    wordCount <= 55
-                        ? '✓ Perfect length'
-                        : 'Too long for microfiction',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: wordCount <= 55
-                          ? Colors.green
-                          : theme.colorScheme.error,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-              ],
-            );
-          },
         ),
       ],
     );
@@ -585,49 +696,44 @@ class _CreateapostState extends ConsumerState<Createapost> {
   String _getPlaceholder(String selectedType) {
     switch (selectedType) {
       case 'Poetry':
-        return 'Write your poem here... Let your words flow like verses';
+        return 'Let your verses flow...\n\nStart writing your poem here. Use the toolbar above to format your text.';
       case 'Lyrics':
-        return 'Write your lyrics here... Add verses and chorus';
+        return 'Write your song...\n\nAdd verses, chorus, bridge. Express your melody in words.';
       case 'Stories':
-        return 'Tell your story here... Once upon a time';
+        return 'Once upon a time...\n\nBegin your story here. Take your readers on a journey.';
       case 'Quotes & Aphorisms':
-        return 'Share your wisdom here...';
+        return 'Share your wisdom...\n\nWrite your thoughts, quotes, or aphorisms here.';
       case 'Microfiction':
-        return 'Craft your micro story here (55 words or less)...';
+        return 'Tell your micro story...\n\n(Maximum 55 words)\n\nEvery word counts. Make them meaningful.';
       default:
-        return 'Start writing your content here...';
+        return 'Start writing...';
     }
   }
 
-  Future<void> _handlePublishClick() async {
-    // Validate first
+  void _validateAndContinue() {
     final title = ref.read(titleProvider);
-    final controller = ref.read(quillControllerProvider);
-    final plainTextContent = controller.document.toPlainText();
 
     if (title.trim().isEmpty) {
-      _showSnackBar(context, 'Please add a title', isError: true);
+      _showSnackBar(context, 'Please add a title to continue', isError: true);
       return;
     }
 
-    if (plainTextContent.trim().isEmpty) {
-      _showSnackBar(context, 'Please add some content', isError: true);
-      return;
-    }
+    setState(() => _showEditor = true);
+  }
 
-    // Show tag selection dialog
+  Future<void> _showTagDialog() async {
     final selectedTags = await showDialog<List<String>>(
       context: context,
-      builder: (context) => const TagSelectionDialog(),
+      builder: (context) =>
+          TagSelectionDialog(initialTags: ref.read(tagsProvider)),
     );
 
     if (selectedTags != null) {
-      // User confirmed, proceed with publish
-      _savePost('publish', tags: selectedTags);
+      ref.read(tagsProvider.notifier).state = selectedTags;
     }
   }
 
-  Future<void> _savePost(String action, {List<String>? tags}) async {
+  Future<void> _savePost(String action) async {
     if (_isLoading) return;
 
     setState(() => _isLoading = true);
@@ -636,6 +742,7 @@ class _CreateapostState extends ConsumerState<Createapost> {
       final title = ref.read(titleProvider);
       final description = ref.read(descriptionProvider);
       final postType = ref.read(postTypeProvider);
+      final tags = ref.read(tagsProvider);
       final controller = ref.read(quillControllerProvider);
 
       final plainTextContent = controller.document.toPlainText();
@@ -684,7 +791,7 @@ class _CreateapostState extends ConsumerState<Createapost> {
             .where((word) => word.isNotEmpty)
             .length,
         'characterCount': plainTextContent.length,
-        if (action == 'publish' && tags != null) 'tags': tags,
+        if (tags.isNotEmpty) 'tags': tags,
       };
 
       if (action == 'draft') {
@@ -711,14 +818,14 @@ class _CreateapostState extends ConsumerState<Createapost> {
         final batch = FirebaseFirestore.instance.batch();
 
         if (_mode == PostMode.editPost) {
-          // Update existing post - no postCount change
+          // Update existing post
           final postRef = FirebaseFirestore.instance
               .collection('posts')
               .doc(widget.postId);
           batch.update(postRef, postData);
           _showSnackBar(context, 'Post updated successfully!');
         } else {
-          // Publish new post or draft
+          // Publish new post
           postData['createdAt'] =
               widget.postData?['createdAt'] ?? FieldValue.serverTimestamp();
           postData['likeCount'] = widget.postData?['likeCount'] ?? 0;
@@ -726,7 +833,6 @@ class _CreateapostState extends ConsumerState<Createapost> {
           postData['shareCount'] = widget.postData?['shareCount'] ?? 0;
           postData['viewCount'] = widget.postData?['viewCount'] ?? 0;
 
-          // Add new post
           final postRef = FirebaseFirestore.instance.collection('posts').doc();
           batch.set(postRef, postData);
 
@@ -749,13 +855,13 @@ class _CreateapostState extends ConsumerState<Createapost> {
           _showSnackBar(context, 'Post published successfully!');
         }
 
-        // Commit all changes atomically
         await batch.commit();
       }
 
       // Clear form and navigate back
       ref.read(titleProvider.notifier).state = '';
       ref.read(descriptionProvider.notifier).state = '';
+      ref.read(tagsProvider.notifier).state = [];
       controller.clear();
 
       if (mounted) {
@@ -789,14 +895,16 @@ class _CreateapostState extends ConsumerState<Createapost> {
 
 // Tag Selection Dialog
 class TagSelectionDialog extends StatefulWidget {
-  const TagSelectionDialog({super.key});
+  final List<String> initialTags;
+
+  const TagSelectionDialog({super.key, this.initialTags = const []});
 
   @override
   State<TagSelectionDialog> createState() => _TagSelectionDialogState();
 }
 
 class _TagSelectionDialogState extends State<TagSelectionDialog> {
-  final List<String> _selectedTags = [];
+  late List<String> _selectedTags;
   final TextEditingController _customTagController = TextEditingController();
   bool _isLoadingTags = true;
   List<String> _availableTags = [];
@@ -804,6 +912,7 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
   @override
   void initState() {
     super.initState();
+    _selectedTags = List.from(widget.initialTags);
     _loadTags();
   }
 
@@ -826,7 +935,6 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
           _isLoadingTags = false;
         });
       } else {
-        // Default tags if none exist
         setState(() {
           _availableTags = [
             'Love',
@@ -855,7 +963,6 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
     final tag = _customTagController.text.trim();
     if (tag.isEmpty) return;
 
-    // Validate tag
     if (tag.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -876,7 +983,6 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
       return;
     }
 
-    // Check if tag already exists
     if (_availableTags.contains(tag) || _selectedTags.contains(tag)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -888,13 +994,11 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
       return;
     }
 
-    // Add to selected tags
     setState(() {
       _selectedTags.add(tag);
       _availableTags.add(tag);
     });
 
-    // Save to Firebase
     try {
       await FirebaseFirestore.instance
           .collection('app_settings')
@@ -912,61 +1016,67 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final screenHeight = MediaQuery.of(context).size.height;
-    final maxDialogHeight = screenHeight - keyboardHeight - 100;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
       child: Container(
         constraints: BoxConstraints(
           maxWidth: 500,
-          maxHeight: maxDialogHeight.clamp(300.0, 600.0),
+          maxHeight: screenHeight * 0.7,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.all(24),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.tag, color: theme.colorScheme.primary),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Add Tags',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                        tooltip: 'Cancel',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Select existing tags or create new ones',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: Icon(
+                      Icons.tag,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Add Tags',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          'Help others discover your work',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
 
-            // Scrollable content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -978,7 +1088,7 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -997,24 +1107,31 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
                           );
                         }).toList(),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                     ],
 
                     // Add custom tag
+                    Text(
+                      'Create New Tag',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                           child: TextField(
                             controller: _customTagController,
                             decoration: InputDecoration(
-                              hintText: 'Create new tag...',
+                              hintText: 'Enter tag name...',
                               prefixIcon: const Icon(Icons.add),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
-                                vertical: 12,
+                                vertical: 14,
                               ),
                               counterText: '',
                             ),
@@ -1023,24 +1140,29 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
                             onSubmitted: (_) => _addCustomTag(),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        IconButton.filled(
+                        const SizedBox(width: 12),
+                        FilledButton(
                           onPressed: _addCustomTag,
-                          icon: const Icon(Icons.add),
-                          tooltip: 'Add tag',
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.all(16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Icon(Icons.add),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
                     // Available tags
                     Text(
-                      'Available Tags',
+                      'Popular Tags',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
 
                     _isLoadingTags
                         ? const Center(
@@ -1081,17 +1203,15 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
                               );
                             }).toList(),
                           ),
-                    const SizedBox(height: 80),
                   ],
                 ),
               ),
             ),
 
-            // Action buttons (fixed at bottom)
+            // Bottom actions
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
                 border: Border(
                   top: BorderSide(
                     color: theme.colorScheme.outline.withValues(alpha: 0.2),
@@ -1099,20 +1219,31 @@ class _TagSelectionDialogState extends State<TagSelectionDialog> {
                 ),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context, _selectedTags),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, _selectedTags),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(_selectedTags.isEmpty ? 'Skip' : 'Cancel'),
                     ),
-                    child: Text(_selectedTags.isEmpty ? 'Skip' : 'Continue'),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(context, _selectedTags),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: Colors.green,
+                      ),
+                      child: Text(
+                        _selectedTags.isEmpty
+                            ? 'Continue without tags'
+                            : 'Done (${_selectedTags.length})',
+                      ),
+                    ),
                   ),
                 ],
               ),

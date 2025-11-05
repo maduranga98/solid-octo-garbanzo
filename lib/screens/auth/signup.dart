@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:poem_application/models/user_model.dart';
 import 'package:poem_application/screens/auth/login.dart';
 import 'package:poem_application/services/auth_service.dart';
@@ -47,106 +48,134 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
   File? _selectedImage;
   String? _uploadedImageUrl;
 
-  // Animation
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  // Username availability
+  bool _isCheckingUsername = false;
+  bool? _isUsernameAvailable;
 
-  // User content types
-  final List<Map<String, dynamic>> _contentTypes = [
-    {
-      'title': 'Poetry',
-      'subtitle': 'Poets, spoken word, haiku, verses',
-      'icon': Icons.auto_stories,
-      'value': 'poetry',
-      'color': const Color(0xFF6366F1),
-    },
-    {
-      'title': 'Lyrics',
-      'subtitle': 'Songwriters, rap, chants, melodies',
-      'icon': Icons.music_note,
-      'value': 'lyrics',
-      'color': const Color(0xFF10B981),
-    },
-    {
-      'title': 'Stories',
-      'subtitle': 'Short stories, novels, folklore, prose',
-      'icon': Icons.menu_book,
-      'value': 'stories',
-      'color': const Color(0xFF8B5CF6),
-    },
-    {
-      'title': 'Quotes & Aphorisms',
-      'subtitle': 'Inspirations, reflections, timeless lines',
-      'icon': Icons.format_quote,
-      'value': 'quotes',
-      'color': const Color(0xFFF59E0B),
-    },
-    {
-      'title': 'Microfiction',
-      'subtitle': 'Tiny tales, flash fiction, one-liners',
-      'icon': Icons.bolt,
-      'value': 'microfiction',
-      'color': const Color(0xFFEF4444),
-    },
-  ];
+  // Animations
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
-    _setupAnimations();
-  }
-
-  void _setupAnimations() {
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-
     _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
+      parent: _fadeController,
+      curve: Curves.easeIn,
     );
-
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0.0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
-
-    _animationController.forward();
+    _fadeController.forward();
   }
 
   @override
   void dispose() {
+    _pageController.dispose();
+    _scrollController1.dispose();
+    _scrollController2.dispose();
+    _scrollController3.dispose();
     _firstnameController.dispose();
     _lastnameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _pageController.dispose();
-    _scrollController1.dispose();
-    _scrollController2.dispose();
-    _scrollController3.dispose();
-    _animationController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
+  void _nextStep() {
+    if (_currentStep == 0 && !_validateStep1()) return;
+    if (_currentStep == 1 && !_validateStep2()) return;
+
+    if (_currentStep < 2) {
+      setState(() => _currentStep++);
+      _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _previousStep() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+      _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  bool _validateStep1() {
+    return _firstnameController.text.isNotEmpty &&
+        _lastnameController.text.isNotEmpty &&
+        _usernameController.text.isNotEmpty &&
+        _emailController.text.isNotEmpty &&
+        _passwordController.text.isNotEmpty &&
+        _confirmPasswordController.text.isNotEmpty &&
+        _passwordController.text == _confirmPasswordController.text &&
+        (_isUsernameAvailable ?? false);
+  }
+
+  bool _validateStep2() {
+    return _selectedCountry != null && _selectedTypes.isNotEmpty;
+  }
+
+  bool _validateFinalStep() {
+    return _acceptTerms;
+  }
+
+  void _checkUsernameAvailability() async {
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) {
+      setState(() {
+        _isUsernameAvailable = null;
+        _isCheckingUsername = false;
+      });
+      return;
+    }
+
+    setState(() => _isCheckingUsername = true);
+
+    try {
+      final isAvailable = await _authService.isUsernameAvailable(username);
+      if (mounted) {
+        setState(() {
+          _isUsernameAvailable = isAvailable;
+          _isCheckingUsername = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isUsernameAvailable = false;
+          _isCheckingUsername = false;
+        });
+      }
+    }
+  }
+
   Future<void> _pickImage() async {
+    final theme = Theme.of(context);
+
     try {
       final ImagePicker picker = ImagePicker();
-
-      final source = await showModalBottomSheet<ImageSource>(
+      final ImageSource? source = await showModalBottomSheet<ImageSource>(
         context: context,
+        backgroundColor: theme.cardColor,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (context) => SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(vertical: 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -210,30 +239,6 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
     }
   }
 
-  Future<String?> _uploadImage(String userId) async {
-    if (_selectedImage == null) return null;
-
-    setState(() => _isUploadingImage = true);
-
-    try {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('profile_images')
-          .child('$userId.jpg');
-
-      final uploadTask = await storageRef.putFile(_selectedImage!);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-
-      setState(() => _uploadedImageUrl = downloadUrl);
-      return downloadUrl;
-    } catch (e) {
-      _showErrorMessage('Failed to upload image: $e');
-      return null;
-    } finally {
-      setState(() => _isUploadingImage = false);
-    }
-  }
-
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_validateFinalStep()) return;
@@ -266,38 +271,31 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
           fcmToken: fcmToken,
         ),
         context: context,
+        selectedImageUrl: _selectedImage,
       );
-
+      print(
+        "User Credentials: ${credential?.user} **************************************s",
+      );
       if (credential?.user != null) {
         // Start listening to token refresh
         if (fcmToken != null) {
           fcmService.listenToTokenRefresh(credential!.user!.uid);
         }
 
-        // Upload profile image if selected
-        if (_selectedImage != null) {
-          final imageUrl = await _uploadImage(credential!.user!.uid);
-          if (imageUrl != null) {
-            await _authService.updateUserData(
-              credential!.user!.uid,
-              UserModel(
-                uid: credential.user!.uid,
-                firstname: _firstnameController.text.trim(),
-                lastname: _lastnameController.text.trim(),
-                email: _emailController.text.trim(),
-                userName: _usernameController.text.trim(),
-                type: _selectedTypes,
-                country: _selectedCountry!.name,
-                photoURl: imageUrl,
-                postCount: 0,
-                followersCount: 0,
-                followingCount: 0,
-                createdAt: DateTime.now(),
-                fcmToken: fcmToken,
-              ),
-            );
-          }
-        }
+        // Upload profile image if selected and update Firestore directly
+        // if (_selectedImage != null) {
+        //   final imageUrl = await _uploadImage(credential!.user!.uid);
+        //   print("Image URL : ${imageUrl}");
+        //   if (imageUrl != null) {
+        //     // Update the photoURl field in Firestore
+        //     await FirebaseFirestore.instance
+        //         .collection('users')
+        //         .doc(credential.user!.uid)
+        //         .update({'photoURl': imageUrl});
+
+        //     print("✅ Profile picture URL updated in Firestore: $imageUrl");
+        //   }
+        // }
       }
     } catch (e) {
       if (mounted) {
@@ -314,883 +312,593 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
     if (error.contains('weak-password')) {
       return 'Password is too weak. Please use a stronger password.';
     } else if (error.contains('email-already-in-use')) {
-      return 'An account already exists with this email address.';
+      return 'An account with this email already exists.';
     } else if (error.contains('invalid-email')) {
-      return 'Please enter a valid email address.';
+      return 'Invalid email address.';
+    } else if (error.contains('network-request-failed')) {
+      return 'Network error. Please check your connection.';
     }
-    return 'Failed to create account. Please try again.';
+    return error.replaceAll('Exception: ', '');
   }
 
   void _showErrorMessage(String message) {
-    HapticFeedback.lightImpact();
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Theme.of(context).colorScheme.error,
+        content: Text(message),
+        backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
-  }
-
-  void _nextStep() {
-    HapticFeedback.lightImpact();
-
-    if (_currentStep < 2) {
-      if (_currentStep == 0 && !_validatePersonalInfo()) {
-        _showErrorMessage('Please fill in all required fields');
-        return;
-      }
-      if (_currentStep == 1 && !_validateAccountInfo()) {
-        _showErrorMessage('Please check your account details');
-        return;
-      }
-
-      setState(() => _currentStep++);
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      _handleSignup();
-    }
-  }
-
-  void _previousStep() {
-    HapticFeedback.lightImpact();
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  bool _validatePersonalInfo() {
-    return _firstnameController.text.trim().isNotEmpty &&
-        _lastnameController.text.trim().isNotEmpty &&
-        _selectedCountry != null;
-  }
-
-  bool _validateAccountInfo() {
-    final form = _formKey.currentState;
-    if (form != null && !form.validate()) return false;
-
-    return _usernameController.text.trim().isNotEmpty &&
-        _emailController.text.trim().isNotEmpty &&
-        _passwordController.text.trim().isNotEmpty &&
-        _confirmPasswordController.text.trim().isNotEmpty &&
-        _passwordController.text == _confirmPasswordController.text;
-  }
-
-  bool _validateFinalStep() {
-    if (_selectedTypes.isEmpty) {
-      _showErrorMessage('Please select at least one content type');
-      return false;
-    }
-    if (!_acceptTerms) {
-      _showErrorMessage('Please accept the Terms and Conditions');
-      return false;
-    }
-    return true;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      resizeToAvoidBottomInset: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Column(
-              children: [
-                // ULTRA COMPACT HEADER - Only ~80px!
-                _buildCompactHeader(theme),
-
-                // Maximum space for content
-                Expanded(
-                  child: Form(
-                    key: _formKey,
-                    child: PageView(
-                      controller: _pageController,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _buildPersonalInfoStep(theme),
-                        _buildAccountInfoStep(theme),
-                        _buildPreferencesStep(theme),
-                      ],
+          child: Column(
+            children: [
+              // Progress Indicator
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: List.generate(
+                    3,
+                    (index) => Expanded(
+                      child: Container(
+                        height: 4,
+                        margin: EdgeInsets.only(right: index < 2 ? 8 : 0),
+                        decoration: BoxDecoration(
+                          color: index <= _currentStep
+                              ? colorScheme.primary
+                              : colorScheme.primary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     ),
                   ),
                 ),
+              ),
 
-                // Navigation buttons
-                _buildNavigationButtons(theme),
-              ],
-            ),
+              // Content
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildStep1(theme, isDark, colorScheme),
+                      _buildStep2(theme, isDark, colorScheme),
+                      _buildStep3(theme, isDark, colorScheme),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Navigation Buttons
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    if (_currentStep > 0)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _isLoading ? null : _previousStep,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: BorderSide(color: colorScheme.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Back'),
+                        ),
+                      ),
+                    if (_currentStep > 0) const SizedBox(width: 12),
+                    Expanded(
+                      flex: _currentStep == 0 ? 1 : 2,
+                      child: ElevatedButton(
+                        onPressed: _isLoading
+                            ? null
+                            : _currentStep == 2
+                            ? _handleSignup
+                            : _nextStep,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                _currentStep == 2
+                                    ? 'Create Account'
+                                    : 'Continue',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // ULTRA COMPACT HEADER - YOUR DESIGN!
-  Widget _buildCompactHeader(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+  Widget _buildStep1(ThemeData theme, bool isDark, ColorScheme colorScheme) {
+    return SingleChildScrollView(
+      controller: _scrollController1,
+      padding: const EdgeInsets.all(20),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row with Step Title and Sign In button
+          Text(
+            'Create Account',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Enter your personal details',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.textTheme.bodySmall?.color,
+            ),
+          ),
+          const SizedBox(height: 32),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Step title
-              Text(
-                'Step ${_currentStep + 1}/3 • ${_getStepTitle()}',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
+              Expanded(
+                child: InputField(
+                  controller: _firstnameController,
+                  hint: 'First name',
+                  prefixIcon: Icon(Icons.person_outline),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Required';
+                    }
+                    return null;
+                  },
                 ),
               ),
-
-              // Sign In button
-              TextButton(
-                onPressed: _isLoading
-                    ? null
-                    : () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const Login()),
-                      ),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: InputField(
+                  controller: _lastnameController,
+                  hint: 'Last name',
+                  prefixIcon: Icon(Icons.person_outline),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Required';
+                    }
+                    return null;
+                  },
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          InputField(
+            controller: _usernameController,
+            hint: 'Username',
+            prefixIcon: Icon(Icons.alternate_email),
+            onChanged: (_) => _checkUsernameAvailability(),
+            suffixIcon: _isCheckingUsername
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : _isUsernameAvailable == null
+                ? null
+                : Icon(
+                    _isUsernameAvailable! ? Icons.check_circle : Icons.cancel,
+                    color: _isUsernameAvailable! ? Colors.green : Colors.red,
+                  ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Username is required';
+              }
+              if (!(_isUsernameAvailable ?? false)) {
+                return 'Username not available';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          InputField(
+            controller: _emailController,
+            hint: 'Email',
+            prefixIcon: Icon(Icons.email_outlined),
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Email is required';
+              }
+              if (!value.contains('@')) {
+                return 'Invalid email';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          InputField(
+            controller: _passwordController,
+            hint: 'Password',
+            prefixIcon: Icon(Icons.lock_outline),
+            obscureText: true,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Password is required';
+              }
+              if (value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          InputField(
+            controller: _confirmPasswordController,
+            hint: 'Confirm Password',
+            prefixIcon: Icon(Icons.lock_outline),
+            obscureText: true,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please confirm password';
+              }
+              if (value != _passwordController.text) {
+                return 'Passwords do not match';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Already have an account? ',
+                style: theme.textTheme.bodyMedium,
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const Login()),
+                  );
+                },
                 child: Text(
                   'Sign In',
-                  style: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildStep2(ThemeData theme, bool isDark, ColorScheme colorScheme) {
+    return SingleChildScrollView(
+      controller: _scrollController2,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Location & Interests',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Help us personalize your experience',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.textTheme.bodySmall?.color,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Country',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 12),
-
-          // Progress bar only
-          Row(
-            children: List.generate(3, (index) {
-              final isActive = index <= _currentStep;
-              return Expanded(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.outline.withValues(
-                                  alpha: 0.2,
-                                ),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    if (index < 2) const SizedBox(width: 6),
-                  ],
-                ),
+          InkWell(
+            onTap: () {
+              showCountryPicker(
+                context: context,
+                showPhoneCode: false,
+                onSelect: (Country country) {
+                  setState(() => _selectedCountry = country);
+                  HapticFeedback.lightImpact();
+                },
               );
-            }),
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[850] : Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _selectedCountry != null
+                      ? colorScheme.primary
+                      : Colors.transparent,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    color: theme.iconTheme.color,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _selectedCountry?.name ?? 'Select your country',
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: theme.iconTheme.color,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'I\'m interested in',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ['Poetry', 'Lyrics', 'Stories', 'Quotes', 'Microfiction']
+                .map((type) {
+                  final isSelected = _selectedTypes.contains(type);
+                  return FilterChip(
+                    label: Text(type),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedTypes.add(type);
+                        } else {
+                          _selectedTypes.remove(type);
+                        }
+                      });
+                      HapticFeedback.lightImpact();
+                    },
+                    backgroundColor: isDark
+                        ? Colors.grey[850]
+                        : Colors.grey[100],
+                    selectedColor: colorScheme.primary.withOpacity(0.2),
+                    checkmarkColor: colorScheme.primary,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? colorScheme.primary
+                          : theme.textTheme.bodyLarge?.color,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                    side: BorderSide(
+                      color: isSelected
+                          ? colorScheme.primary
+                          : Colors.transparent,
+                    ),
+                  );
+                })
+                .toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPersonalInfoStep(ThemeData theme) {
-    return ListView(
-      controller: _scrollController1,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      children: [
-        // Profile image - compact
-        Center(
-          child: GestureDetector(
-            onTap: _isLoading ? null : _pickImage,
+  Widget _buildStep3(ThemeData theme, bool isDark, ColorScheme colorScheme) {
+    return SingleChildScrollView(
+      controller: _scrollController3,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Profile Picture',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add a photo to personalize your profile (optional)',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.textTheme.bodySmall?.color,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Center(
             child: Stack(
               children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: _selectedImage != null
-                        ? Colors.transparent
-                        : theme.colorScheme.primaryContainer.withValues(
-                            alpha: 0.3,
-                          ),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.colorScheme.primary,
-                      width: 2,
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark ? Colors.grey[850] : Colors.grey[200],
+                      image: _selectedImage != null
+                          ? DecorationImage(
+                              image: FileImage(_selectedImage!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
+                    child: _selectedImage == null
+                        ? Icon(
+                            Icons.person,
+                            size: 80,
+                            color: theme.iconTheme.color?.withOpacity(0.5),
+                          )
+                        : null,
                   ),
-                  child: _isUploadingImage
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: theme.colorScheme.primary,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : _selectedImage != null
-                      ? ClipOval(
-                          child: Image.file(
-                            _selectedImage!,
-                            fit: BoxFit.cover,
-                            width: 100,
-                            height: 100,
-                          ),
-                        )
-                      : Icon(
-                          Icons.person_outline_rounded,
-                          size: 40,
-                          color: theme.colorScheme.primary,
-                        ),
                 ),
                 Positioned(
                   bottom: 0,
                   right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: theme.colorScheme.surface,
-                        width: 2,
+                  child: GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.scaffoldBackgroundColor,
+                          width: 3,
+                        ),
+                      ),
+                      child: Icon(
+                        _selectedImage == null ? Icons.add_a_photo : Icons.edit,
+                        size: 20,
+                        color: Colors.white,
                       ),
                     ),
-                    child: Icon(
-                      _selectedImage != null ? Icons.edit : Icons.camera_alt,
-                      size: 14,
-                      color: Colors.white,
+                  ),
+                ),
+                if (_isUploadingImage)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black.withOpacity(0.5),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'You can always update your profile picture later from settings',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Center(
-          child: Text(
-            _selectedImage != null ? 'Tap to change' : 'Add photo (optional)',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        InputField(
-          label: 'First Name',
-          hint: 'Enter your first name',
-          controller: _firstnameController,
-          required: true,
-          textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.next,
-          prefixIcon: const Icon(Icons.person_outline),
-          enabled: !_isLoading,
-          validator: (value) {
-            if (value?.trim().isEmpty ?? true) {
-              return 'First name is required';
-            }
-            if (value!.trim().length < 2) {
-              return 'First name must be at least 2 characters';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 14),
-
-        InputField(
-          label: 'Last Name',
-          hint: 'Enter your last name',
-          controller: _lastnameController,
-          required: true,
-          textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.next,
-          prefixIcon: const Icon(Icons.person_outline),
-          enabled: !_isLoading,
-          validator: (value) {
-            if (value?.trim().isEmpty ?? true) {
-              return 'Last name is required';
-            }
-            if (value!.trim().length < 2) {
-              return 'Last name must be at least 2 characters';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 14),
-
-        _buildCountryPicker(theme),
-        const SizedBox(height: 120),
-      ],
-    );
-  }
-
-  Widget _buildAccountInfoStep(ThemeData theme) {
-    return ListView(
-      controller: _scrollController2,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      children: [
-        InputField(
-          label: 'Username',
-          hint: 'Choose a unique username',
-          controller: _usernameController,
-          required: true,
-          textInputAction: TextInputAction.next,
-          prefixIcon: const Icon(Icons.alternate_email),
-          enabled: !_isLoading,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
-            LengthLimitingTextInputFormatter(20),
-          ],
-          validator: (value) {
-            if (value?.trim().isEmpty ?? true) {
-              return 'Username is required';
-            }
-            if (value!.length < 3) {
-              return 'Username must be at least 3 characters';
-            }
-            if (value.length > 20) {
-              return 'Username must be less than 20 characters';
-            }
-            if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
-              return 'Username can only contain letters, numbers, and underscores';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 14),
-
-        InputField(
-          label: 'Email',
-          hint: 'Enter your email address',
-          controller: _emailController,
-          required: true,
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          prefixIcon: const Icon(Icons.email_outlined),
-          enabled: !_isLoading,
-          validator: (value) {
-            if (value?.trim().isEmpty ?? true) {
-              return 'Email is required';
-            }
-            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
-              return 'Enter a valid email address';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 14),
-
-        InputField(
-          label: 'Password',
-          hint: 'Create a strong password (min. 6 characters)',
-          controller: _passwordController,
-          required: true,
-          obscureText: true,
-          textInputAction: TextInputAction.next,
-          prefixIcon: const Icon(Icons.lock_outline),
-          enabled: !_isLoading,
-          validator: (value) {
-            if (value?.trim().isEmpty ?? true) {
-              return 'Password is required';
-            }
-            if (value!.length < 6) {
-              return 'Password must be at least 6 characters';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 14),
-
-        InputField(
-          label: 'Confirm Password',
-          hint: 'Confirm your password',
-          controller: _confirmPasswordController,
-          required: true,
-          obscureText: true,
-          textInputAction: TextInputAction.done,
-          prefixIcon: const Icon(Icons.lock_outline),
-          enabled: !_isLoading,
-          validator: (value) {
-            if (value?.trim().isEmpty ?? true) {
-              return 'Please confirm your password';
-            }
-            if (value != _passwordController.text) {
-              return 'Passwords do not match';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 180), // EXTRA space for keyboard
-      ],
-    );
-  }
-
-  Widget _buildPreferencesStep(ThemeData theme) {
-    return ListView(
-      controller: _scrollController3,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      children: [
-        Text(
-          'What type of content do you create?',
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        ...List.generate(_contentTypes.length, (index) {
-          final type = _contentTypes[index];
-          final isSelected = _selectedTypes.contains(type['value']);
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _isLoading
-                    ? null
-                    : () {
-                        HapticFeedback.lightImpact();
-                        setState(() {
-                          if (isSelected) {
-                            _selectedTypes.remove(type['value']);
-                          } else {
-                            _selectedTypes.add(type['value']);
-                          }
-                        });
-                      },
-                borderRadius: BorderRadius.circular(14),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: isSelected
-                          ? type['color']
-                          : theme.colorScheme.outline.withValues(alpha: 0.3),
-                      width: isSelected ? 2 : 1,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    color: isSelected
-                        ? type['color'].withValues(alpha: 0.05)
-                        : Colors.transparent,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? type['color'].withValues(alpha: 0.1)
-                              : theme.colorScheme.surfaceContainer.withValues(
-                                  alpha: 0.5,
-                                ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          type['icon'],
-                          color: isSelected
-                              ? type['color']
-                              : theme.colorScheme.onSurfaceVariant,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              type['title'],
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurface,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              type['subtitle'],
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.7,
-                                ),
-                                fontSize: 12,
-                                height: 1.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      AnimatedScale(
-                        scale: isSelected ? 1.0 : 0.8,
-                        duration: const Duration(milliseconds: 200),
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? type['color']
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isSelected
-                                  ? type['color']
-                                  : theme.colorScheme.outline.withValues(
-                                      alpha: 0.3,
-                                    ),
-                              width: 2,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.check,
-                            color: isSelected
-                                ? Colors.white
-                                : Colors.transparent,
-                            size: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-
-        const SizedBox(height: 16),
-
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: Checkbox(
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Checkbox(
                 value: _acceptTerms,
-                onChanged: _isLoading
-                    ? null
-                    : (value) {
-                        setState(() => _acceptTerms = value ?? false);
-                      },
-                activeColor: theme.colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                ),
+                onChanged: (value) {
+                  setState(() => _acceptTerms = value ?? false);
+                  HapticFeedback.lightImpact();
+                },
+                activeColor: colorScheme.primary,
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: GestureDetector(
-                onTap: _isLoading
-                    ? null
-                    : () {
-                        setState(() => _acceptTerms = !_acceptTerms);
-                      },
-                child: RichText(
-                  text: TextSpan(
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                      height: 1.3,
-                      fontSize: 12,
-                    ),
-                    children: [
-                      const TextSpan(text: 'I agree to the '),
-                      TextSpan(
-                        text: 'Terms',
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const TextSpan(text: ' and '),
-                      TextSpan(
-                        text: 'Privacy Policy',
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 100),
-      ],
-    );
-  }
-
-  Widget _buildCountryPicker(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Country',
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            Text(
-              ' *',
-              style: TextStyle(
-                color: theme.colorScheme.error,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: _isLoading
-                ? null
-                : () {
-                    showCountryPicker(
-                      context: context,
-                      showPhoneCode: false,
-                      onSelect: (Country country) {
-                        setState(() {
-                          _selectedCountry = country;
-                        });
-                      },
-                      countryListTheme: CountryListThemeData(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(20.0),
-                          topRight: Radius.circular(20.0),
-                        ),
-                        inputDecoration: InputDecoration(
-                          labelText: 'Search',
-                          hintText: 'Start typing to search',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: theme.colorScheme.outline.withValues(
-                                alpha: 0.3,
-                              ),
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    );
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _acceptTerms = !_acceptTerms);
+                    HapticFeedback.lightImpact();
                   },
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                color: theme.colorScheme.surfaceContainer.withValues(
-                  alpha: 0.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.public,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  if (_selectedCountry != null) ...[
-                    Text(
-                      _selectedCountry!.flagEmoji,
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: Text(
-                      _selectedCountry?.name ?? 'Select your country',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: _selectedCountry == null
-                            ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
-                            : theme.colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    Icons.keyboard_arrow_down,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    size: 18,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNavigationButtons(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.shadow.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          if (_currentStep > 0)
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _isLoading ? null : _previousStep,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  side: BorderSide(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.arrow_back,
-                      size: 16,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Previous',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.7,
-                        ),
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          if (_currentStep > 0) const SizedBox(width: 12),
-
-          Expanded(
-            flex: _currentStep == 0 ? 1 : 1,
-            child: FilledButton(
-              onPressed: _isLoading ? null : _nextStep,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: _isLoading ? 0 : 2,
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'I agree to the ',
+                      style: theme.textTheme.bodyMedium,
                       children: [
-                        Text(
-                          _getButtonText(),
-                          style: const TextStyle(
-                            fontSize: 15,
+                        TextSpan(
+                          text: 'Terms & Conditions',
+                          style: TextStyle(
+                            color: colorScheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        if (_currentStep < 2) ...[
-                          const SizedBox(width: 6),
-                          const Icon(Icons.arrow_forward, size: 16),
-                        ],
+                        const TextSpan(text: ' and '),
+                        TextSpan(
+                          text: 'Privacy Policy',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
-            ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
-  }
-
-  String _getStepTitle() {
-    switch (_currentStep) {
-      case 0:
-        return 'Profile & Details';
-      case 1:
-        return 'Account';
-      case 2:
-        return 'Preferences';
-      default:
-        return '';
-    }
-  }
-
-  String _getButtonText() {
-    switch (_currentStep) {
-      case 0:
-      case 1:
-        return 'Next';
-      case 2:
-        return 'Create Account';
-      default:
-        return 'Next';
-    }
   }
 }
