@@ -15,3 +15,20 @@ final getUserDataProvider = FutureProvider.family<UserModel?, String>((
   final repo = ref.watch(userRepositoryProvider);
   return repo.getUserData(uid);
 });
+
+// Stream provider for real-time user data updates (for profile stats)
+final userDataStreamProvider = StreamProvider.family<UserModel?, String>((
+  ref,
+  uid,
+) {
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .snapshots()
+      .map((snapshot) {
+    if (snapshot.exists) {
+      return UserModel.fromFirestore(snapshot);
+    }
+    return null;
+  });
+});

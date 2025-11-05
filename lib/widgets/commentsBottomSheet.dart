@@ -254,6 +254,8 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                         color: colorScheme.onSurface,
                         height: 1.4,
                       ),
+                      softWrap: true,
+                      overflow: TextOverflow.visible,
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -798,6 +800,8 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                     color: colorScheme.onSurface,
                     height: 1.3,
                   ),
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
                 ),
               ],
             ),

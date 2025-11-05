@@ -72,7 +72,8 @@ class UserProfile extends ConsumerWidget {
     final profileUserId = userId ?? currentUser.uid;
     final isOwnProfile = profileUserId == currentUser.uid;
 
-    final userAsync = ref.watch(getUserDataProvider(profileUserId));
+    // Use stream provider for real-time updates of profile stats
+    final userAsync = ref.watch(userDataStreamProvider(profileUserId));
 
     return DefaultTabController(
       length: isOwnProfile ? 3 : 1,

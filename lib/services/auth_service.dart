@@ -126,16 +126,26 @@ class AuthService {
         final createdUser = await _userRepository.createNewUser(
           userModelWithUid,
         );
-        final imageUrl = await _uploadImage(
-          selectedImageUrl,
-          credential.user!.uid,
-        );
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(credential.user!.uid)
-            .update({'photoURl': imageUrl});
 
-        print("✅ Profile picture URL updated in Firestore: $imageUrl");
+        // Upload profile image if provided
+        if (selectedImageUrl != null) {
+          final imageUrl = await _uploadImage(
+            selectedImageUrl,
+            credential.user!.uid,
+          );
+
+          if (imageUrl != null && imageUrl.isNotEmpty) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(credential.user!.uid)
+                .update({'photoURl': imageUrl});
+            print("✅ Profile picture URL updated in Firestore: $imageUrl");
+          } else {
+            print("⚠️ Failed to upload profile picture");
+          }
+        } else {
+          print("ℹ️ No profile picture selected");
+        }
         if (createdUser == null) {
           print(
             "❌ Failed to create user document, cleaning up Firebase user...",
@@ -304,66 +314,13 @@ class AuthService {
 
       print("✅ Firebase authentication successful");
 
-      // Check if this is a new user
+      // Check if this is an existing user
       if (userCredential.user != null) {
         final userExists = await doesUserDocumentExist(
           userCredential.user!.uid,
         );
 
-        if (!userExists) {
-          print("📝 Creating new user document for Google Sign-In user");
-
-          // Get FCM Token
-          String? fcmToken = await getFCMToken();
-
-          // Extract name parts
-          String displayName = userCredential.user!.displayName ?? '';
-          List<String> nameParts = displayName.split(' ');
-          String firstName = nameParts.isNotEmpty ? nameParts[0] : '';
-          String lastName = nameParts.length > 1
-              ? nameParts.sublist(1).join(' ')
-              : '';
-
-          // Generate username from email
-          String baseUsername = userCredential.user!.email!
-              .split('@')[0]
-              .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-          String username = baseUsername;
-          int counter = 1;
-
-          // Ensure username is unique
-          while (!await isUsernameAvailable(username)) {
-            username = '${baseUsername}_$counter';
-            counter++;
-          }
-
-          // Create user model with correct types
-          final newUser = UserModel(
-            uid: userCredential.user!.uid,
-            firstname: firstName,
-            lastname: lastName,
-            email: userCredential.user!.email ?? '',
-            userName: username,
-            type: [], // Default type
-            country: '', // Will be updated later
-            photoURl:
-                userCredential.user!.photoURL ?? '', // Get Google profile photo
-            postCount: 0,
-            followersCount: 0,
-            followingCount: 0,
-            createdAt:
-                DateTime.now(), // Changed from Timestamp.now() to DateTime.now()
-            fcmToken: fcmToken,
-            preferredReadingLanguages: [
-              'English',
-            ], // Changed from const ['English'] to ['English']
-            preferredWritingLanguage: 'English',
-            exploreInternational: true,
-          );
-
-          await _userRepository.createNewUser(newUser);
-          print("✅ New user document created successfully");
-        } else {
+        if (userExists) {
           // Update FCM token for existing user
           await updateFCMToken(userCredential.user!.uid);
 
@@ -378,6 +335,9 @@ class AuthService {
                 .update({'photoURl': userCredential.user!.photoURL});
             print("✅ Updated photo URL from Google profile");
           }
+        } else {
+          // New user - don't create document yet, let GoogleUserInfoScreen handle it
+          print("📝 New Google user - will collect info in GoogleUserInfoScreen");
         }
       }
 
