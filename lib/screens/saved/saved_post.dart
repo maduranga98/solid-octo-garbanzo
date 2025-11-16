@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/providers/auth_provider.dart';
-import 'package:poem_application/providers/postRepositoryProvider.dart';
-import 'package:poem_application/providers/post_interaction_provider.dart';
-import 'package:poem_application/repositories/post_repository.dart';
+import 'package:versebox/providers/auth_provider.dart';
+import 'package:versebox/providers/postRepositoryProvider.dart';
+import 'package:versebox/providers/post_interaction_provider.dart';
+import 'package:versebox/repositories/post_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:poem_application/widgets/commentsBottomSheet.dart';
-import 'package:poem_application/widgets/fullPostBottomSheet.dart';
+import 'package:versebox/widgets/commentsBottomSheet.dart';
+import 'package:versebox/widgets/fullPostBottomSheet.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class SavedPostScreen extends ConsumerStatefulWidget {

@@ -7,13 +7,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-import 'package:poem_application/config/theme.dart';
-import 'package:poem_application/providers/theme_provider.dart';
-import 'package:poem_application/screens/auth/login.dart';
-import 'package:poem_application/screens/auth/google_user_info_screen.dart';
-import 'package:poem_application/screens/home/home_screen.dart';
-import 'package:poem_application/screens/splash_screen.dart';
-import 'package:poem_application/services/fcm_service.dart';
+import 'package:versebox/config/theme.dart';
+import 'package:versebox/providers/theme_provider.dart';
+import 'package:versebox/screens/auth/login.dart';
+import 'package:versebox/screens/auth/google_user_info_screen.dart';
+import 'package:versebox/screens/home/home_screen.dart';
+import 'package:versebox/screens/splash_screen.dart';
+import 'package:versebox/services/fcm_service.dart';
 import 'firebase_options.dart';
 
 // Background message handler for Firebase Cloud Messaging
@@ -65,7 +65,10 @@ class AuthWrapper extends StatelessWidget {
 
   Future<bool> _checkUserDocumentExists(String uid) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
       return doc.exists;
     } catch (e) {
       print("❌ Error checking user document: $e");

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:poem_application/models/user_model.dart';
-import 'package:poem_application/repositories/user_repository.dart';
-import 'package:poem_application/screens/home/home_screen.dart';
+import 'package:versebox/models/user_model.dart';
+import 'package:versebox/repositories/user_repository.dart';
+import 'package:versebox/screens/home/home_screen.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 
 class UserPreferencesIntroScreen extends ConsumerStatefulWidget {

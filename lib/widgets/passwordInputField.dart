@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:poem_application/widgets/inputfields.dart';
+import 'package:versebox/widgets/inputfields.dart';
 
 class PasswordInputField extends StatelessWidget {
   final String? label;

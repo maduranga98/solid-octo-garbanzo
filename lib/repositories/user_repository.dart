@@ -2,7 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:poem_application/models/user_model.dart';
+import 'package:versebox/models/user_model.dart';
 
 class UserRepository {
   final FirebaseFirestore firestore;

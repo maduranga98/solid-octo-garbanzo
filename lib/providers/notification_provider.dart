@@ -1,7 +1,7 @@
 // lib/providers/notification_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/models/notification_model.dart';
-import 'package:poem_application/services/notification_service.dart';
+import 'package:versebox/models/notification_model.dart';
+import 'package:versebox/services/notification_service.dart';
 
 // Provider for NotificationService
 final notificationServiceProvider = Provider<NotificationService>((ref) {

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:poem_application/screens/auth/signup.dart';
-import 'package:poem_application/screens/auth/google_user_info_screen.dart';
-import 'package:poem_application/screens/home/home_screen.dart';
-import 'package:poem_application/services/auth_service.dart';
-import 'package:poem_application/widgets/emailInputField.dart';
-import 'package:poem_application/widgets/passwordInputField.dart';
+import 'package:versebox/screens/auth/signup.dart';
+import 'package:versebox/screens/auth/google_user_info_screen.dart';
+import 'package:versebox/screens/home/home_screen.dart';
+import 'package:versebox/services/auth_service.dart';
+import 'package:versebox/widgets/emailInputField.dart';
+import 'package:versebox/widgets/passwordInputField.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -108,7 +108,9 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
       }
 
       // Check if user document exists in Firestore
-      final userExists = await _authService.doesUserDocumentExist(credential.user!.uid);
+      final userExists = await _authService.doesUserDocumentExist(
+        credential.user!.uid,
+      );
 
       if (mounted) {
         if (userExists) {
@@ -124,9 +126,8 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => GoogleUserInfoScreen(
-                firebaseUser: credential.user!,
-              ),
+              builder: (context) =>
+                  GoogleUserInfoScreen(firebaseUser: credential.user!),
             ),
           );
         }

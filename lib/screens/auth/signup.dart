@@ -7,12 +7,12 @@ import 'package:country_picker/country_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:poem_application/models/user_model.dart';
-import 'package:poem_application/screens/auth/login.dart';
-import 'package:poem_application/screens/auth/user_preferences_intro_screen.dart';
-import 'package:poem_application/services/auth_service.dart';
-import 'package:poem_application/services/fcm_service.dart';
-import 'package:poem_application/widgets/inputfields.dart';
+import 'package:versebox/models/user_model.dart';
+import 'package:versebox/screens/auth/login.dart';
+import 'package:versebox/screens/auth/user_preferences_intro_screen.dart';
+import 'package:versebox/services/auth_service.dart';
+import 'package:versebox/services/fcm_service.dart';
+import 'package:versebox/widgets/inputfields.dart';
 
 class Signup extends ConsumerStatefulWidget {
   const Signup({super.key});
