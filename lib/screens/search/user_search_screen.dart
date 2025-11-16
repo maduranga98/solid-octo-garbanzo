@@ -2,9 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/providers/auth_provider.dart';
-import 'package:poem_application/providers/follow_provider.dart';
-import 'package:poem_application/screens/profile/user_profile.dart'
+import 'package:versebox/providers/auth_provider.dart';
+import 'package:versebox/providers/follow_provider.dart';
+import 'package:versebox/screens/profile/user_profile.dart'
     hide isFollowingProvider;
 
 class UserSearchScreen extends ConsumerStatefulWidget {

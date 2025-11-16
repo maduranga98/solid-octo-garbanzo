@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/providers/auth_provider.dart';
-import 'package:poem_application/providers/follow_provider.dart';
-import 'package:poem_application/screens/profile/user_profile.dart'
+import 'package:versebox/providers/auth_provider.dart';
+import 'package:versebox/providers/follow_provider.dart';
+import 'package:versebox/screens/profile/user_profile.dart'
     hide isFollowingProvider;
 
 enum ListType { followers, following }
@@ -77,7 +77,9 @@ class _FollowersFollowingScreenState
                   Text(
                     'Error loading users',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.6,
+                      ),
                     ),
                   ),
                 ],
@@ -104,7 +106,9 @@ class _FollowersFollowingScreenState
                         : 'Not following anyone yet',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w500,
-                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.6,
+                      ),
                     ),
                   ),
                 ],
@@ -221,7 +225,9 @@ class UserListItem extends ConsumerWidget {
                         '@$userName',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: 13,
-                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                     ],
@@ -261,7 +267,9 @@ class UserListItem extends ConsumerWidget {
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             backgroundColor: isFollowing
-                ? (isDark ? theme.colorScheme.surfaceContainerHigh : theme.colorScheme.surfaceContainerHighest)
+                ? (isDark
+                      ? theme.colorScheme.surfaceContainerHigh
+                      : theme.colorScheme.surfaceContainerHighest)
                 : theme.primaryColor,
             foregroundColor: isFollowing
                 ? theme.textTheme.bodyLarge?.color

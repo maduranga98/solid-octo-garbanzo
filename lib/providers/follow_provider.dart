@@ -1,7 +1,7 @@
 // lib/providers/follow_provider.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/services/follow_service.dart';
+import 'package:versebox/services/follow_service.dart';
 
 final followServiceProvider = Provider<FollowService>((ref) {
   return FollowService(FirebaseFirestore.instance);

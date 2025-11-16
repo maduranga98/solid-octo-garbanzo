@@ -3,23 +3,23 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/models/post_model.dart';
-import 'package:poem_application/providers/auth_provider.dart';
-import 'package:poem_application/providers/follow_provider.dart';
-import 'package:poem_application/providers/postRepositoryProvider.dart';
-import 'package:poem_application/providers/post_interaction_provider.dart';
-import 'package:poem_application/providers/user_provider.dart';
-import 'package:poem_application/screens/auth/login.dart';
-import 'package:poem_application/screens/following/following_feed.dart';
-import 'package:poem_application/screens/messages/message.dart';
-import 'package:poem_application/screens/notifications/notifications_screen.dart';
-import 'package:poem_application/screens/profile/user_profile.dart'
+import 'package:versebox/models/post_model.dart';
+import 'package:versebox/providers/auth_provider.dart';
+import 'package:versebox/providers/follow_provider.dart';
+import 'package:versebox/providers/postRepositoryProvider.dart';
+import 'package:versebox/providers/post_interaction_provider.dart';
+import 'package:versebox/providers/user_provider.dart';
+import 'package:versebox/screens/auth/login.dart';
+import 'package:versebox/screens/following/following_feed.dart';
+import 'package:versebox/screens/messages/message.dart';
+import 'package:versebox/screens/notifications/notifications_screen.dart';
+import 'package:versebox/screens/profile/user_profile.dart'
     hide isFollowingProvider;
-import 'package:poem_application/screens/saved/saved_post.dart';
-import 'package:poem_application/screens/search/user_search_screen.dart';
-import 'package:poem_application/widgets/commentsBottomSheet.dart';
-import 'package:poem_application/widgets/fullPostBottomSheet.dart';
-import 'package:poem_application/widgets/theme_switcher.dart';
+import 'package:versebox/screens/saved/saved_post.dart';
+import 'package:versebox/screens/search/user_search_screen.dart';
+import 'package:versebox/widgets/commentsBottomSheet.dart';
+import 'package:versebox/widgets/fullPostBottomSheet.dart';
+import 'package:versebox/widgets/theme_switcher.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class HomeScreen extends ConsumerStatefulWidget {

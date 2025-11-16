@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/models/user_model.dart';
-import 'package:poem_application/repositories/user_repository.dart';
+import 'package:versebox/models/user_model.dart';
+import 'package:versebox/repositories/user_repository.dart';
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {
   return UserRepository(FirebaseFirestore.instance);
@@ -26,9 +26,9 @@ final userDataStreamProvider = StreamProvider.family<UserModel?, String>((
       .doc(uid)
       .snapshots()
       .map((snapshot) {
-    if (snapshot.exists) {
-      return UserModel.fromFirestore(snapshot);
-    }
-    return null;
-  });
+        if (snapshot.exists) {
+          return UserModel.fromFirestore(snapshot);
+        }
+        return null;
+      });
 });

@@ -1,8 +1,8 @@
 // ignore_for_file: avoid_print
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:poem_application/models/post_model.dart';
-import 'package:poem_application/models/saved_model.dart';
+import 'package:versebox/models/post_model.dart';
+import 'package:versebox/models/saved_model.dart';
 
 class SavedPost {
   final SavedModel savedData;

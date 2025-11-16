@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:poem_application/models/post_model.dart';
-import 'package:poem_application/services/notification_service.dart';
-import 'package:poem_application/services/fcm_service.dart';
+import 'package:versebox/models/post_model.dart';
+import 'package:versebox/services/notification_service.dart';
+import 'package:versebox/services/fcm_service.dart';
 import 'package:share_plus/share_plus.dart';
 
 class PostInteractionService {
@@ -40,10 +40,12 @@ class PostInteractionService {
         });
 
         // Remove like notification (async, don't wait)
-        _notificationService.removeLikeNotification(
-          postOwnerId: post.createdBy,
-          postId: post.docId,
-        ).catchError((e) => print('Error removing notification: $e'));
+        _notificationService
+            .removeLikeNotification(
+              postOwnerId: post.createdBy,
+              postId: post.docId,
+            )
+            .catchError((e) => print('Error removing notification: $e'));
 
         return false; // Post is now unliked
       } else {
