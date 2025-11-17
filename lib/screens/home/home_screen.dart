@@ -88,10 +88,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Avatar
+                      // App Logo
                       Container(
+                        width: 60,
+                        height: 60,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
@@ -101,13 +103,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
-                          radius: 35,
-                          backgroundColor: Colors.white,
-                          child: Icon(
-                            Icons.person,
-                            size: 40,
-                            color: colorScheme.primary,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(9),
+                          child: Image.asset(
+                            'assets/versebox-logo.jpg',
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),
@@ -124,7 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       const SizedBox(height: 4),
                       // App name
                       Text(
-                        'Poetic Platform',
+                        'VerseBox - Poetic Platform',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                         ),
@@ -261,24 +261,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               title: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [colorScheme.primary, colorScheme.secondary],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: Icon(
-                      Icons.auto_stories,
-                      color: colorScheme.onPrimary,
-                      size: 20,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/versebox-logo.jpg',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Poetic',
+                    'VerseBox',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
@@ -1350,17 +1355,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [colorScheme.primary, colorScheme.secondary],
-                ),
                 borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.auto_stories, color: Colors.white),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/versebox-logo.jpg',
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
-            const Text('About Poetic'),
+            const Text('About VerseBox'),
           ],
         ),
         content: SingleChildScrollView(
@@ -1377,7 +1393,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                'Poetic is a platform for writers and poets to share their creative works with the world.',
+                'VerseBox is a platform for writers and poets to share their creative works with the world.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.8),
                   height: 1.5,
@@ -1399,7 +1415,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               _buildFeatureItem('✨ Rich text formatting support'),
               const SizedBox(height: 16),
               Text(
-                '© 2025 Poetic Platform. All rights reserved.',
+                '© 2025 VerseBox. All rights reserved.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),

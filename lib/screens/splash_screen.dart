@@ -63,15 +63,17 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     // App Logo
                     Container(
-                      width: 120,
-                      height: 120,
+                      width: 150,
+                      height: 150,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
+
                             color: const Color(
                               0xFF6366F1,
                             ).withValues(alpha: 0.3),
+
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
