@@ -58,6 +58,44 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
+  final List<Map<String, dynamic>> _contentTypes = [
+    {
+      'title': 'Poetry',
+      'subtitle': 'Poets, spoken word, haiku, verses',
+      'icon': Icons.auto_stories,
+      'value': 'poetry',
+      'color': const Color(0xFF6366F1),
+    },
+    {
+      'title': 'Lyrics',
+      'subtitle': 'Songwriters, rap, chants, melodies',
+      'icon': Icons.music_note,
+      'value': 'lyrics',
+      'color': const Color(0xFF10B981),
+    },
+    {
+      'title': 'Stories',
+      'subtitle': 'Short stories, novels, folklore, prose',
+      'icon': Icons.menu_book,
+      'value': 'stories',
+      'color': const Color(0xFF8B5CF6),
+    },
+    {
+      'title': 'Quotes & Aphorisms',
+      'subtitle': 'Inspirations, reflections, timeless lines',
+      'icon': Icons.format_quote,
+      'value': 'quotes',
+      'color': const Color(0xFFF59E0B),
+    },
+    {
+      'title': 'Microfiction',
+      'subtitle': 'Tiny tales, flash fiction, one-liners',
+      'icon': Icons.bolt,
+      'value': 'microfiction',
+      'color': const Color(0xFFEF4444),
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -790,47 +828,126 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: ['Poetry', 'Lyrics', 'Stories', 'Quotes', 'Microfiction']
-                .map((type) {
-                  final isSelected = _selectedTypes.contains(type);
-                  return FilterChip(
-                    label: Text(type),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedTypes.add(type);
-                        } else {
-                          _selectedTypes.remove(type);
-                        }
-                      });
-                      HapticFeedback.lightImpact();
-                    },
-                    backgroundColor: isDark
-                        ? Colors.grey[850]
-                        : Colors.grey[100],
-                    selectedColor: colorScheme.primary.withOpacity(0.2),
-                    checkmarkColor: colorScheme.primary,
-                    labelStyle: TextStyle(
+          const SizedBox(height: 8),
+          Text(
+            'Select all that apply',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.textTheme.bodySmall?.color,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _contentTypes.length,
+            itemBuilder: (context, index) {
+              final type = _contentTypes[index];
+              final isSelected = _selectedTypes.contains(type['value']);
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedTypes.remove(type['value']);
+                      } else {
+                        _selectedTypes.add(type['value']);
+                      }
+                    });
+                    HapticFeedback.lightImpact();
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
                       color: isSelected
-                          ? colorScheme.primary
-                          : theme.textTheme.bodyLarge?.color,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+                          ? (type['color'] as Color).withOpacity(0.1)
+                          : (isDark ? Colors.grey[850] : Colors.grey[100]),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? (type['color'] as Color)
+                            : Colors.transparent,
+                        width: 2,
+                      ),
                     ),
-                    side: BorderSide(
-                      color: isSelected
-                          ? colorScheme.primary
-                          : Colors.transparent,
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? (type['color'] as Color)
+                                : (isDark
+                                      ? Colors.grey[800]
+                                      : Colors.grey[200]),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            type['icon'] as IconData,
+                            color: isSelected
+                                ? Colors.white
+                                : theme.iconTheme.color,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                type['title'] as String,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected
+                                      ? (type['color'] as Color)
+                                      : theme.textTheme.bodyLarge?.color,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                type['subtitle'] as String,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected
+                                ? (type['color'] as Color)
+                                : Colors.transparent,
+                            border: Border.all(
+                              color: isSelected
+                                  ? (type['color'] as Color)
+                                  : (isDark
+                                        ? Colors.grey[700]!
+                                        : Colors.grey[400]!),
+                              width: 2,
+                            ),
+                          ),
+                          child: isSelected
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 16,
+                                )
+                              : null,
+                        ),
+                      ],
                     ),
-                  );
-                })
-                .toList(),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

@@ -99,7 +99,24 @@ class UserProfile extends ConsumerWidget {
                   backgroundColor: theme.scaffoldBackgroundColor,
                   foregroundColor: theme.textTheme.bodyLarge?.color,
                   elevation: 0,
-                  expandedHeight: isOwnProfile ? 380 : 380,
+                  expandedHeight: isOwnProfile ? 340 : 380,
+                  actions: isOwnProfile
+                      ? [
+                          IconButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const EditProfileScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: 'Edit Profile',
+                          ),
+                        ]
+                      : null,
                   flexibleSpace: FlexibleSpaceBar(
                     background: _buildProfileHeader(
                       user,
@@ -303,43 +320,11 @@ class UserProfile extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            if (isOwnProfile) ...[
-              _buildEditProfileButton(context, theme),
-            ] else ...[
+            if (!isOwnProfile) ...[
+              const SizedBox(height: 20),
               _buildActionButtons(context, ref, profileUserId),
             ],
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEditProfileButton(BuildContext context, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const EditProfileScreen(),
-              ),
-            );
-          },
-          icon: const Icon(Icons.edit_outlined, size: 18),
-          label: const Text('Edit Profile'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            elevation: 0,
-          ),
         ),
       ),
     );
