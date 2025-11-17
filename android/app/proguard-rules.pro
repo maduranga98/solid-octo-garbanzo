@@ -18,6 +18,10 @@
 -keep class com.google.android.gms.auth.** { *; }
 -keep class com.google.android.gms.common.** { *; }
 
+# Keep Play Core library classes
+-keep class com.google.android.play.core.** { *; }
+-dontwarn com.google.android.play.core.**
+
 # Keep native methods
 -keepclasseswithmembernames class * {
     native <methods>;
