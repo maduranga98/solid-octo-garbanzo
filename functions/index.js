@@ -1,8 +1,9 @@
 /**
  * Firebase Cloud Functions for Push Notifications
+ * Production-ready with authentication, validation, and error handling
  */
 
-const {onCall} = require("firebase-functions/v2/https");
+const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {
   onDocumentCreated,
   onDocumentDeleted,
@@ -14,17 +15,78 @@ const {getMessaging} = require("firebase-admin/messaging");
 initializeApp();
 
 /**
+ * Helper function to validate FCM token format
+ */
+function isValidFCMToken(token) {
+  return typeof token === "string" &&
+         token.length > 0 &&
+         token.length < 500;
+}
+
+/**
+ * Helper function to sanitize string input
+ */
+function sanitizeString(str, maxLength = 1000) {
+  if (typeof str !== "string") return "";
+  return str.trim().substring(0, maxLength);
+}
+
+/**
+ * Helper function to validate user authentication
+ */
+function requireAuth(request) {
+  if (!request.auth) {
+    throw new HttpsError(
+        "unauthenticated",
+        "User must be authenticated to call this function",
+    );
+  }
+  return request.auth.uid;
+}
+
+/**
  * Send a push notification to a specific user
+ * Requires authentication
  */
 exports.sendNotification = onCall(async (request) => {
+  // Require authentication
+  const userId = requireAuth(request);
+
   const {token, title, body, data: notificationData} = request.data;
 
+  // Validate required parameters
   if (!token || !title || !body) {
-    throw new Error("Missing required parameters");
+    throw new HttpsError(
+        "invalid-argument",
+        "Missing required parameters: token, title, and body are required",
+    );
+  }
+
+  // Validate FCM token format
+  if (!isValidFCMToken(token)) {
+    throw new HttpsError(
+        "invalid-argument",
+        "Invalid FCM token format",
+    );
+  }
+
+  // Sanitize inputs
+  const sanitizedTitle = sanitizeString(title, 100);
+  const sanitizedBody = sanitizeString(body, 500);
+
+  // Validate notification data
+  if (notificationData && typeof notificationData !== "object") {
+    throw new HttpsError(
+        "invalid-argument",
+        "Notification data must be an object",
+    );
   }
 
   const message = {
-    notification: {title, body},
+    notification: {
+      title: sanitizedTitle,
+      body: sanitizedBody,
+    },
     data: notificationData || {},
     token: token,
     android: {
@@ -36,11 +98,15 @@ exports.sendNotification = onCall(async (request) => {
 
   try {
     const response = await getMessaging().send(message);
-    console.log("Notification sent:", response);
+    console.log(`Notification sent by user ${userId}:`, response);
     return {success: true, messageId: response};
   } catch (error) {
     console.error("Error sending notification:", error);
-    throw new Error("Failed to send notification");
+    if (error.code === "messaging/invalid-registration-token" ||
+        error.code === "messaging/registration-token-not-registered") {
+      throw new HttpsError("not-found", "Invalid or expired FCM token");
+    }
+    throw new HttpsError("internal", "Failed to send notification");
   }
 });
 
@@ -250,20 +316,65 @@ exports.cleanupFCMToken = onDocumentDeleted("users/{userId}", async (event) => {
 
 /**
  * Batch send notifications
+ * Requires authentication and has limits to prevent abuse
  */
 exports.sendBatchNotifications = onCall(async (request) => {
+  // Require authentication
+  const userId = requireAuth(request);
+
   const {tokens, title, body, data: notificationData} = request.data;
 
+  // Validate tokens array
   if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
-    throw new Error("tokens must be a non-empty array");
+    throw new HttpsError(
+        "invalid-argument",
+        "tokens must be a non-empty array",
+    );
   }
 
+  // Limit batch size to prevent abuse
+  const MAX_BATCH_SIZE = 500;
+  if (tokens.length > MAX_BATCH_SIZE) {
+    throw new HttpsError(
+        "invalid-argument",
+        `Cannot send to more than ${MAX_BATCH_SIZE} tokens at once`,
+    );
+  }
+
+  // Validate all tokens
+  const validTokens = tokens.filter((token) => isValidFCMToken(token));
+  if (validTokens.length === 0) {
+    throw new HttpsError(
+        "invalid-argument",
+        "No valid FCM tokens provided",
+    );
+  }
+
+  // Validate title and body
   if (!title || !body) {
-    throw new Error("title and body are required");
+    throw new HttpsError(
+        "invalid-argument",
+        "title and body are required",
+    );
+  }
+
+  // Sanitize inputs
+  const sanitizedTitle = sanitizeString(title, 100);
+  const sanitizedBody = sanitizeString(body, 500);
+
+  // Validate notification data
+  if (notificationData && typeof notificationData !== "object") {
+    throw new HttpsError(
+        "invalid-argument",
+        "Notification data must be an object",
+    );
   }
 
   const message = {
-    notification: {title, body},
+    notification: {
+      title: sanitizedTitle,
+      body: sanitizedBody,
+    },
     data: notificationData || {},
     android: {priority: "high", notification: {sound: "default"}},
     apns: {payload: {aps: {sound: "default"}}},
@@ -272,11 +383,12 @@ exports.sendBatchNotifications = onCall(async (request) => {
   try {
     const response = await getMessaging().sendEachForMulticast({
       ...message,
-      tokens: tokens,
+      tokens: validTokens,
     });
 
     console.log(
-        `Batch sent. Success: ${response.successCount}, ` +
+        `Batch sent by user ${userId}. ` +
+        `Success: ${response.successCount}, ` +
         `Failed: ${response.failureCount}`,
     );
 
@@ -284,10 +396,11 @@ exports.sendBatchNotifications = onCall(async (request) => {
       success: true,
       successCount: response.successCount,
       failureCount: response.failureCount,
-      responses: response.responses,
+      totalRequested: tokens.length,
+      validTokensUsed: validTokens.length,
     };
   } catch (error) {
     console.error("Error sending batch notifications:", error);
-    throw new Error("Failed to send batch notifications");
+    throw new HttpsError("internal", "Failed to send batch notifications");
   }
 });
