@@ -12,7 +12,6 @@ import 'package:versebox/services/auth_service.dart';
 import 'package:versebox/screens/auth/user_preferences_intro_screen.dart';
 import 'package:versebox/providers/fcm_provider.dart';
 import 'package:versebox/providers/firestore_provider.dart';
-import 'package:versebox/widgets/inputfields.dart';
 
 /// Screen to collect additional user information after Google Sign-In
 class GoogleUserInfoScreen extends ConsumerStatefulWidget {
@@ -38,7 +37,7 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
   bool _isLoading = false;
   bool _isUploadingImage = false;
   Country? _selectedCountry;
-  List<String> _selectedTypes = [];
+  final List<String> _selectedTypes = [];
   File? _selectedImage;
   String? _uploadedImageUrl;
   bool _isUsernameAvailable = false;
