@@ -1,5 +1,4 @@
-package com.example.poem_application
+package com.versebox.app
 
 import io.flutter.embedding.android.FlutterActivity
-
 class MainActivity : FlutterActivity()
