@@ -61,29 +61,30 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     // App Logo
                     Container(
-                      width: 120,
-                      height: 120,
+                      width: 150,
+                      height: 150,
                       decoration: BoxDecoration(
-                        color: Colors.blue[600],
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.blue.withValues(alpha: 0.3),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.flash_on,
-                        color: Colors.white,
-                        size: 64,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/versebox-logo.jpg',
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 32),
                     // App Name
                     Text(
-                      'MyApp',
+                      'VerseBox',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
