@@ -130,8 +130,8 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/versebox-logo.jpg"
-    background_color: "#ffffff"
-    theme_color: "#ffffff"
+    background_color: "#e8e8e8"
+    theme_color: "#e8e8e8"
   windows:
     generate: true
     image_path: "assets/versebox-logo.jpg"
