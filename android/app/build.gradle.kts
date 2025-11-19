@@ -70,6 +70,22 @@ android {
             )
         }
     }
+
+    // Fix for duplicate classes
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/license.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/notice.txt",
+                "META-INF/ASL2.0"
+            )
+        }
+    }
 }
 
 flutter {
@@ -78,5 +94,18 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
-    implementation("com.google.android.play:core:1.10.3")
+    
+    // FIXED: Remove old Play Core and use newer versions
+    // implementation("com.google.android.play:core:1.10.3") // REMOVED - This is the problem!
+    
+    // Add the new Play Core libraries that don't conflict
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
+    implementation("com.google.android.play:review:2.0.1")
+    implementation("com.google.android.play:review-ktx:2.0.1")
+    
+    // Exclude the old core library to prevent conflicts
+    configurations.all {
+        exclude(group = "com.google.android.play", module = "core")
+    }
 }

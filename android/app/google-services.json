@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "773557992042-7dnauof5bpekopo05usphah0mfh5aa9e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.versebox.app",
+            "certificate_hash": "d5d0dc1dc9a2649adb46575b68d64c577a579abf"
+          }
+        },
+        {
           "client_id": "773557992042-7q2s7dq110n3g75kkeclqojminlen9ek.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
