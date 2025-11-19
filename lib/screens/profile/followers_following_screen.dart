@@ -171,7 +171,7 @@ class UserListItem extends ConsumerWidget {
 
         final firstName = userData['firstname'] ?? userData['name'];
         final lastName = userData['lastname'] ?? '';
-        final userName = userData['username'] ?? '';
+        final userName = userData['userName'] ?? '';
         final photoUrl = userData['photoURl'] ?? '';
         final theme = Theme.of(context);
 

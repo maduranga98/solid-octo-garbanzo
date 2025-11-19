@@ -5,6 +5,7 @@ import 'package:versebox/models/comment_model.dart';
 import 'package:versebox/models/post_model.dart';
 import 'package:versebox/services/notification_service.dart';
 import 'package:versebox/services/fcm_service.dart';
+import 'package:versebox/utils/crashlytics_helper.dart';
 
 class CommentsRepository {
   final FirebaseFirestore firestore;
@@ -62,7 +63,14 @@ class CommentsRepository {
 
       final snapshot = await docRef.get();
       return CommentModel.fromFirestore(snapshot);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in addComment while adding comment to Firestore',
+        additionalInfo: {'postId': postId, 'userId': data.userId},
+        fatal: true,
+      );
       throw Exception('Failed to add comment: $e');
     }
   }
@@ -118,7 +126,18 @@ class CommentsRepository {
 
       final snapshot = await docRef.get();
       return CommentModel.fromFirestore(snapshot);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in addReply while adding reply to comment',
+        additionalInfo: {
+          'postId': postId,
+          'parentCommentId': parentCommentId,
+          'userId': replyData.userId,
+        },
+        fatal: true,
+      );
       throw Exception('Failed to add reply: $e');
     }
   }
@@ -149,7 +168,18 @@ class CommentsRepository {
         });
         return true;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in toggleCommentLike while toggling like on comment',
+        additionalInfo: {
+          'postId': postId,
+          'commentId': commentId,
+          'userId': currentUser.uid,
+        },
+        fatal: true,
+      );
       throw Exception('Failed to toggle comment like: $e');
     }
   }
@@ -185,7 +215,14 @@ class CommentsRepository {
       await firestore.collection('posts').doc(postId).update({
         'commentCount': FieldValue.increment(-1),
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in deleteComment while deleting comment from Firestore',
+        additionalInfo: {'postId': postId, 'commentId': commentId},
+        fatal: true,
+      );
       throw Exception('Failed to delete comment: $e');
     }
   }
@@ -206,7 +243,18 @@ class CommentsRepository {
             'comment': newComment,
             'updatedAt': FieldValue.serverTimestamp(),
           });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in updateComment while updating comment in Firestore',
+        additionalInfo: {
+          'postId': postId,
+          'commentId': commentId,
+          'newComment': newComment,
+        },
+        fatal: true,
+      );
       throw Exception('Failed to update comment: $e');
     }
   }
@@ -250,7 +298,18 @@ class CommentsRepository {
             commentText: commentText,
           );
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
+        await CrashlyticsHelper.recordError(
+          e,
+          stackTrace,
+          reason: 'Error in _createCommentNotificationsAsync while creating notifications',
+          additionalInfo: {
+            'postId': post.id,
+            'commentId': commentId,
+            'userId': currentUserId,
+          },
+          fatal: false,
+        );
         print('Error creating comment notifications: $e');
       }
     }();

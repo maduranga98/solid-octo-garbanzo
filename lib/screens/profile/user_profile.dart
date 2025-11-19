@@ -204,12 +204,11 @@ class UserProfile extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
     final primaryColor = theme.primaryColor;
 
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(4),
@@ -324,8 +323,7 @@ class UserProfile extends ConsumerWidget {
               const SizedBox(height: 20),
               _buildActionButtons(context, ref, profileUserId),
             ],
-          ],
-        ),
+        ],
       ),
     );
   }
