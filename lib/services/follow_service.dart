@@ -1,5 +1,6 @@
 // lib/services/follow_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:versebox/utils/crashlytics_helper.dart';
 
 class FollowService {
   final FirebaseFirestore _firestore;
@@ -65,7 +66,13 @@ class FollowService {
         .doc(targetUserId)
         .snapshots()
         .map((snapshot) => snapshot.exists)
-        .handleError((error) {
+        .handleError((error, stackTrace) {
+          CrashlyticsHelper.recordError(
+            error,
+            stackTrace,
+            reason: 'Error checking follow status',
+            fatal: false,
+          );
           print('Error checking follow status: $error');
           return false;
         });

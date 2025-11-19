@@ -7,6 +7,7 @@ import 'package:versebox/models/post_model.dart';
 import 'package:versebox/services/notification_service.dart';
 import 'package:versebox/services/fcm_service.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:versebox/utils/crashlytics_helper.dart';
 
 class PostInteractionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -63,7 +64,14 @@ class PostInteractionService {
 
         return true; // Post is now liked
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in toggleLike while toggling like status',
+        additionalInfo: {'postId': post.docId, 'userId': currentUser.uid},
+        fatal: true,
+      );
       throw Exception('Failed to toggle like: $e');
     }
   }
@@ -82,7 +90,14 @@ class PostInteractionService {
           .get();
 
       return likeDoc.exists;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in hasUserLikedPost checking like status',
+        additionalInfo: {'postId': postId},
+        fatal: false,
+      );
       return false;
     }
   }
@@ -115,7 +130,14 @@ class PostInteractionService {
           .get();
 
       return likesSnapshot.docs.map((doc) => doc.id).toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in getPostLikers fetching list of users who liked post',
+        additionalInfo: {'postId': postId, 'limit': limit},
+        fatal: false,
+      );
       return [];
     }
   }
@@ -144,7 +166,14 @@ class PostInteractionService {
       if (result.status == ShareResultStatus.success) {
         _showSuccessMessage(context, 'Post shared successfully!');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in sharePost sharing post via native share dialog',
+        additionalInfo: {'postId': post.docId, 'postTitle': post.title},
+        fatal: false,
+      );
       _showErrorMessage(context, 'Failed to share post: $e');
     }
   }
@@ -161,7 +190,14 @@ class PostInteractionService {
       });
 
       await Share.share(customText);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in sharePostWithCustomText sharing post with custom text',
+        additionalInfo: {'postId': post.docId, 'customTextLength': customText.length},
+        fatal: false,
+      );
       _showErrorMessage(context, 'Failed to share post: $e');
     }
   }
@@ -175,7 +211,14 @@ class PostInteractionService {
       await Clipboard.setData(ClipboardData(text: postLink));
 
       _showSuccessMessage(context, 'Link copied to clipboard!');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in copyPostLink copying post link to clipboard',
+        additionalInfo: {'postId': post.docId},
+        fatal: false,
+      );
       _showErrorMessage(context, 'Failed to copy link: $e');
     }
   }
@@ -192,7 +235,14 @@ class PostInteractionService {
 
     try {
       await Share.share(shareText);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in shareToSpecificPlatform sharing to specific platform',
+        additionalInfo: {'postId': post.docId, 'platform': platform},
+        fatal: false,
+      );
       _showErrorMessage(context, 'Failed to share: $e');
     }
   }
@@ -304,7 +354,14 @@ class PostInteractionService {
         });
         return true; // Post is now bookmarked
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in toggleBookmark while toggling bookmark status',
+        additionalInfo: {'postId': post.docId, 'userId': _auth.currentUser?.uid},
+        fatal: true,
+      );
       throw Exception('Failed to toggle bookmark: $e');
     }
   }
@@ -323,7 +380,14 @@ class PostInteractionService {
           .get();
 
       return bookmarkDoc.exists;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in hasUserBookmarkedPost checking bookmark status',
+        additionalInfo: {'postId': postId},
+        fatal: false,
+      );
       return false;
     }
   }
@@ -359,7 +423,14 @@ class PostInteractionService {
           .get();
 
       return bookmarksSnapshot.docs.map((doc) => doc.id).toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in getUserBookmarks fetching user bookmarked posts',
+        additionalInfo: {'userId': _auth.currentUser?.uid, 'limit': limit},
+        fatal: false,
+      );
       return [];
     }
   }
@@ -394,7 +465,18 @@ class PostInteractionService {
             postTitle: post.title.isNotEmpty ? post.title : 'your post',
           );
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
+        await CrashlyticsHelper.recordError(
+          e,
+          stackTrace,
+          reason: 'Error in _createLikeNotificationsAsync creating like notifications',
+          additionalInfo: {
+            'postId': post.docId,
+            'postOwnerId': post.createdBy,
+            'likerId': currentUser.uid,
+          },
+          fatal: false,
+        );
         print('Error creating like notifications: $e');
       }
     }();
