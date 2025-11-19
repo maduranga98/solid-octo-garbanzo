@@ -18,6 +18,7 @@ import 'package:versebox/screens/auth/google_user_info_screen.dart';
 import 'package:versebox/screens/home/home_screen.dart';
 import 'package:versebox/screens/splash_screen.dart';
 import 'package:versebox/services/fcm_service.dart';
+import 'package:versebox/utils/crashlytics_helper.dart';
 import 'firebase_options.dart';
 
 // Background message handler for Firebase Cloud Messaging
@@ -90,7 +91,13 @@ class AuthWrapper extends StatelessWidget {
           .doc(uid)
           .get();
       return doc.exists;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error checking user document exists in AuthWrapper',
+        additionalInfo: {'uid': uid},
+      );
       print("❌ Error checking user document: $e");
       return false;
     }
