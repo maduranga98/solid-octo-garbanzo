@@ -47,12 +47,7 @@ void main() async {
     return true;
   };
 
-  // Run app in a zone to catch async errors
-  runZonedGuarded(() {
-    runApp(const ProviderScope(child: MyApp()));
-  }, (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-  });
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
