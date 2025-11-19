@@ -68,7 +68,7 @@ class CommentsRepository {
         e,
         stackTrace,
         reason: 'Error in addComment while adding comment to Firestore',
-        additionalInfo: {'postId': postId, 'userId': data.userId},
+        additionalInfo: {'postId': postId, 'userId': data.authorId},
         fatal: true,
       );
       throw Exception('Failed to add comment: $e');
@@ -134,7 +134,7 @@ class CommentsRepository {
         additionalInfo: {
           'postId': postId,
           'parentCommentId': parentCommentId,
-          'userId': replyData.userId,
+          'userId': replyData.authorId,
         },
         fatal: true,
       );
@@ -304,7 +304,7 @@ class CommentsRepository {
           stackTrace,
           reason: 'Error in _createCommentNotificationsAsync while creating notifications',
           additionalInfo: {
-            'postId': post.id,
+            'postId': post.docId,
             'commentId': commentId,
             'userId': currentUserId,
           },
