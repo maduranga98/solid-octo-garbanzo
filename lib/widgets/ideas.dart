@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:poem_application/pages/add_edit_idea_page.dart';
 
 // Provider to fetch ideas
 final getIdeasProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>(
@@ -232,180 +233,12 @@ class Ideas extends ConsumerWidget {
   }
 
   void _showIdeaDialog(BuildContext context, {Map<String, dynamic>? idea}) {
-    final titleController = TextEditingController(text: idea?['title'] ?? '');
-    final descController = TextEditingController(
-      text: idea?['description'] ?? '',
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddEditIdeaPage(idea: idea),
+      ),
     );
-    final isEditing = idea != null;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isEditing ? 'Edit Idea' : 'New Idea',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Title',
-                        hintText: 'Enter idea title',
-                        border: OutlineInputBorder(),
-                      ),
-                      textCapitalization: TextCapitalization.sentences,
-                      maxLength: 100,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: descController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'Describe your idea...',
-                        border: OutlineInputBorder(),
-                        alignLabelWithHint: true,
-                      ),
-                      textCapitalization: TextCapitalization.sentences,
-                      maxLines: 5,
-                      maxLength: 500,
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () {
-                            final title = titleController.text.trim();
-                            final description = descController.text.trim();
-
-                            if (title.isEmpty && description.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please add at least a title or description',
-                                  ),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                              return;
-                            }
-
-                            Navigator.pop(context);
-                            _saveIdea(
-                              context,
-                              title,
-                              description,
-                              ideaId: idea?['id'],
-                            );
-                          },
-                          child: Text(isEditing ? 'Update' : 'Save'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _saveIdea(
-    BuildContext context,
-    String title,
-    String description, {
-    String? ideaId,
-  }) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please sign in to save ideas'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-
-      final ideaData = {
-        'title': title,
-        'description': description,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-      if (ideaId != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('ideas')
-            .doc(ideaId)
-            .update(ideaData);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Idea updated successfully'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } else {
-        ideaData['createdAt'] = FieldValue.serverTimestamp();
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('ideas')
-            .add(ideaData);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Idea saved successfully'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving idea: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _deleteIdea(BuildContext context, String ideaId) async {
