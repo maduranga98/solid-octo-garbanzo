@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:poem_application/pages/add_edit_idea_page.dart';
+import 'package:versebox/pages/add_edit_idea_page.dart';
 
 // Provider to fetch ideas
 final getIdeasProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>(
@@ -235,9 +235,7 @@ class Ideas extends ConsumerWidget {
   void _showIdeaDialog(BuildContext context, {Map<String, dynamic>? idea}) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => AddEditIdeaPage(idea: idea),
-      ),
+      MaterialPageRoute(builder: (context) => AddEditIdeaPage(idea: idea)),
     );
   }
 
