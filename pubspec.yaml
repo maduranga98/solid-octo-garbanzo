@@ -45,7 +45,7 @@ dependencies:
   firebase_core: ^4.1.0
   firebase_storage: ^13.0.1
   firebase_messaging: ^16.0.3
-  firebase_crashlytics: ^4.2.0
+  firebase_crashlytics:
   flutter_local_notifications: ^18.0.1
   #dotnev
   flutter_dotenv: ^6.0.0
