@@ -1,11 +1,11 @@
 {
-    "name": "VerseBox",
-    "short_name": "VerseBox",
+    "name": "InkWing",
+    "short_name": "InkWing",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#e8e8e8",
     "theme_color": "#e8e8e8",
-    "description": "VerseBox - A poetry and content sharing social platform.",
+    "description": "InkWing - Where Words Take Flight",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

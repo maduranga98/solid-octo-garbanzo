@@ -300,7 +300,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
 
         // App Title
         Text(
-          'VerseBox',
+          'InkWing',
           style: theme.textTheme.headlineLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,

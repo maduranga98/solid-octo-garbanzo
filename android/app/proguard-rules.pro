@@ -1,4 +1,4 @@
-# Flutter ProGuard Rules for VerseBox
+# Flutter ProGuard Rules for InkWing
 
 # Keep Flutter engine classes
 -keep class io.flutter.app.** { *; }

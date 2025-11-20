@@ -192,7 +192,7 @@ class _UserPreferencesIntroScreenState
           ),
           const SizedBox(height: 32),
           Text(
-            "Welcome to VerseBox! ✨",
+            "Welcome to InkWing! ✨",
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,

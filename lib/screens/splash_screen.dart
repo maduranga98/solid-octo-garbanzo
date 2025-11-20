@@ -90,7 +90,7 @@ class _SplashScreenState extends State<SplashScreen>
                     const SizedBox(height: 32),
                     // App Name
                     Text(
-                      'VerseBox',
+                      'InkWing',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -100,7 +100,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Where creativity lives forever',
+                      'Where Words Take Flight',
                       style: TextStyle(
                         fontSize: 16,
                         color: isDark ? Colors.grey[400] : Colors.grey[600],
