@@ -1,6 +1,6 @@
-# VerseBox - Production Deployment Guide
+# InkWing - Production Deployment Guide
 
-This guide provides step-by-step instructions to prepare and deploy VerseBox to production environments across all platforms.
+This guide provides step-by-step instructions to prepare and deploy InkWing to production environments across all platforms.
 
 ## Table of Contents
 1. [Prerequisites](#prerequisites)
@@ -165,8 +165,8 @@ flutter build ios --release
 ### 1. Configuration
 
 Web configuration has been updated with:
-- **App Name:** VerseBox
-- **Description:** "VerseBox - A poetry and content sharing social platform."
+- **App Name:** InkWing
+- **Description:** "InkWing - Where Words Take Flight"
 - **PWA Support:** Configured via `manifest.json`
 - **Icons:** Will be generated automatically
 
@@ -419,6 +419,6 @@ dart run flutter_launcher_icons
 ---
 
 **Last Updated:** 2025-11-16
-**VerseBox Version:** 1.0.0
-**App Name:** VerseBox
+**InkWing Version:** 1.0.0
+**App Name:** InkWing
 **Organization:** Verse Technologies

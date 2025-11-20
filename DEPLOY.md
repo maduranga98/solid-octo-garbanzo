@@ -1,6 +1,6 @@
-# Quick Deployment Guide for VerseBox
+# Quick Deployment Guide for InkWing
 
-This guide provides the essential commands to deploy VerseBox to production.
+This guide provides the essential commands to deploy InkWing to production.
 
 ## 📋 Prerequisites
 

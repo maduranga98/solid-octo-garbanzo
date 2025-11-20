@@ -124,7 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       const SizedBox(height: 4),
                       // App name
                       Text(
-                        'VerseBox - Poetic Platform',
+                        'InkWing - Where Words Take Flight',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                         ),
@@ -283,7 +283,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'VerseBox',
+                    'InkWing',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
@@ -1380,7 +1380,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
             const SizedBox(width: 12),
-            const Text('About VerseBox'),
+            const Text('About InkWing'),
           ],
         ),
         content: SingleChildScrollView(
@@ -1397,7 +1397,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                'VerseBox is a platform for writers and poets to share their creative works with the world.',
+                'InkWing - Where Words Take Flight. A platform for writers and poets to share their creative works with the world.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.8),
                   height: 1.5,
@@ -1419,7 +1419,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               _buildFeatureItem('✨ Rich text formatting support'),
               const SizedBox(height: 16),
               Text(
-                '© 2025 VerseBox. All rights reserved.',
+                '© 2025 InkWing. All rights reserved.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),

@@ -1,10 +1,10 @@
-# VerseBox Security Guide
+# InkWing Security Guide
 
-This document outlines the security measures implemented in VerseBox and best practices for maintaining security in production.
+This document outlines the security measures implemented in InkWing and best practices for maintaining security in production.
 
 ## 🔒 Security Overview
 
-VerseBox implements multiple layers of security to protect user data and prevent unauthorized access:
+InkWing implements multiple layers of security to protect user data and prevent unauthorized access:
 
 1. **Authentication** - Firebase Authentication with email/password and Google Sign-In
 2. **Authorization** - Firestore and Storage security rules

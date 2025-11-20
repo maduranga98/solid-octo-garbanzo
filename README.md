@@ -1,6 +1,8 @@
-# VerseBox
+# InkWing
 
-**VerseBox** is a modern, multi-platform poetry and content sharing social platform built with Flutter. Share your verses, connect with fellow poets, and explore creative content across all devices.
+**InkWing** - Where Words Take Flight
+
+A modern, multi-platform poetry and content sharing social platform built with Flutter. Share your verses, connect with fellow poets, and explore creative content across all devices.
 
 ## Features
 
@@ -70,7 +72,7 @@
 
 ## 🔒 Security & Production Deployment
 
-VerseBox implements comprehensive security measures to protect user data:
+InkWing implements comprehensive security measures to protect user data:
 
 - ✅ **Firestore Security Rules** - Database access control and validation
 - ✅ **Storage Security Rules** - File upload protection (10MB limit, images only)

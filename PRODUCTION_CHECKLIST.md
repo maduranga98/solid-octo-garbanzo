@@ -1,6 +1,6 @@
-# Production Deployment Checklist for VerseBox
+# Production Deployment Checklist for InkWing
 
-This comprehensive checklist ensures your VerseBox application is production-ready and secure.
+This comprehensive checklist ensures your InkWing application is production-ready and secure.
 
 ## 🔐 Security (CRITICAL)
 
