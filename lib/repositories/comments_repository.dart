@@ -1,11 +1,11 @@
 // lib/repositories/comments_repository.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:versebox/models/comment_model.dart';
-import 'package:versebox/models/post_model.dart';
-import 'package:versebox/services/notification_service.dart';
-import 'package:versebox/services/fcm_service.dart';
-import 'package:versebox/utils/crashlytics_helper.dart';
+import 'package:inkwing/models/comment_model.dart';
+import 'package:inkwing/models/post_model.dart';
+import 'package:inkwing/services/notification_service.dart';
+import 'package:inkwing/services/fcm_service.dart';
+import 'package:inkwing/utils/crashlytics_helper.dart';
 
 class CommentsRepository {
   final FirebaseFirestore firestore;

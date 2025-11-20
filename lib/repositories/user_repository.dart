@@ -2,8 +2,8 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:versebox/models/user_model.dart';
-import 'package:versebox/utils/crashlytics_helper.dart';
+import 'package:inkwing/models/user_model.dart';
+import 'package:inkwing/utils/crashlytics_helper.dart';
 
 class UserRepository {
   final FirebaseFirestore firestore;

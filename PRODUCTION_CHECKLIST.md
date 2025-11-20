@@ -114,15 +114,15 @@ This comprehensive checklist ensures your InkWing application is production-read
 #### Android
 - [ ] **Generate Release Keystore**
   ```bash
-  keytool -genkey -v -keystore ~/versebox-release-key.jks \
-    -keyalg RSA -keysize 2048 -validity 10000 -alias versebox
+  keytool -genkey -v -keystore ~/inkwing-release-key.jks \
+    -keyalg RSA -keysize 2048 -validity 10000 -alias inkwing
   ```
 
 - [ ] **Configure Signing** in `android/key.properties`
   ```properties
   storePassword=<your-password>
   keyPassword=<your-password>
-  keyAlias=versebox
+  keyAlias=inkwing
   storeFile=<path-to-jks-file>
   ```
   ⚠️ **Never commit `key.properties` to Git**

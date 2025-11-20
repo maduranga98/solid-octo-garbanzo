@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
-import 'package:versebox/utils/crashlytics_helper.dart';
+import 'package:inkwing/utils/crashlytics_helper.dart';
 
 /// Service for managing Firebase Cloud Messaging (FCM) tokens and push notifications
 class FCMService {

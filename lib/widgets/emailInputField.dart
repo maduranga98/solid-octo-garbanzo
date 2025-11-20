@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:versebox/widgets/inputfields.dart';
+import 'package:inkwing/widgets/inputfields.dart';
 
 class EmailInputField extends StatelessWidget {
   final String? label;

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:versebox/providers/auth_provider.dart';
-import 'package:versebox/providers/user_provider.dart';
-import 'package:versebox/screens/messages/message.dart';
-import 'package:versebox/screens/profile/edit_profile_screen.dart';
-import 'package:versebox/screens/profile/followers_following_screen.dart';
-import 'package:versebox/widgets/draft.dart';
-import 'package:versebox/widgets/ideas.dart';
-import 'package:versebox/widgets/posted.dart';
+import 'package:inkwing/providers/auth_provider.dart';
+import 'package:inkwing/providers/user_provider.dart';
+import 'package:inkwing/screens/messages/message.dart';
+import 'package:inkwing/screens/profile/edit_profile_screen.dart';
+import 'package:inkwing/screens/profile/followers_following_screen.dart';
+import 'package:inkwing/widgets/draft.dart';
+import 'package:inkwing/widgets/ideas.dart';
+import 'package:inkwing/widgets/posted.dart';
 
 final isFollowingProvider = StreamProvider.family<bool, String>((ref, userId) {
   final currentUser = ref.watch(firebaseAuthProvider).currentUser;

@@ -11,14 +11,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-import 'package:versebox/config/theme.dart';
-import 'package:versebox/providers/theme_provider.dart';
-import 'package:versebox/screens/auth/login.dart';
-import 'package:versebox/screens/auth/google_user_info_screen.dart';
-import 'package:versebox/screens/home/home_screen.dart';
-import 'package:versebox/screens/splash_screen.dart';
-import 'package:versebox/services/fcm_service.dart';
-import 'package:versebox/utils/crashlytics_helper.dart';
+import 'package:inkwing/config/theme.dart';
+import 'package:inkwing/providers/theme_provider.dart';
+import 'package:inkwing/screens/auth/login.dart';
+import 'package:inkwing/screens/auth/google_user_info_screen.dart';
+import 'package:inkwing/screens/home/home_screen.dart';
+import 'package:inkwing/screens/splash_screen.dart';
+import 'package:inkwing/services/fcm_service.dart';
+import 'package:inkwing/utils/crashlytics_helper.dart';
 import 'firebase_options.dart';
 
 // Background message handler for Firebase Cloud Messaging

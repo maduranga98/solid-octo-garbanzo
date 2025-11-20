@@ -2,14 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:versebox/models/post_model.dart';
-import 'package:versebox/providers/auth_provider.dart';
-import 'package:versebox/providers/postRepositoryProvider.dart';
-import 'package:versebox/providers/post_interaction_provider.dart';
-import 'package:versebox/providers/user_provider.dart';
-import 'package:versebox/screens/profile/user_profile.dart';
-import 'package:versebox/widgets/commentsBottomSheet.dart';
-import 'package:versebox/widgets/fullPostBottomSheet.dart';
+import 'package:inkwing/models/post_model.dart';
+import 'package:inkwing/providers/auth_provider.dart';
+import 'package:inkwing/providers/postRepositoryProvider.dart';
+import 'package:inkwing/providers/post_interaction_provider.dart';
+import 'package:inkwing/providers/user_provider.dart';
+import 'package:inkwing/screens/profile/user_profile.dart';
+import 'package:inkwing/widgets/commentsBottomSheet.dart';
+import 'package:inkwing/widgets/fullPostBottomSheet.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class FollowingFeedScreen extends ConsumerWidget {

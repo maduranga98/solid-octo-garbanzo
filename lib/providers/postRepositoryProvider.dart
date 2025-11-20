@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:versebox/models/post_model.dart';
-import 'package:versebox/providers/follow_provider.dart';
-import 'package:versebox/repositories/post_repository.dart';
+import 'package:inkwing/models/post_model.dart';
+import 'package:inkwing/providers/follow_provider.dart';
+import 'package:inkwing/repositories/post_repository.dart';
 
 final postRepositoryProvider = Provider<PostRepository>((ref) {
   return PostRepository(FirebaseFirestore.instance);
