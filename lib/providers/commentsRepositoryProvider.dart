@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:versebox/models/comment_model.dart';
-import 'package:versebox/repositories/comments_repository.dart';
+import 'package:inkwing/models/comment_model.dart';
+import 'package:inkwing/repositories/comments_repository.dart';
 
 // Provider for CommentsRepository
 final commentsRepositoryProvider = Provider<CommentsRepository>((ref) {

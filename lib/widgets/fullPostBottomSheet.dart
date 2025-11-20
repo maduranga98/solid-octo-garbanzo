@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
-import 'package:versebox/models/post_model.dart';
-import 'package:versebox/providers/auth_provider.dart';
-import 'package:versebox/providers/user_provider.dart';
-import 'package:versebox/screens/profile/user_profile.dart';
+import 'package:inkwing/models/post_model.dart';
+import 'package:inkwing/providers/auth_provider.dart';
+import 'package:inkwing/providers/user_provider.dart';
+import 'package:inkwing/screens/profile/user_profile.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class FullPostBottomSheet extends ConsumerWidget {

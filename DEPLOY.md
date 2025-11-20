@@ -152,16 +152,16 @@ flutter install --release
 **Sign the app** (required for Play Store):
 1. Generate keystore (if not already done):
    ```bash
-   keytool -genkey -v -keystore ~/versebox-release-key.jks \
-     -keyalg RSA -keysize 2048 -validity 10000 -alias versebox
+   keytool -genkey -v -keystore ~/inkwing-release-key.jks \
+     -keyalg RSA -keysize 2048 -validity 10000 -alias inkwing
    ```
 
 2. Create `android/key.properties`:
    ```properties
    storePassword=<password>
    keyPassword=<password>
-   keyAlias=versebox
-   storeFile=/path/to/versebox-release-key.jks
+   keyAlias=inkwing
+   storeFile=/path/to/inkwing-release-key.jks
    ```
 
 3. Rebuild:

@@ -28,7 +28,7 @@ Ensure you have the following installed and configured:
 
 ## Generate App Icons
 
-The app logo (`assets/versebox-logo.jpg`) has been configured to generate icons for all platforms using `flutter_launcher_icons`.
+The app logo (`assets/inkwing-logo.jpg`) has been configured to generate icons for all platforms using `flutter_launcher_icons`.
 
 ### Steps:
 
@@ -63,8 +63,8 @@ The app logo (`assets/versebox-logo.jpg`) has been configured to generate icons 
 Generate a keystore for signing the Android release APK/AAB:
 
 ```bash
-keytool -genkey -v -keystore ~/versebox-release-key.jks \
-  -alias versebox \
+keytool -genkey -v -keystore ~/inkwing-release-key.jks \
+  -alias inkwing \
   -keyalg RSA \
   -keysize 2048 \
   -validity 10000
@@ -79,9 +79,9 @@ Create `android/key.properties` (this file is gitignored for security):
 ```properties
 storePassword=<your-keystore-password>
 keyPassword=<your-key-password>
-keyAlias=versebox
+keyAlias=inkwing
 storeFile=<path-to-your-keystore-file>
-# Example: storeFile=/Users/yourname/versebox-release-key.jks
+# Example: storeFile=/Users/yourname/inkwing-release-key.jks
 ```
 
 **IMPORTANT:** Add `key.properties` to `.gitignore` to prevent committing sensitive credentials.
@@ -90,7 +90,7 @@ storeFile=<path-to-your-keystore-file>
 
 The following production optimizations are already configured in `android/app/build.gradle.kts`:
 
-- **Application ID:** `com.versebox.app`
+- **Application ID:** `com.inkwing.app`
 - **Code shrinking:** Enabled with ProGuard
 - **Resource shrinking:** Enabled
 - **Obfuscation:** Configured via `proguard-rules.pro`
@@ -132,7 +132,7 @@ The bundle identifier has been updated to match your organization. Verify in `io
 1. Open `ios/Runner.xcworkspace` in Xcode
 2. Select Runner target
 3. Verify Bundle Identifier matches your provisioning profile
-4. Consider changing to: `com.versebox.app` (currently using generated identifier)
+4. Consider changing to: `com.inkwing.app` (currently using generated identifier)
 
 ### 2. Configure Code Signing
 
@@ -357,7 +357,7 @@ firebase deploy --only functions
 ## Important Notes
 
 ### Package Name / Bundle Identifier
-- **Android:** `com.versebox.app`
+- **Android:** `com.inkwing.app`
 - **iOS:** Update in Xcode to match your provisioning profile
 - **Web:** Domain-based (Firebase Hosting or custom domain)
 

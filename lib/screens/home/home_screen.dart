@@ -3,23 +3,23 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:versebox/models/post_model.dart';
-import 'package:versebox/providers/auth_provider.dart';
-import 'package:versebox/providers/follow_provider.dart';
-import 'package:versebox/providers/postRepositoryProvider.dart';
-import 'package:versebox/providers/post_interaction_provider.dart';
-import 'package:versebox/providers/user_provider.dart';
-import 'package:versebox/screens/auth/login.dart';
-import 'package:versebox/screens/following/following_feed.dart';
-import 'package:versebox/screens/messages/message.dart';
-import 'package:versebox/screens/notifications/notifications_screen.dart';
-import 'package:versebox/screens/profile/user_profile.dart'
+import 'package:inkwing/models/post_model.dart';
+import 'package:inkwing/providers/auth_provider.dart';
+import 'package:inkwing/providers/follow_provider.dart';
+import 'package:inkwing/providers/postRepositoryProvider.dart';
+import 'package:inkwing/providers/post_interaction_provider.dart';
+import 'package:inkwing/providers/user_provider.dart';
+import 'package:inkwing/screens/auth/login.dart';
+import 'package:inkwing/screens/following/following_feed.dart';
+import 'package:inkwing/screens/messages/message.dart';
+import 'package:inkwing/screens/notifications/notifications_screen.dart';
+import 'package:inkwing/screens/profile/user_profile.dart'
     hide isFollowingProvider;
-import 'package:versebox/screens/saved/saved_post.dart';
-import 'package:versebox/screens/search/user_search_screen.dart';
-import 'package:versebox/widgets/commentsBottomSheet.dart';
-import 'package:versebox/widgets/fullPostBottomSheet.dart';
-import 'package:versebox/widgets/theme_switcher.dart';
+import 'package:inkwing/screens/saved/saved_post.dart';
+import 'package:inkwing/screens/search/user_search_screen.dart';
+import 'package:inkwing/widgets/commentsBottomSheet.dart';
+import 'package:inkwing/widgets/fullPostBottomSheet.dart';
+import 'package:inkwing/widgets/theme_switcher.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -106,7 +106,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(9),
                           child: Image.asset(
-                            'assets/versebox-logo.jpg',
+                            'assets/inkwing-logo.jpg',
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -276,7 +276,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.asset(
-                        'assets/versebox-logo.jpg',
+                        'assets/inkwing-logo.jpg',
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -1374,7 +1374,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.asset(
-                  'assets/versebox-logo.jpg',
+                  'assets/inkwing-logo.jpg',
                   fit: BoxFit.cover,
                 ),
               ),
