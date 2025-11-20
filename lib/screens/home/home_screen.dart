@@ -398,7 +398,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ? posts.where((post) => post.workType == workType).toList()
               : posts;
 
-          print(filteredPosts);
+          // print(filteredPosts);
           if (filteredPosts.isEmpty) {
             return _buildEmptyState(workType);
           }
@@ -907,7 +907,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
           error: (error, stack) {
             // Log the error for debugging
-            print('Follow button error: $error');
+            // print('Follow button error: $error');
             // Show a default "Follow" button on error
             return TextButton(
               onPressed: () => _handleFollow(post.createdBy),
@@ -968,7 +968,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             const SizedBox(height: 8),
             Text(
               workType != null
-                  ? 'Be the first to share your ${workType}!'
+                  ? 'Be the first to share your $workType!'
                   : 'Start following creators to see their posts',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.7),
