@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
-import 'package:inkwing/utils/crashlytics_helper.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 /// Service for managing Firebase Cloud Messaging (FCM) tokens and push notifications
 class FCMService {
@@ -20,22 +20,26 @@ class FCMService {
       await _initializeLocalNotifications();
 
       // Request permission for notifications (iOS)
-      NotificationSettings settings = await _firebaseMessaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
+      NotificationSettings settings = await _firebaseMessaging
+          .requestPermission(
+            alert: true,
+            announcement: false,
+            badge: true,
+            carPlay: false,
+            criticalAlert: false,
+            provisional: false,
+            sound: true,
+          );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         debugPrint('✅ User granted permission for notifications');
-      } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+      } else if (settings.authorizationStatus ==
+          AuthorizationStatus.provisional) {
         debugPrint('✅ User granted provisional permission for notifications');
       } else {
-        debugPrint('⚠️ User declined or has not accepted notification permissions');
+        debugPrint(
+          '⚠️ User declined or has not accepted notification permissions',
+        );
       }
 
       // Set foreground notification presentation options
@@ -51,7 +55,9 @@ class FCMService {
         debugPrint('Message data: ${message.data}');
 
         if (message.notification != null) {
-          debugPrint('Message also contained a notification: ${message.notification}');
+          debugPrint(
+            'Message also contained a notification: ${message.notification}',
+          );
           _showLocalNotification(message);
         }
       });
@@ -64,7 +70,8 @@ class FCMService {
       });
 
       // Handle messages when app is terminated
-      RemoteMessage? initialMessage = await _firebaseMessaging.getInitialMessage();
+      RemoteMessage? initialMessage = await _firebaseMessaging
+          .getInitialMessage();
       if (initialMessage != null) {
         debugPrint('📭 App opened from terminated state via notification!');
         debugPrint('Message data: ${initialMessage.data}');
@@ -86,7 +93,9 @@ class FCMService {
 
   /// Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -118,7 +127,8 @@ class FCMService {
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(androidChannel);
   }
 
@@ -199,10 +209,7 @@ class FCMService {
         e,
         stackTrace,
         reason: 'Error updating user FCM token in Firestore',
-        additionalInfo: {
-          'method': 'updateUserToken',
-          'userId': userId,
-        },
+        additionalInfo: {'method': 'updateUserToken', 'userId': userId},
         fatal: false,
       );
       debugPrint('❌ Error updating user FCM token: $e');
@@ -222,10 +229,7 @@ class FCMService {
         e,
         stackTrace,
         reason: 'Error deleting user FCM token from Firestore',
-        additionalInfo: {
-          'method': 'deleteUserToken',
-          'userId': userId,
-        },
+        additionalInfo: {'method': 'deleteUserToken', 'userId': userId},
         fatal: false,
       );
       debugPrint('❌ Error deleting user FCM token: $e');
@@ -236,9 +240,7 @@ class FCMService {
   void listenToTokenRefresh(String userId) {
     _firebaseMessaging.onTokenRefresh.listen((newToken) {
       debugPrint('🔄 FCM token refreshed: $newToken');
-      _firestore.collection('users').doc(userId).update({
-        'fcmToken': newToken,
-      });
+      _firestore.collection('users').doc(userId).update({'fcmToken': newToken});
     });
   }
 
@@ -253,7 +255,10 @@ class FCMService {
   }) async {
     try {
       // Get recipient's FCM token from Firestore
-      final userDoc = await _firestore.collection('users').doc(recipientUserId).get();
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(recipientUserId)
+          .get();
 
       if (!userDoc.exists) {
         debugPrint('❌ User document not found for: $recipientUserId');
@@ -373,10 +378,7 @@ class FCMService {
         e,
         stackTrace,
         reason: 'Error subscribing to FCM topic',
-        additionalInfo: {
-          'method': 'subscribeToTopic',
-          'topic': topic,
-        },
+        additionalInfo: {'method': 'subscribeToTopic', 'topic': topic},
         fatal: false,
       );
       debugPrint('❌ Error subscribing to topic: $e');
@@ -393,10 +395,7 @@ class FCMService {
         e,
         stackTrace,
         reason: 'Error unsubscribing from FCM topic',
-        additionalInfo: {
-          'method': 'unsubscribeFromTopic',
-          'topic': topic,
-        },
+        additionalInfo: {'method': 'unsubscribeFromTopic', 'topic': topic},
         fatal: false,
       );
       debugPrint('❌ Error unsubscribing from topic: $e');

@@ -3,23 +3,23 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:inkwing/models/post_model.dart';
-import 'package:inkwing/providers/auth_provider.dart';
-import 'package:inkwing/providers/follow_provider.dart';
-import 'package:inkwing/providers/postRepositoryProvider.dart';
-import 'package:inkwing/providers/post_interaction_provider.dart';
-import 'package:inkwing/providers/user_provider.dart';
-import 'package:inkwing/screens/auth/login.dart';
-import 'package:inkwing/screens/following/following_feed.dart';
-import 'package:inkwing/screens/messages/message.dart';
-import 'package:inkwing/screens/notifications/notifications_screen.dart';
-import 'package:inkwing/screens/profile/user_profile.dart'
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/providers/follow_provider.dart';
+import 'package:versewing/providers/postRepositoryProvider.dart';
+import 'package:versewing/providers/post_interaction_provider.dart';
+import 'package:versewing/providers/user_provider.dart';
+import 'package:versewing/screens/auth/login.dart';
+import 'package:versewing/screens/following/following_feed.dart';
+import 'package:versewing/screens/messages/message.dart';
+import 'package:versewing/screens/notifications/notifications_screen.dart';
+import 'package:versewing/screens/profile/user_profile.dart'
     hide isFollowingProvider;
-import 'package:inkwing/screens/saved/saved_post.dart';
-import 'package:inkwing/screens/search/user_search_screen.dart';
-import 'package:inkwing/widgets/commentsBottomSheet.dart';
-import 'package:inkwing/widgets/fullPostBottomSheet.dart';
-import 'package:inkwing/widgets/theme_switcher.dart';
+import 'package:versewing/screens/saved/saved_post.dart';
+import 'package:versewing/screens/search/user_search_screen.dart';
+import 'package:versewing/widgets/commentsBottomSheet.dart';
+import 'package:versewing/widgets/fullPostBottomSheet.dart';
+import 'package:versewing/widgets/theme_switcher.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -124,7 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       const SizedBox(height: 4),
                       // App name
                       Text(
-                        'InkWing - Where Words Take Flight',
+                        'VerseWing - Where Words Take Flight Forever',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                         ),
@@ -283,7 +283,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'InkWing',
+                    'VerseWing',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
@@ -1380,7 +1380,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
             const SizedBox(width: 12),
-            const Text('About InkWing'),
+            const Text('About VerseWing'),
           ],
         ),
         content: SingleChildScrollView(
@@ -1397,7 +1397,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                'InkWing - Where Words Take Flight. A platform for writers and poets to share their creative works with the world.',
+                'VerseWing - Where Words Take Flight Forever. A platform for writers and poets to share their creative works with the world.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.8),
                   height: 1.5,
@@ -1419,7 +1419,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               _buildFeatureItem('✨ Rich text formatting support'),
               const SizedBox(height: 16),
               Text(
-                '© 2025 InkWing. All rights reserved.',
+                '© 2025 VerseWing. All rights reserved.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),

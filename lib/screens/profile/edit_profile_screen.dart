@@ -5,10 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:inkwing/models/user_model.dart';
-import 'package:inkwing/providers/auth_provider.dart';
-import 'package:inkwing/providers/user_provider.dart';
-import 'package:inkwing/repositories/user_repository.dart';
+import 'package:versewing/models/user_model.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/providers/user_provider.dart';
+import 'package:versewing/repositories/user_repository.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});

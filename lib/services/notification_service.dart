@@ -1,9 +1,9 @@
 // lib/services/notification_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:inkwing/models/notification_model.dart';
-import 'package:inkwing/models/post_model.dart';
-import 'package:inkwing/utils/crashlytics_helper.dart';
+import 'package:versewing/models/notification_model.dart';
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -105,7 +105,8 @@ class NotificationService {
       await CrashlyticsHelper.recordError(
         e,
         stackTrace,
-        reason: 'Error in createCommentNotification creating comment notification',
+        reason:
+            'Error in createCommentNotification creating comment notification',
         additionalInfo: {
           'postId': post.docId,
           'postOwnerId': post.createdBy,
@@ -203,7 +204,8 @@ class NotificationService {
       await CrashlyticsHelper.recordError(
         e,
         stackTrace,
-        reason: 'Error in createFollowNotification creating follow notification',
+        reason:
+            'Error in createFollowNotification creating follow notification',
         additionalInfo: {
           'followedUserId': followedUserId,
           'senderId': currentUser?.uid,
@@ -259,10 +261,7 @@ class NotificationService {
         e,
         stackTrace,
         reason: 'Error in markAsRead marking notification as read',
-        additionalInfo: {
-          'userId': userId,
-          'notificationId': notificationId,
-        },
+        additionalInfo: {'userId': userId, 'notificationId': notificationId},
         fatal: false,
       );
       print('Error marking notification as read: $e');
@@ -296,9 +295,7 @@ class NotificationService {
         e,
         stackTrace,
         reason: 'Error in markAllAsRead marking all notifications as read',
-        additionalInfo: {
-          'userId': userId,
-        },
+        additionalInfo: {'userId': userId},
         fatal: false,
       );
       print('Error marking all notifications as read: $e');
@@ -319,10 +316,7 @@ class NotificationService {
         e,
         stackTrace,
         reason: 'Error in deleteNotification deleting notification',
-        additionalInfo: {
-          'userId': userId,
-          'notificationId': notificationId,
-        },
+        additionalInfo: {'userId': userId, 'notificationId': notificationId},
         fatal: false,
       );
       print('Error deleting notification: $e');
@@ -355,9 +349,7 @@ class NotificationService {
         e,
         stackTrace,
         reason: 'Error in deleteAllNotifications deleting all notifications',
-        additionalInfo: {
-          'userId': userId,
-        },
+        additionalInfo: {'userId': userId},
         fatal: false,
       );
       print('Error deleting all notifications: $e');
@@ -383,10 +375,7 @@ class NotificationService {
           e2,
           stackTrace2,
           reason: 'Error in _incrementUnreadCount creating unread count field',
-          additionalInfo: {
-            'userId': userId,
-            'originalError': e.toString(),
-          },
+          additionalInfo: {'userId': userId, 'originalError': e.toString()},
           fatal: false,
         );
       }
@@ -404,9 +393,7 @@ class NotificationService {
         e,
         stackTrace,
         reason: 'Error in _decrementUnreadCount decrementing unread count',
-        additionalInfo: {
-          'userId': userId,
-        },
+        additionalInfo: {'userId': userId},
         fatal: false,
       );
       print('Error decrementing unread count: $e');

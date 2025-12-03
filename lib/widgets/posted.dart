@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:inkwing/models/post_model.dart';
-import 'package:inkwing/providers/postRepositoryProvider.dart';
-import 'package:inkwing/widgets/createApost.dart';
-import 'package:inkwing/widgets/fullPostBottomSheet.dart';
-import 'package:inkwing/widgets/commentsBottomSheet.dart';
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/providers/postRepositoryProvider.dart';
+import 'package:versewing/widgets/createApost.dart';
+import 'package:versewing/widgets/fullPostBottomSheet.dart';
+import 'package:versewing/widgets/commentsBottomSheet.dart';
 
 class Posted extends ConsumerWidget {
   final String uid, name;

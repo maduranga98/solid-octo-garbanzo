@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:inkwing/models/user_model.dart';
-import 'package:inkwing/repositories/user_repository.dart';
+import 'package:versewing/models/user_model.dart';
+import 'package:versewing/repositories/user_repository.dart';
 
 final userRepositoryProvider = Provider<UserRepository>((ref) {
   return UserRepository(FirebaseFirestore.instance);

@@ -1,9 +1,9 @@
 // ignore_for_file: avoid_print
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:inkwing/models/post_model.dart';
-import 'package:inkwing/models/saved_model.dart';
-import 'package:inkwing/utils/crashlytics_helper.dart';
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/models/saved_model.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class SavedPost {
   final SavedModel savedData;
@@ -69,10 +69,7 @@ class PostRepository {
         e,
         stackTrace,
         reason: 'Error in deletePost while deleting post',
-        additionalInfo: {
-          'postId': postId,
-          'operation': 'deletePost',
-        },
+        additionalInfo: {'postId': postId, 'operation': 'deletePost'},
         fatal: true,
       );
       print("print error in delect post: $e");

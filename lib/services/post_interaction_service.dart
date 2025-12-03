@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:inkwing/models/post_model.dart';
-import 'package:inkwing/services/notification_service.dart';
-import 'package:inkwing/services/fcm_service.dart';
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/services/notification_service.dart';
+import 'package:versewing/services/fcm_service.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:inkwing/utils/crashlytics_helper.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class PostInteractionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -194,8 +194,12 @@ class PostInteractionService {
       await CrashlyticsHelper.recordError(
         e,
         stackTrace,
-        reason: 'Error in sharePostWithCustomText sharing post with custom text',
-        additionalInfo: {'postId': post.docId, 'customTextLength': customText.length},
+        reason:
+            'Error in sharePostWithCustomText sharing post with custom text',
+        additionalInfo: {
+          'postId': post.docId,
+          'customTextLength': customText.length,
+        },
         fatal: false,
       );
       _showErrorMessage(context, 'Failed to share post: $e');
@@ -359,7 +363,10 @@ class PostInteractionService {
         e,
         stackTrace,
         reason: 'Error in toggleBookmark while toggling bookmark status',
-        additionalInfo: {'postId': post.docId, 'userId': _auth.currentUser?.uid},
+        additionalInfo: {
+          'postId': post.docId,
+          'userId': _auth.currentUser?.uid,
+        },
         fatal: true,
       );
       throw Exception('Failed to toggle bookmark: $e');
@@ -469,7 +476,8 @@ class PostInteractionService {
         await CrashlyticsHelper.recordError(
           e,
           stackTrace,
-          reason: 'Error in _createLikeNotificationsAsync creating like notifications',
+          reason:
+              'Error in _createLikeNotificationsAsync creating like notifications',
           additionalInfo: {
             'postId': post.docId,
             'postOwnerId': post.createdBy,

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:inkwing/providers/auth_provider.dart';
-import 'package:inkwing/providers/user_provider.dart';
-import 'package:inkwing/screens/messages/message.dart';
-import 'package:inkwing/screens/profile/edit_profile_screen.dart';
-import 'package:inkwing/screens/profile/followers_following_screen.dart';
-import 'package:inkwing/widgets/draft.dart';
-import 'package:inkwing/widgets/ideas.dart';
-import 'package:inkwing/widgets/posted.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/providers/user_provider.dart';
+import 'package:versewing/screens/messages/message.dart';
+import 'package:versewing/screens/profile/edit_profile_screen.dart';
+import 'package:versewing/screens/profile/followers_following_screen.dart';
+import 'package:versewing/widgets/draft.dart';
+import 'package:versewing/widgets/ideas.dart';
+import 'package:versewing/widgets/posted.dart';
 
 final isFollowingProvider = StreamProvider.family<bool, String>((ref, userId) {
   final currentUser = ref.watch(firebaseAuthProvider).currentUser;
@@ -209,120 +209,120 @@ class UserProfile extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isDark
-                      ? Colors.grey.shade600
-                      : primaryColor.withValues(alpha: 0.5),
-                  width: 3,
-                ),
-                boxShadow: isDark
-                    ? [
-                        BoxShadow(
-                          color: Colors.grey.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark
+                    ? Colors.grey.shade600
+                    : primaryColor.withValues(alpha: 0.5),
+                width: 3,
               ),
-              child: CircleAvatar(
-                radius: 42,
-                backgroundColor: isDark
-                    ? Colors.grey.shade800
-                    : primaryColor.withValues(alpha: 0.15),
-                backgroundImage:
-                    user.photoURl != null && user.photoURl!.isNotEmpty
-                    ? NetworkImage(user.photoURl!)
-                    : null,
-                child: user.photoURl == null || user.photoURl!.isEmpty
-                    ? Text(
-                        user.firstname != null && user.firstname.isNotEmpty
-                            ? user.firstname[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : primaryColor,
-                        ),
-                      )
-                    : null,
+              boxShadow: isDark
+                  ? [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: CircleAvatar(
+              radius: 42,
+              backgroundColor: isDark
+                  ? Colors.grey.shade800
+                  : primaryColor.withValues(alpha: 0.15),
+              backgroundImage:
+                  user.photoURl != null && user.photoURl!.isNotEmpty
+                  ? NetworkImage(user.photoURl!)
+                  : null,
+              child: user.photoURl == null || user.photoURl!.isEmpty
+                  ? Text(
+                      user.firstname != null && user.firstname.isNotEmpty
+                          ? user.firstname[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : primaryColor,
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            "${user.firstname ?? ''} ${user.lastname ?? ''}",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: theme.textTheme.bodyLarge?.color,
+            ),
+          ),
+          Text(
+            "@${user.userName ?? ''}",
+            style: TextStyle(
+              fontSize: 15,
+              color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildStat(
+                "Posts",
+                user.postCount ?? 0,
+                context,
+                profileUserId,
+                user.userName ?? '',
               ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              "${user.firstname ?? ''} ${user.lastname ?? ''}",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: theme.textTheme.bodyLarge?.color,
+              _buildStatDivider(isDark),
+              _buildStat(
+                "Followers",
+                user.followersCount ?? 0,
+                context,
+                profileUserId,
+                user.userName ?? '',
               ),
-            ),
-            Text(
-              "@${user.userName ?? ''}",
-              style: TextStyle(
-                fontSize: 15,
-                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                fontWeight: FontWeight.w400,
+              _buildStatDivider(isDark),
+              _buildStat(
+                "Following",
+                user.followingCount ?? 0,
+                context,
+                profileUserId,
+                user.userName ?? '',
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildStat(
-                  "Posts",
-                  user.postCount ?? 0,
-                  context,
-                  profileUserId,
-                  user.userName ?? '',
-                ),
-                _buildStatDivider(isDark),
-                _buildStat(
-                  "Followers",
-                  user.followersCount ?? 0,
-                  context,
-                  profileUserId,
-                  user.userName ?? '',
-                ),
-                _buildStatDivider(isDark),
-                _buildStat(
-                  "Following",
-                  user.followingCount ?? 0,
-                  context,
-                  profileUserId,
-                  user.userName ?? '',
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfo(
-                    Icons.email_outlined,
-                    user.email ?? '',
-                    context,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildInfo(
-                    Icons.location_on_outlined,
-                    user.country ?? '',
-                    context,
-                  ),
-                ),
-              ],
-            ),
-            if (!isOwnProfile) ...[
-              const SizedBox(height: 20),
-              _buildActionButtons(context, ref, profileUserId),
             ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildInfo(
+                  Icons.email_outlined,
+                  user.email ?? '',
+                  context,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildInfo(
+                  Icons.location_on_outlined,
+                  user.country ?? '',
+                  context,
+                ),
+              ),
+            ],
+          ),
+          if (!isOwnProfile) ...[
+            const SizedBox(height: 20),
+            _buildActionButtons(context, ref, profileUserId),
+          ],
         ],
       ),
     );

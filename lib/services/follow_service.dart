@@ -1,6 +1,6 @@
 // lib/services/follow_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:inkwing/utils/crashlytics_helper.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class FollowService {
   final FirebaseFirestore _firestore;

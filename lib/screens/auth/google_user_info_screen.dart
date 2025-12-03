@@ -6,12 +6,12 @@ import 'package:country_picker/country_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:inkwing/models/user_model.dart';
-import 'package:inkwing/repositories/user_repository.dart';
-import 'package:inkwing/services/auth_service.dart';
-import 'package:inkwing/screens/auth/user_preferences_intro_screen.dart';
-import 'package:inkwing/providers/fcm_provider.dart';
-import 'package:inkwing/providers/firestore_provider.dart';
+import 'package:versewing/models/user_model.dart';
+import 'package:versewing/repositories/user_repository.dart';
+import 'package:versewing/services/auth_service.dart';
+import 'package:versewing/screens/auth/user_preferences_intro_screen.dart';
+import 'package:versewing/providers/fcm_provider.dart';
+import 'package:versewing/providers/firestore_provider.dart';
 
 /// Screen to collect additional user information after Google Sign-In
 class GoogleUserInfoScreen extends ConsumerStatefulWidget {

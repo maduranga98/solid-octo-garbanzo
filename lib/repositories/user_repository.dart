@@ -2,8 +2,8 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:inkwing/models/user_model.dart';
-import 'package:inkwing/utils/crashlytics_helper.dart';
+import 'package:versewing/models/user_model.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class UserRepository {
   final FirebaseFirestore firestore;
@@ -261,10 +261,7 @@ class UserRepository {
         e,
         stackTrace,
         reason: 'Error updating user fields in updateUserFields',
-        additionalInfo: {
-          'uid': uid,
-          'updates': updates.keys.toList(),
-        },
+        additionalInfo: {'uid': uid, 'updates': updates.keys.toList()},
         fatal: true,
       );
       print("Error updating user fields: $e");
@@ -421,10 +418,7 @@ class UserRepository {
         e,
         stackTrace,
         reason: 'Error getting users by content type in getUsersByContentType',
-        additionalInfo: {
-          'contentType': contentType,
-          'limit': limit,
-        },
+        additionalInfo: {'contentType': contentType, 'limit': limit},
         fatal: false,
       );
       print("Error getting users by content type: $e");
@@ -523,10 +517,7 @@ class UserRepository {
         e,
         stackTrace,
         reason: 'Error getting users by IDs in getUsersByIds',
-        additionalInfo: {
-          'uidsCount': uids.length,
-          'uids': uids,
-        },
+        additionalInfo: {'uidsCount': uids.length, 'uids': uids},
         fatal: false,
       );
       print("Error getting users by IDs: $e");
