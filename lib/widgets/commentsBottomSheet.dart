@@ -3,11 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:inkwing/models/comment_model.dart';
-import 'package:inkwing/models/post_model.dart';
-import 'package:inkwing/providers/auth_provider.dart';
-import 'package:inkwing/providers/commentsRepositoryProvider.dart';
-import 'package:inkwing/providers/user_provider.dart';
+import 'package:versewing/models/comment_model.dart';
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/providers/commentsRepositoryProvider.dart';
+import 'package:versewing/providers/user_provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class CommentsBottomSheet extends ConsumerStatefulWidget {

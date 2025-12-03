@@ -14,6 +14,74 @@
       },
       "oauth_client": [
         {
+          "client_id": "773557992042-1foscft86srcasg5ufsatd4mtlccg0cg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.inkwing.app",
+            "certificate_hash": "c407b745dc95b3019071be230d00999c3a89d5e8"
+          }
+        },
+        {
+          "client_id": "773557992042-hfoqa9phgni2mruivomu57tqdu1t177t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.inkwing.app",
+            "certificate_hash": "d5d0dc1dc9a2649adb46575b68d64c577a579abf"
+          }
+        },
+        {
+          "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXh6XPS6pJLU6NO4ZbicifxcwIgNWfzIw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "773557992042-4d8lgmrjts2av8797im13tidjlg1rdro.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.poemApplication"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:773557992042:android:81193b86941fcaebdea813",
+        "android_client_info": {
+          "package_name": "com.versewing.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "773557992042-46u988at9c6fkd670bi9c7m2s6df03vk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.versewing.app",
+            "certificate_hash": "c407b745dc95b3019071be230d00999c3a89d5e8"
+          }
+        },
+        {
+          "client_id": "773557992042-la3h8sfobcp09okhmqgvv141hfrh4epl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.versewing.app",
+            "certificate_hash": "d5d0dc1dc9a2649adb46575b68d64c577a579abf"
+          }
+        },
+        {
           "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
           "client_type": 3
         }

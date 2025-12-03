@@ -69,7 +69,6 @@ class _SplashScreenState extends State<SplashScreen>
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-
                             color: const Color(
                               0xFF6366F1,
                             ).withValues(alpha: 0.3),
@@ -90,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen>
                     const SizedBox(height: 32),
                     // App Name
                     Text(
-                      'InkWing',
+                      'VerseWing',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -100,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Where Words Take Flight',
+                      'Where Words Take Flight Forever',
                       style: TextStyle(
                         fontSize: 16,
                         color: isDark ? Colors.grey[400] : Colors.grey[600],

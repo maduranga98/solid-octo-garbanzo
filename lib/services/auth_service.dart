@@ -5,10 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:inkwing/models/user_model.dart';
-import 'package:inkwing/repositories/user_repository.dart';
-import 'package:inkwing/screens/auth/user_preferences_intro_screen.dart';
-import 'package:inkwing/utils/crashlytics_helper.dart';
+import 'package:versewing/models/user_model.dart';
+import 'package:versewing/repositories/user_repository.dart';
+import 'package:versewing/screens/auth/user_preferences_intro_screen.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -166,7 +166,8 @@ class AuthService {
         await CrashlyticsHelper.recordError(
           firestoreError,
           stackTrace,
-          reason: 'Firestore error during user creation in AuthService.signUpWithEmailAndPassword',
+          reason:
+              'Firestore error during user creation in AuthService.signUpWithEmailAndPassword',
           additionalInfo: {'email': email},
           fatal: true,
         );
@@ -197,7 +198,8 @@ class AuthService {
       await CrashlyticsHelper.recordError(
         e,
         stackTrace,
-        reason: 'General signup error in AuthService.signUpWithEmailAndPassword',
+        reason:
+            'General signup error in AuthService.signUpWithEmailAndPassword',
         fatal: true,
       );
       print("❌ General signup error: $e");

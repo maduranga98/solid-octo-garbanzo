@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:inkwing/screens/auth/signup.dart';
-import 'package:inkwing/screens/auth/google_user_info_screen.dart';
-import 'package:inkwing/screens/home/home_screen.dart';
-import 'package:inkwing/services/auth_service.dart';
-import 'package:inkwing/widgets/emailInputField.dart';
-import 'package:inkwing/widgets/passwordInputField.dart';
+import 'package:versewing/screens/auth/signup.dart';
+import 'package:versewing/screens/auth/google_user_info_screen.dart';
+import 'package:versewing/screens/home/home_screen.dart';
+import 'package:versewing/services/auth_service.dart';
+import 'package:versewing/widgets/emailInputField.dart';
+import 'package:versewing/widgets/passwordInputField.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -300,7 +300,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
 
         // App Title
         Text(
-          'InkWing',
+          'VerseWing',
           style: theme.textTheme.headlineLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,

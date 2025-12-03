@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:inkwing/pages/add_edit_idea_page.dart';
+import 'package:versewing/pages/add_edit_idea_page.dart';
 
 // Provider to fetch ideas
 final getIdeasProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>(
