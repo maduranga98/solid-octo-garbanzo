@@ -1,11 +1,11 @@
 {
-    "name": "InkWing",
-    "short_name": "InkWing",
+    "name": "VerseWing",
+    "short_name": "VerseWing",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#e8e8e8",
     "theme_color": "#e8e8e8",
-    "description": "InkWing - Where Words Take Flight",
+    "description": "VerseWing - Where Words Take Flight Forever",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

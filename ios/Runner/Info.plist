@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>InkWing</string>
+	<string>VerseWing</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>InkWing</string>
+	<string>VerseWing</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -47,11 +47,11 @@
 		<string>remote-notification</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>InkWing needs camera access to let you take photos for your profile and posts</string>
+	<string>VerseWing needs camera access to let you take photos for your profile and posts</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>InkWing needs photo library access to let you select images for your profile and posts</string>
+	<string>VerseWing needs photo library access to let you select images for your profile and posts</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>InkWing needs permission to save photos to your library</string>
+	<string>VerseWing needs permission to save photos to your library</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

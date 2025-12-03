@@ -22,7 +22,7 @@ if (keystorePropertiesFile.exists()) {
 
 
 android {
-    namespace = "com.inkwing.app"
+    namespace = "com.versewing.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -37,7 +37,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.inkwing.app"
+        applicationId = "com.versewing.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = flutter.versionCode
