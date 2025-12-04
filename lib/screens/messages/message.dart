@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:versewing/models/report_model.dart';
+import 'package:versewing/models/block_model.dart';
+import 'package:versewing/repositories/report_repository.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/widgets/report_dialog.dart';
 
 class MessageSection extends StatefulWidget {
   const MessageSection({Key? key}) : super(key: key);
@@ -329,7 +335,7 @@ class _MessageSectionState extends State<MessageSection> {
   }
 }
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   final String chatId;
   final String otherUserId;
   final String otherUserName;
@@ -344,10 +350,10 @@ class ChatScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _messageController = TextEditingController();
@@ -467,6 +473,49 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) async {
+              if (value == 'report') {
+                // For reporting messages, we'll report the conversation/chat
+                showReportDialog(
+                  context,
+                  reportType: ReportType.message,
+                  contentId: widget.chatId,
+                  contentAuthorId: widget.otherUserId,
+                  contentAuthorName: widget.otherUserName,
+                  chatId: widget.chatId,
+                  contentText: 'Chat conversation with ${widget.otherUserName}',
+                );
+              } else if (value == 'block') {
+                _showBlockDialog(context, widget.otherUserId, widget.otherUserName);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.flag_outlined, size: 20),
+                    SizedBox(width: 12),
+                    Text('Report Conversation'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'block',
+                child: Row(
+                  children: [
+                    Icon(Icons.block_outlined, size: 20),
+                    SizedBox(width: 12),
+                    Text('Block User'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -640,6 +689,71 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBlockDialog(BuildContext context, String userId, String username) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Block User'),
+        content: Text(
+          'Are you sure you want to block @$username? You will no longer see their messages or interact with them.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final reportRepo = ref.read(reportRepositoryProvider);
+                final currentUser = ref.read(firebaseAuthProvider).currentUser;
+
+                if (currentUser != null) {
+                  await reportRepo.blockUser(
+                    BlockModel(
+                      docId: '',
+                      blockedBy: currentUser.uid,
+                      blockedUserId: userId,
+                      blockedUsername: username,
+                      createdAt: DateTime.now(),
+                      reason: 'Blocked from messages',
+                    ),
+                  );
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    Navigator.pop(context); // Also pop the chat screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$username has been blocked'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to block user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Block'),
           ),
         ],
       ),
