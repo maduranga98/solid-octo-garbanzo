@@ -142,11 +142,13 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
     setState(() => _isUploadingImage = true);
 
     try {
-      final fileName =
-          'profile_${widget.firebaseUser.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      // Use the correct path that matches storage.rules: users/{userId}/profile/{filename}
+      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final ref = FirebaseStorage.instance
           .ref()
-          .child('profile_images')
+          .child('users')
+          .child(widget.firebaseUser.uid)
+          .child('profile')
           .child(fileName);
 
       final uploadTask = ref.putFile(_selectedImage!);

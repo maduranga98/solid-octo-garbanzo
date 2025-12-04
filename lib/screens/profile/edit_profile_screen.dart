@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:country_picker/country_picker.dart';
 import 'package:versewing/models/user_model.dart';
 import 'package:versewing/providers/auth_provider.dart';
 import 'package:versewing/providers/user_provider.dart';
@@ -22,7 +23,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _firstnameController;
   late TextEditingController _lastnameController;
   late TextEditingController _usernameController;
-  late TextEditingController _bioController;
 
   File? _selectedImage;
   String? _currentImageUrl;
@@ -30,13 +30,74 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   bool _isUploadingImage = false;
   UserModel? _currentUser;
 
+  // New fields
+  Country? _selectedCountry;
+  List<String> _selectedTypes = [];
+  List<String> _selectedReadingLanguages = [];
+  String _selectedWritingLanguage = 'English';
+  bool _exploreInternational = true;
+
+  // Content types (same as google_user_info_screen)
+  final List<Map<String, dynamic>> _contentTypes = [
+    {
+      'title': 'Poetry',
+      'subtitle': 'Poets, spoken word, haiku, verses',
+      'icon': Icons.auto_stories,
+      'value': 'poetry',
+      'color': const Color(0xFF6366F1),
+    },
+    {
+      'title': 'Lyrics',
+      'subtitle': 'Songwriters, rap, chants, melodies',
+      'icon': Icons.music_note,
+      'value': 'lyrics',
+      'color': const Color(0xFF10B981),
+    },
+    {
+      'title': 'Stories',
+      'subtitle': 'Short stories, novels, folklore, prose',
+      'icon': Icons.menu_book,
+      'value': 'stories',
+      'color': const Color(0xFF8B5CF6),
+    },
+    {
+      'title': 'Quotes & Aphorisms',
+      'subtitle': 'Inspirations, reflections, timeless lines',
+      'icon': Icons.format_quote,
+      'value': 'quotes',
+      'color': const Color(0xFFF59E0B),
+    },
+    {
+      'title': 'Microfiction',
+      'subtitle': 'Tiny tales, flash fiction, one-liners',
+      'icon': Icons.bolt,
+      'value': 'microfiction',
+      'color': const Color(0xFFEF4444),
+    },
+  ];
+
+  // Available languages
+  final List<String> _availableLanguages = [
+    'English',
+    'Spanish',
+    'French',
+    'German',
+    'Italian',
+    'Portuguese',
+    'Chinese',
+    'Japanese',
+    'Korean',
+    'Arabic',
+    'Hindi',
+    'Other',
+  ];
+
   @override
   void initState() {
     super.initState();
     _firstnameController = TextEditingController();
     _lastnameController = TextEditingController();
     _usernameController = TextEditingController();
-    _bioController = TextEditingController();
     _loadUserData();
   }
 
@@ -45,7 +106,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _firstnameController.dispose();
     _lastnameController.dispose();
     _usernameController.dispose();
-    _bioController.dispose();
     super.dispose();
   }
 
@@ -62,8 +122,27 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             _firstnameController.text = user.firstname;
             _lastnameController.text = user.lastname;
             _usernameController.text = user.userName;
-            _bioController.text = user.bio ?? '';
             _currentImageUrl = user.photoURl;
+
+            // Load new fields
+            _selectedTypes = List<String>.from(user.type);
+            _selectedReadingLanguages =
+                List<String>.from(user.preferredReadingLanguages);
+            _selectedWritingLanguage = user.preferredWritingLanguage;
+            _exploreInternational = user.exploreInternational;
+
+            // Load country
+            if (user.country.isNotEmpty) {
+              try {
+                final countryList = CountryParser.parseCountriesEnglish();
+                _selectedCountry = countryList.firstWhere(
+                  (c) => c.name == user.country,
+                  orElse: () => countryList.first,
+                );
+              } catch (e) {
+                // If country not found, leave it null
+              }
+            }
           });
         }
       },
@@ -157,10 +236,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     setState(() => _isUploadingImage = true);
 
     try {
+      // Use the correct path that matches storage.rules: users/{userId}/profile/{filename}
+      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final storageRef = FirebaseStorage.instance
           .ref()
-          .child('profile_images')
-          .child('$userId.jpg');
+          .child('users')
+          .child(userId)
+          .child('profile')
+          .child(fileName);
 
       final uploadTask = await storageRef.putFile(_selectedImage!);
       final downloadUrl = await uploadTask.ref.getDownloadURL();
@@ -180,6 +263,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final currentUser = ref.read(firebaseAuthProvider).currentUser;
     if (currentUser == null || _currentUser == null) return;
 
+    // Validate new fields
+    if (_selectedCountry == null) {
+      _showErrorMessage('Please select your country');
+      return;
+    }
+
+    if (_selectedTypes.isEmpty) {
+      _showErrorMessage('Please select at least one content type');
+      return;
+    }
+
+    if (_selectedReadingLanguages.isEmpty) {
+      _showErrorMessage('Please select at least one reading language');
+      return;
+    }
+
     setState(() => _isLoading = true);
     HapticFeedback.mediumImpact();
 
@@ -197,16 +296,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         firstname: _firstnameController.text.trim(),
         lastname: _lastnameController.text.trim(),
         userName: _usernameController.text.trim(),
-        bio: _bioController.text.trim(),
         photoURl: photoUrl,
+        country: _selectedCountry!.name,
+        type: _selectedTypes,
+        preferredReadingLanguages: _selectedReadingLanguages,
+        preferredWritingLanguage: _selectedWritingLanguage,
+        exploreInternational: _exploreInternational,
       );
 
       await userRepository.updateUserFields(currentUser.uid, {
         'firstname': updatedUser.firstname,
         'lastname': updatedUser.lastname,
         'userName': updatedUser.userName,
-        'bio': updatedUser.bio,
         'photoURl': updatedUser.photoURl,
+        'country': updatedUser.country,
+        'type': updatedUser.type,
+        'preferredReadingLanguages': updatedUser.preferredReadingLanguages,
+        'preferredWritingLanguage': updatedUser.preferredWritingLanguage,
+        'exploreInternational': updatedUser.exploreInternational,
       });
 
       // Refresh user data
@@ -529,36 +636,257 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 32),
 
-            // Bio
-            TextFormField(
-              controller: _bioController,
-              enabled: !_isLoading,
-              maxLines: 4,
-              maxLength: 150,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Bio',
-                hintText: 'Tell us about yourself',
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.only(bottom: 60),
-                  child: Icon(Icons.info_outline),
-                ),
-                border: OutlineInputBorder(
+            // Country Selector
+            Text(
+              'Country',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: _isLoading
+                  ? null
+                  : () {
+                      showCountryPicker(
+                        context: context,
+                        showPhoneCode: false,
+                        onSelect: (Country country) {
+                          setState(() => _selectedCountry = country);
+                        },
+                      );
+                    },
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.all(20),
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                enabledBorder: OutlineInputBorder(
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _selectedCountry?.name ?? 'Select Country',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  const Icon(Icons.arrow_drop_down),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Content Types
+            Text(
+              'What Content Do You Create?',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Select all that apply',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...(_contentTypes.map((type) {
+              final isSelected = _selectedTypes.contains(type['value']);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  onTap: _isLoading
+                      ? null
+                      : () {
+                          setState(() {
+                            if (isSelected) {
+                              _selectedTypes.remove(type['value']);
+                            } else {
+                              _selectedTypes.add(type['value']);
+                            }
+                          });
+                        },
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? (type['color'] as Color).withOpacity(0.1)
+                          : colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? type['color'] as Color
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: (type['color'] as Color).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            type['icon'] as IconData,
+                            color: type['color'] as Color,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                type['title'] as String,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                type['subtitle'] as String,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          Icon(
+                            Icons.check_circle,
+                            color: type['color'] as Color,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                ),
-                alignLabelWithHint: true,
+              );
+            })),
+            const SizedBox(height: 24),
+
+            // Preferred Reading Languages
+            Text(
+              'Preferred Reading Languages',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Select languages you want to read content in',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _availableLanguages.map((language) {
+                final isSelected = _selectedReadingLanguages.contains(language);
+                return FilterChip(
+                  label: Text(language),
+                  selected: isSelected,
+                  onSelected: _isLoading
+                      ? null
+                      : (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedReadingLanguages.add(language);
+                            } else {
+                              _selectedReadingLanguages.remove(language);
+                            }
+                          });
+                        },
+                  selectedColor: colorScheme.primary.withOpacity(0.3),
+                  checkmarkColor: colorScheme.primary,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+
+            // Preferred Writing Language
+            Text(
+              'Preferred Writing Language',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Select your primary writing language',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _availableLanguages.map((language) {
+                final isSelected = _selectedWritingLanguage == language;
+                return ChoiceChip(
+                  label: Text(language),
+                  selected: isSelected,
+                  onSelected: _isLoading
+                      ? null
+                      : (selected) {
+                          if (selected) {
+                            setState(() => _selectedWritingLanguage = language);
+                          }
+                        },
+                  selectedColor: colorScheme.primary.withOpacity(0.3),
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+
+            // Explore International Content
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Explore International Content',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Discover content from around the world',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _exploreInternational,
+                    onChanged: _isLoading
+                        ? null
+                        : (value) {
+                            setState(() => _exploreInternational = value);
+                          },
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 32),

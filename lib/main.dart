@@ -76,8 +76,33 @@ class MyApp extends ConsumerWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _showSplash = true;
+  Timer? _splashTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Show splash screen for minimum 2.5 seconds
+    _splashTimer = Timer(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() => _showSplash = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _splashTimer?.cancel();
+    super.dispose();
+  }
 
   Future<bool> _checkUserDocumentExists(String uid) async {
     try {
@@ -100,6 +125,11 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Always show splash screen for minimum duration on app startup
+    if (_showSplash) {
+      return const SplashScreen();
+    }
+
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, authSnapshot) {
