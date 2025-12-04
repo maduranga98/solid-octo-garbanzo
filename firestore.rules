@@ -148,6 +148,24 @@ service cloud.firestore {
         // Only the user can delete their notifications
         allow delete: if isOwner(userId);
       }
+
+      // Blocked users subcollection
+      match /blockedUsers/{blockedUserId} {
+        // Only the user can read their own blocked list
+        allow read: if isOwner(userId);
+
+        // Only the user can block other users
+        allow create: if isOwner(userId)
+          && request.resource.data.blockedBy == request.auth.uid
+          && request.resource.data.blockedUserId is string
+          && request.resource.data.createdAt is timestamp;
+
+        // Only the user can unblock users
+        allow delete: if isOwner(userId);
+
+        // Prevent updates to blocks
+        allow update: if false;
+      }
     }
 
     // Posts collection rules
@@ -213,6 +231,64 @@ service cloud.firestore {
         allow delete: if isAuthenticated()
           && (resource.data.uid == request.auth.uid
               || get(/databases/$(database)/documents/posts/$(postId)).data.uid == request.auth.uid);
+      }
+    }
+
+    // Reports collection rules
+    match /reports/{reportId} {
+      // Users can read their own reports
+      allow read: if isAuthenticated()
+        && resource.data.reportedBy == request.auth.uid;
+
+      // Any authenticated user can create a report
+      allow create: if isAuthenticated()
+        && request.resource.data.reportedBy == request.auth.uid
+        && request.resource.data.reportType in ['post', 'comment', 'profile', 'message']
+        && request.resource.data.reason in ['harassment', 'spam', 'inappropriateContent', 'violence', 'hateSpeech', 'childSafety', 'sexualContent', 'falseInformation', 'other']
+        && isValidString(request.resource.data.description, 10, 500)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt is timestamp;
+
+      // Only admins can update reports (status, review notes)
+      // For now, we'll prevent updates. Admins will use Firebase Console or Admin SDK
+      allow update: if false;
+
+      // Users can delete their own reports
+      allow delete: if isAuthenticated()
+        && resource.data.reportedBy == request.auth.uid
+        && resource.data.status == 'pending';
+    }
+
+    // Chats collection rules
+    match /chats/{chatId} {
+      // Users can read chats they're part of
+      allow read: if isAuthenticated()
+        && request.auth.uid in resource.data.participants;
+
+      // Users can create chats
+      allow create: if isAuthenticated()
+        && request.auth.uid in request.resource.data.participants
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() == 2;
+
+      // Users can update chats they're part of (last message, unread count)
+      allow update: if isAuthenticated()
+        && request.auth.uid in resource.data.participants;
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        // Users can read messages in chats they're part of
+        allow read: if isAuthenticated()
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+
+        // Users can create messages in chats they're part of
+        allow create: if isAuthenticated()
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+          && request.resource.data.senderId == request.auth.uid
+          && isValidString(request.resource.data.text, 1, 1000);
+
+        // Prevent updates and deletes
+        allow update, delete: if false;
       }
     }
 

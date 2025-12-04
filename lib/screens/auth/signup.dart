@@ -13,6 +13,7 @@ import 'package:versewing/screens/auth/user_preferences_intro_screen.dart';
 import 'package:versewing/services/auth_service.dart';
 import 'package:versewing/services/fcm_service.dart';
 import 'package:versewing/widgets/inputfields.dart';
+import 'package:versewing/widgets/age_verification_step.dart';
 
 class Signup extends ConsumerStatefulWidget {
   const Signup({super.key});
@@ -49,6 +50,11 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
   bool _acceptTerms = false;
   File? _selectedImage;
   String? _uploadedImageUrl;
+
+  // Age verification
+  DateTime? _dateOfBirth;
+  bool _requiresParentalConsent = false;
+  bool _parentalConsentGiven = false;
 
   // Username availability
   bool _isCheckingUsername = false;
@@ -129,8 +135,9 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
   void _nextStep() {
     if (_currentStep == 0 && !_validateStep1()) return;
     if (_currentStep == 1 && !_validateStep2()) return;
+    if (_currentStep == 2 && !_validateStep3()) return;
 
-    if (_currentStep < 2) {
+    if (_currentStep < 3) {
       setState(() => _currentStep++);
       _pageController.animateToPage(
         _currentStep,
@@ -166,6 +173,13 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
 
   bool _validateStep2() {
     return _selectedCountry != null && _selectedTypes.isNotEmpty;
+  }
+
+  bool _validateStep3() {
+    // Age verification step
+    if (_dateOfBirth == null) return false;
+    if (_requiresParentalConsent && !_parentalConsentGiven) return false;
+    return true;
   }
 
   bool _validateFinalStep() {
@@ -349,6 +363,13 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
         preferredReadingLanguages: const ['English'],
         preferredWritingLanguage: 'English',
         exploreInternational: true,
+        dateOfBirth: _dateOfBirth,
+        isAgeVerified: true,
+        requiresParentalConsent: _requiresParentalConsent,
+        parentalConsentGiven: _parentalConsentGiven,
+        parentalConsentDate:
+            _parentalConsentGiven ? DateTime.now() : null,
+        blockedUsers: const [],
       );
 
       await FirebaseFirestore.instance
@@ -487,11 +508,11 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
                 padding: const EdgeInsets.all(20),
                 child: Row(
                   children: List.generate(
-                    3,
+                    4,
                     (index) => Expanded(
                       child: Container(
                         height: 4,
-                        margin: EdgeInsets.only(right: index < 2 ? 8 : 0),
+                        margin: EdgeInsets.only(right: index < 3 ? 8 : 0),
                         decoration: BoxDecoration(
                           color: index <= _currentStep
                               ? colorScheme.primary
@@ -515,6 +536,7 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
                       _buildStep1(theme, isDark, colorScheme),
                       _buildStep2(theme, isDark, colorScheme),
                       _buildStep3(theme, isDark, colorScheme),
+                      _buildStep4(theme, isDark, colorScheme),
                     ],
                   ),
                 ),
@@ -545,7 +567,7 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
                       child: ElevatedButton(
                         onPressed: _isLoading
                             ? null
-                            : _currentStep == 2
+                            : _currentStep == 3
                             ? _handleSignup
                             : _nextStep,
                         style: ElevatedButton.styleFrom(
@@ -568,7 +590,7 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
                                 ),
                               )
                             : Text(
-                                _currentStep == 2
+                                _currentStep == 3
                                     ? 'Create Account'
                                     : 'Continue',
                                 style: const TextStyle(
@@ -955,6 +977,22 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
   }
 
   Widget _buildStep3(ThemeData theme, bool isDark, ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: AgeVerificationStep(
+        initialDate: _dateOfBirth,
+        onDateSelected: (dateOfBirth, requiresParentalConsent, parentalConsentGiven) {
+          setState(() {
+            _dateOfBirth = dateOfBirth;
+            _requiresParentalConsent = requiresParentalConsent;
+            _parentalConsentGiven = parentalConsentGiven;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildStep4(ThemeData theme, bool isDark, ColorScheme colorScheme) {
     return SingleChildScrollView(
       controller: _scrollController3,
       padding: const EdgeInsets.all(20),

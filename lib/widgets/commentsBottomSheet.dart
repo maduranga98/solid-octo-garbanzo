@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:versewing/models/comment_model.dart';
 import 'package:versewing/models/post_model.dart';
+import 'package:versewing/models/report_model.dart';
 import 'package:versewing/providers/auth_provider.dart';
 import 'package:versewing/providers/commentsRepositoryProvider.dart';
 import 'package:versewing/providers/user_provider.dart';
+import 'package:versewing/widgets/report_dialog.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class CommentsBottomSheet extends ConsumerStatefulWidget {
@@ -333,6 +335,49 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                                 const SizedBox(width: 4),
                                 Text(
                                   'Reply',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () {
+                            showReportDialog(
+                              context,
+                              reportType: ReportType.comment,
+                              contentId: comment.docId,
+                              contentAuthorId: comment.authorId,
+                              contentText: comment.text,
+                              contentAuthorName: comment.authorName,
+                              chatId: widget.post.docId,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.flag_outlined,
+                                  size: 16,
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.6,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Report',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSurface.withValues(
                                       alpha: 0.6,

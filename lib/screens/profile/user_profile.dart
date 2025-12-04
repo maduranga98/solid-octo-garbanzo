@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:versewing/models/report_model.dart';
+import 'package:versewing/models/block_model.dart';
 import 'package:versewing/providers/auth_provider.dart';
 import 'package:versewing/providers/user_provider.dart';
+import 'package:versewing/repositories/report_repository.dart';
 import 'package:versewing/screens/messages/message.dart';
 import 'package:versewing/screens/profile/edit_profile_screen.dart';
 import 'package:versewing/screens/profile/followers_following_screen.dart';
 import 'package:versewing/widgets/draft.dart';
 import 'package:versewing/widgets/ideas.dart';
 import 'package:versewing/widgets/posted.dart';
+import 'package:versewing/widgets/report_dialog.dart';
 
 final isFollowingProvider = StreamProvider.family<bool, String>((ref, userId) {
   final currentUser = ref.watch(firebaseAuthProvider).currentUser;
@@ -116,7 +120,46 @@ class UserProfile extends ConsumerWidget {
                             tooltip: 'Edit Profile',
                           ),
                         ]
-                      : null,
+                      : [
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            onSelected: (value) async {
+                              if (value == 'report') {
+                                showReportDialog(
+                                  context,
+                                  reportType: ReportType.profile,
+                                  contentId: user.uid,
+                                  contentAuthorId: user.uid,
+                                  contentAuthorName: user.userName,
+                                );
+                              } else if (value == 'block') {
+                                _showBlockDialog(context, ref, user);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'report',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.flag_outlined, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Report Profile'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'block',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.block_outlined, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Block User'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                   flexibleSpace: FlexibleSpaceBar(
                     background: _buildProfileHeader(
                       user,
@@ -649,6 +692,74 @@ class UserProfile extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  static void _showBlockDialog(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic user,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Block User'),
+        content: Text(
+          'Are you sure you want to block @${user.userName}? You will no longer see their posts or comments, and they will not be able to interact with your content.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final reportRepo = ref.read(reportRepositoryProvider);
+                final currentUser = ref.read(firebaseAuthProvider).currentUser;
+
+                if (currentUser != null) {
+                  await reportRepo.blockUser(
+                    BlockModel(
+                      docId: '',
+                      blockedBy: currentUser.uid,
+                      blockedUserId: user.uid,
+                      blockedUsername: user.userName,
+                      createdAt: DateTime.now(),
+                      reason: 'Blocked from profile',
+                    ),
+                  );
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${user.userName} has been blocked'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to block user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
     );
   }
 }

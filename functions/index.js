@@ -7,6 +7,7 @@ const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {
   onDocumentCreated,
   onDocumentDeleted,
+  onDocumentUpdated,
 } = require("firebase-functions/v2/firestore");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore} = require("firebase-admin/firestore");
@@ -404,3 +405,97 @@ exports.sendBatchNotifications = onCall(async (request) => {
     throw new HttpsError("internal", "Failed to send batch notifications");
   }
 });
+
+/**
+ * Send notification when a report is reviewed/updated
+ * Triggered when a report document is updated
+ */
+exports.sendReportUpdateNotification = onDocumentUpdated(
+    "reports/{reportId}",
+    async (event) => {
+      try {
+        const newData = event.data.after.data();
+        const previousData = event.data.before.data();
+
+        // Only send notification if status changed
+        if (newData.status === previousData.status) {
+          console.log("Report status unchanged, skipping notification");
+          return null;
+        }
+
+        const reportedBy = newData.reportedBy;
+        if (!reportedBy) {
+          console.log("No reporter ID found");
+          return null;
+        }
+
+        // Get reporter's FCM token
+        const userDoc = await getFirestore()
+            .collection("users")
+            .doc(reportedBy)
+            .get();
+
+        if (!userDoc.exists) {
+          console.log(`User ${reportedBy} not found`);
+          return null;
+        }
+
+        const fcmToken = userDoc.data().fcmToken;
+        if (!fcmToken || !isValidFCMToken(fcmToken)) {
+          console.log(`No valid FCM token for user ${reportedBy}`);
+          return null;
+        }
+
+        // Determine notification message based on status
+        let notificationTitle = "Report Update";
+        let notificationBody = "";
+
+        switch (newData.status) {
+          case "underReview":
+            notificationTitle = "Report Under Review";
+            notificationBody =
+              "Your report is being reviewed by our moderation team.";
+            break;
+          case "resolved":
+            notificationTitle = "Report Resolved";
+            notificationBody =
+              "Your report has been reviewed and appropriate action has been taken. " +
+              "Thank you for helping keep our community safe.";
+            break;
+          case "dismissed":
+            notificationTitle = "Report Update";
+            notificationBody =
+              "Your report has been reviewed. " +
+              "We couldn\'t find a violation of our community guidelines.";
+            break;
+          default:
+            notificationBody = "Your report status has been updated.";
+        }
+
+        // Send notification
+        const message = {
+          notification: {
+            title: notificationTitle,
+            body: notificationBody,
+          },
+          data: {
+            type: "report_update",
+            reportId: event.params.reportId,
+            status: newData.status,
+            clickAction: "FLUTTER_NOTIFICATION_CLICK",
+          },
+          token: fcmToken,
+        };
+
+        await getMessaging().send(message);
+        console.log(
+            `Report update notification sent to user ${reportedBy}`,
+        );
+
+        return null;
+      } catch (error) {
+        console.error("Error sending report update notification:", error);
+        return null;
+      }
+    },
+);
