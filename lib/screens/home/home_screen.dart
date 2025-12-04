@@ -15,6 +15,7 @@ import 'package:versewing/screens/messages/message.dart';
 import 'package:versewing/screens/notifications/notifications_screen.dart';
 import 'package:versewing/screens/profile/user_profile.dart'
     hide isFollowingProvider;
+import 'package:versewing/screens/safety/reports_history_screen.dart';
 import 'package:versewing/screens/saved/saved_post.dart';
 import 'package:versewing/screens/search/user_search_screen.dart';
 import 'package:versewing/widgets/commentsBottomSheet.dart';
@@ -197,6 +198,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   context,
                   MaterialPageRoute(
                     builder: (context) => const MessageSection(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('My Reports'),
+              subtitle: const Text('Track your safety reports'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReportsHistoryScreen(),
                   ),
                 );
               },
