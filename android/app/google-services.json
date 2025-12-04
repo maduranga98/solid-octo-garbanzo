@@ -30,6 +30,22 @@
           }
         },
         {
+          "client_id": "773557992042-knoqmgfpc0t8puco4q4n0p5u2qag4u40.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.inkwing.app",
+            "certificate_hash": "e8c0439a718a1f05f7928b013d17cb3c6df08ae7"
+          }
+        },
+        {
+          "client_id": "773557992042-ndvb30b6lf8p80crli4mei1cpv43cni9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.inkwing.app",
+            "certificate_hash": "8d62075ad53f4f2b35652178f2206f287b528281"
+          }
+        },
+        {
           "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
           "client_type": 3
         }

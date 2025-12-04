@@ -126,15 +126,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
             // Load new fields
             _selectedTypes = List<String>.from(user.type);
-            _selectedReadingLanguages =
-                List<String>.from(user.preferredReadingLanguages);
+            _selectedReadingLanguages = List<String>.from(
+              user.preferredReadingLanguages,
+            );
             _selectedWritingLanguage = user.preferredWritingLanguage;
             _exploreInternational = user.exploreInternational;
 
             // Load country
             if (user.country.isNotEmpty) {
               try {
-                final countryList = CountryParser.parseCountriesEnglish();
+                final countryList = CountryService().getAll();
                 _selectedCountry = countryList.firstWhere(
                   (c) => c.name == user.country,
                   orElse: () => countryList.first,
