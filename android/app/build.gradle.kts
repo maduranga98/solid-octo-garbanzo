@@ -20,10 +20,9 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
-
 android {
     namespace = "com.versewing.app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36  
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -38,10 +37,13 @@ android {
 
     defaultConfig {
         applicationId = "com.versewing.app"
-        minSdk = flutter.minSdkVersion
-        targetSdk = 34
+        minSdk = flutter.minSdkVersion 
+        targetSdk = 35  
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Add this for better compatibility
+        multiDexEnabled = true  
     }
 
     signingConfigs {
@@ -49,7 +51,7 @@ android {
             if (keystorePropertiesFile.exists()) {
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
                 storePassword = keystoreProperties.getProperty("storePassword")
             }
         }
@@ -83,7 +85,8 @@ android {
                 "META-INF/NOTICE",
                 "META-INF/NOTICE.txt",
                 "META-INF/notice.txt",
-                "META-INF/ASL2.0"
+                "META-INF/ASL2.0",
+                "META-INF/*.kotlin_module"  
             )
         }
     }
@@ -94,19 +97,15 @@ flutter {
 }
 
 dependencies {
+    // Core library desugaring for modern Java APIs on older Android versions
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     
-    // FIXED: Remove old Play Core and use newer versions
-    // implementation("com.google.android.play:core:1.10.3") // REMOVED - This is the problem!
+    // ⚠️ REMOVE Play Core dependencies if you're not using in-app updates or reviews
+    // Only include these if you actually use them in your app
+    // implementation("com.google.android.play:app-update:2.1.0")
+    // implementation("com.google.android.play:app-update-ktx:2.1.0")
+    // implementation("com.google.android.play:review:2.0.1")
+    // implementation("com.google.android.play:review-ktx:2.1.0")
     
-    // Add the new Play Core libraries that don't conflict
-    implementation("com.google.android.play:app-update:2.1.0")
-    implementation("com.google.android.play:app-update-ktx:2.1.0")
-    implementation("com.google.android.play:review:2.0.1")
-    implementation("com.google.android.play:review-ktx:2.0.1")
-    
-    // Exclude the old core library to prevent conflicts
-    configurations.all {
-        exclude(group = "com.google.android.play", module = "core")
-    }
+    // implementation("androidx.multidex:multidex:2.0.1")
 }
