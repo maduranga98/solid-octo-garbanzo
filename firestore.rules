@@ -85,6 +85,12 @@ service cloud.firestore {
       return affectedKeys.hasOnly(['postCount']);
     }
 
+    // Check if update is only modifying blockedUsers array (when blocking/unblocking)
+    function isBlockedUsersUpdate() {
+      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return affectedKeys.hasOnly(['blockedUsers']);
+    }
+
     // Validate comment data (simplified)
     function hasValidCommentCoreFields() {
       let data = request.resource.data;
@@ -108,6 +114,7 @@ service cloud.firestore {
       // 1. Owner updating their own profile (full or partial)
       // 2. Anyone updating followersCount (when they follow/unfollow this user)
       // 3. Anyone updating postCount (from batch operations)
+      // 4. Owner updating blockedUsers array (when blocking/unblocking)
       allow update: if isAuthenticated()
         && (
           // Owner can update any field in their document
@@ -115,6 +122,8 @@ service cloud.firestore {
           // OR anyone can update counter fields
           || isFollowerCountUpdate()
           || isPostCountUpdate()
+          // OR owner can update blocked users array
+          || (isOwner(userId) && isBlockedUsersUpdate())
         );
 
       // Only the user can delete their own document
@@ -196,7 +205,10 @@ service cloud.firestore {
         allow read: if isOwner(userId);
 
         // Only the user can block other users
-        allow create: if isOwner(userId);
+        // Validates that blockedBy matches the current user
+        allow create: if isOwner(userId)
+          && request.resource.data.blockedBy == request.auth.uid
+          && request.resource.data.blockedUserId is string;
 
         // Only the user can unblock users
         allow delete: if isOwner(userId);
