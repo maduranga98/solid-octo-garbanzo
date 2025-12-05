@@ -27,6 +27,19 @@ final isFollowingProvider = StreamProvider.family<bool, String>((ref, userId) {
       .map((doc) => doc.exists);
 });
 
+final isBlockedProvider = StreamProvider.family<bool, String>((ref, userId) {
+  final currentUser = ref.watch(firebaseAuthProvider).currentUser;
+  if (currentUser == null) return Stream.value(false);
+
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(currentUser.uid)
+      .collection('blockedUsers')
+      .doc(userId)
+      .snapshots()
+      .map((doc) => doc.exists);
+});
+
 class UserProfile extends ConsumerWidget {
   final String? userId;
 
@@ -121,43 +134,55 @@ class UserProfile extends ConsumerWidget {
                           ),
                         ]
                       : [
-                          PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert),
-                            onSelected: (value) async {
-                              if (value == 'report') {
-                                showReportDialog(
-                                  context,
-                                  reportType: ReportType.profile,
-                                  contentId: user.uid,
-                                  contentAuthorId: user.uid,
-                                  contentAuthorName: user.userName,
-                                );
-                              } else if (value == 'block') {
-                                _showBlockDialog(context, ref, user);
-                              }
+                          Consumer(
+                            builder: (context, ref, child) {
+                              final isBlockedAsync = ref.watch(isBlockedProvider(user.uid));
+                              final isBlocked = isBlockedAsync.value ?? false;
+
+                              return PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert),
+                                onSelected: (value) async {
+                                  if (value == 'report') {
+                                    showReportDialog(
+                                      context,
+                                      reportType: ReportType.profile,
+                                      contentId: user.uid,
+                                      contentAuthorId: user.uid,
+                                      contentAuthorName: user.userName,
+                                    );
+                                  } else if (value == 'block') {
+                                    _showBlockDialog(context, ref, user);
+                                  } else if (value == 'unblock') {
+                                    _showUnblockDialog(context, ref, user);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'report',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.flag_outlined, size: 20),
+                                        SizedBox(width: 12),
+                                        Text('Report Profile'),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: isBlocked ? 'unblock' : 'block',
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          isBlocked ? Icons.check_circle_outline : Icons.block_outlined,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(isBlocked ? 'Unblock User' : 'Block User'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
                             },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'report',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.flag_outlined, size: 20),
-                                    SizedBox(width: 12),
-                                    Text('Report Profile'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'block',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.block_outlined, size: 20),
-                                    SizedBox(width: 12),
-                                    Text('Block User'),
-                                  ],
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                   flexibleSpace: FlexibleSpaceBar(
@@ -757,6 +782,65 @@ class UserProfile extends ConsumerWidget {
               foregroundColor: Colors.white,
             ),
             child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void _showUnblockDialog(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic user,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unblock User'),
+        content: Text(
+          'Are you sure you want to unblock @${user.userName}? You will be able to see their posts and comments again, and they will be able to interact with your content.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final reportRepo = ref.read(reportRepositoryProvider);
+                final currentUser = ref.read(firebaseAuthProvider).currentUser;
+
+                if (currentUser != null) {
+                  await reportRepo.unblockUser(currentUser.uid, user.uid);
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${user.userName} has been unblocked'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to unblock user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Unblock'),
           ),
         ],
       ),

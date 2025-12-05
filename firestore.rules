@@ -67,12 +67,6 @@ service cloud.firestore {
       return affectedKeys.hasOnly(['likeCount', 'shareCount', 'commentCount', 'viewCount']);
     }
 
-    // Check if update is only modifying allowed user counter fields
-    function isUserCounterUpdate() {
-      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      return affectedKeys.hasOnly(['followingCount', 'followersCount', 'postCount']);
-    }
-
     // Check if update is only modifying followersCount (when someone follows you)
     function isFollowerCountUpdate() {
       let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
