@@ -14,6 +14,7 @@ import 'package:versewing/services/auth_service.dart';
 import 'package:versewing/services/fcm_service.dart';
 import 'package:versewing/widgets/inputfields.dart';
 import 'package:versewing/widgets/age_verification_step.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Signup extends ConsumerStatefulWidget {
   const Signup({super.key});
@@ -488,6 +489,15 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
+  }
+
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        _showErrorMessage('Could not open link');
+      }
+    }
   }
 
   @override
@@ -1107,6 +1117,7 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 24),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Checkbox(
                 value: _acceptTerms,
@@ -1117,39 +1128,92 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
                 activeColor: colorScheme.primary,
               ),
               Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() => _acceptTerms = !_acceptTerms);
-                    HapticFeedback.lightImpact();
-                  },
-                  child: Text.rich(
-                    TextSpan(
-                      text: 'I agree to the ',
-                      style: theme.textTheme.bodyMedium,
-                      children: [
-                        TextSpan(
-                          text: 'Terms & Conditions',
-                          style: TextStyle(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const TextSpan(text: ' and '),
-                        TextSpan(
-                          text: 'Privacy Policy',
-                          style: TextStyle(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        setState(() => _acceptTerms = !_acceptTerms);
+                        HapticFeedback.lightImpact();
+                      },
+                      child: Text(
+                        'I agree to the following policies:',
+                        style: theme.textTheme.bodyMedium,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    _buildPolicyLink(
+                      'Terms of Service',
+                      'https://www.versewing.com/terms-of-service',
+                      colorScheme,
+                      theme,
+                    ),
+                    _buildPolicyLink(
+                      'Privacy Policy',
+                      'https://www.versewing.com/privacy-policy',
+                      colorScheme,
+                      theme,
+                    ),
+                    _buildPolicyLink(
+                      'Child Safety Policy',
+                      'https://www.versewing.com/child-safety-policy',
+                      colorScheme,
+                      theme,
+                    ),
+                    _buildPolicyLink(
+                      'Copyright Policy',
+                      'https://www.versewing.com/copyright',
+                      colorScheme,
+                      theme,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPolicyLink(
+    String title,
+    String url,
+    ColorScheme colorScheme,
+    ThemeData theme,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: GestureDetector(
+        onTap: () => _launchURL(url),
+        child: Row(
+          children: [
+            Text(
+              '• ',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Flexible(
+              child: Text(
+                title,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.open_in_new,
+              size: 14,
+              color: colorScheme.primary,
+            ),
+          ],
+        ),
       ),
     );
   }
