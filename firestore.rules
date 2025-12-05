@@ -96,8 +96,12 @@ service cloud.firestore {
 
     // Users collection rules
     match /users/{userId} {
-      // Anyone can read public user data (for search, profiles, etc.)
-      allow read: if isAuthenticated();
+      // Authenticated users can read individual user documents
+      allow get: if isAuthenticated();
+
+      // Anyone can query users collection (for username availability during signup, search, etc.)
+      // Note: This allows unauthenticated username availability checks during signup
+      allow list: if true;
 
       // Only the user can create their own document
       // More flexible validation - allows additional fields like type, language prefs, etc.
