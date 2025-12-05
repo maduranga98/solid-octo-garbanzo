@@ -30,43 +30,47 @@ service cloud.firestore {
         && userName.matches('^[a-zA-Z0-9_]+$');
     }
 
-    // Validate incoming user data
-    function isValidUserData() {
+    // Validate core user data fields (simplified - allows additional fields)
+    // Note: photoURl has capital U (not photoUrl) to match app code
+    function hasValidUserCoreFields() {
       let data = request.resource.data;
       return data.uid is string
+        && data.uid == request.auth.uid
         && isValidString(data.firstname, 1, 50)
         && isValidString(data.lastname, 1, 50)
         && isValidEmail(data.email)
         && isValidUserName(data.userName)
-        && (data.bio == null || isValidString(data.bio, 0, 500))
-        && (data.photoUrl == null || data.photoUrl is string)
-        && (data.country == null || isValidString(data.country, 0, 100))
-        && (data.fcmToken == null || data.fcmToken is string);
+        // Optional fields - only validate if present
+        && (!('bio' in data) || data.bio == null || isValidString(data.bio, 0, 500))
+        && (!('photoURl' in data) || data.photoURl == null || data.photoURl is string)
+        && (!('country' in data) || data.country == null || isValidString(data.country, 0, 100))
+        && (!('fcmToken' in data) || data.fcmToken == null || data.fcmToken is string);
     }
 
-    // Validate post data
-    function isValidPostData() {
+    // Validate core post data fields (simplified - allows additional fields)
+    // Note: Uses createdBy (not uid) to match app code
+    function hasValidPostCoreFields() {
       let data = request.resource.data;
       return isValidString(data.title, 1, 200)
-        && (data.description == null || isValidString(data.description, 0, 5000))
-        && data.uid is string
+        && data.createdBy is string
+        && data.createdBy == request.auth.uid
         && data.authorName is string
         && data.workType is string
         && data.workType in ['Poetry', 'Lyrics', 'Stories', 'Quotes', 'Microfiction']
-        && data.createdAt is timestamp
-        && data.updatedAt is timestamp;
+        // Optional fields
+        && (!('description' in data) || data.description == null || isValidString(data.description, 0, 5000));
     }
 
     // Check if update is only modifying allowed post counter fields
     function isPostCounterUpdate() {
       let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      return affectedKeys.hasOnly(['likeCount', 'shareCount', 'commentCount']);
+      return affectedKeys.hasOnly(['likeCount', 'shareCount', 'commentCount', 'viewCount']);
     }
 
-    // Check if update is only modifying allowed user counter fields (own profile)
+    // Check if update is only modifying allowed user counter fields
     function isUserCounterUpdate() {
       let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      return affectedKeys.hasOnly(['followingCount', 'followersCount']);
+      return affectedKeys.hasOnly(['followingCount', 'followersCount', 'postCount']);
     }
 
     // Check if update is only modifying followersCount (when someone follows you)
@@ -75,13 +79,19 @@ service cloud.firestore {
       return affectedKeys.hasOnly(['followersCount']);
     }
 
-    // Validate comment data
-    function isValidCommentData() {
+    // Check if update is only modifying postCount (when creating/deleting posts)
+    function isPostCountUpdate() {
+      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return affectedKeys.hasOnly(['postCount']);
+    }
+
+    // Validate comment data (simplified)
+    function hasValidCommentCoreFields() {
       let data = request.resource.data;
       return isValidString(data.comment, 1, 1000)
         && data.uid is string
-        && data.userName is string
-        && data.createdAt is timestamp;
+        && data.uid == request.auth.uid
+        && data.userName is string;
     }
 
     // Users collection rules
@@ -90,28 +100,21 @@ service cloud.firestore {
       allow read: if isAuthenticated();
 
       // Only the user can create their own document
+      // More flexible validation - allows additional fields like type, language prefs, etc.
       allow create: if isOwner(userId)
-        && isValidUserData()
-        && request.resource.data.uid == userId;
+        && hasValidUserCoreFields();
 
       // Allow user document updates in these cases:
       // 1. Owner updating their own profile (full or partial)
       // 2. Anyone updating followersCount (when they follow/unfollow this user)
+      // 3. Anyone updating postCount (from batch operations)
       allow update: if isAuthenticated()
         && (
-          // Owner updating their own document
-          (isOwner(userId)
-            && (
-              // Full profile update with validation
-              (isValidUserData()
-                && request.resource.data.uid == userId
-                && request.resource.data.uid == resource.data.uid)
-              // OR partial update for counter fields only
-              || isUserCounterUpdate()
-            )
-          )
-          // OR anyone can update followersCount (when they follow/unfollow)
+          // Owner can update any field in their document
+          (isOwner(userId) && request.resource.data.uid == userId)
+          // OR anyone can update counter fields
           || isFollowerCountUpdate()
+          || isPostCountUpdate()
         );
 
       // Only the user can delete their own document
@@ -129,6 +132,15 @@ service cloud.firestore {
         allow update: if false;
       }
 
+      // Drafts subcollection
+      match /drafts/{draftId} {
+        // Only the user can read their own drafts
+        allow read: if isOwner(userId);
+
+        // Only the user can create/update/delete their own drafts
+        allow create, update, delete: if isOwner(userId);
+      }
+
       // Followers subcollection
       match /followers/{followerId} {
         // Anyone can read followers (for follower count, etc.)
@@ -137,8 +149,7 @@ service cloud.firestore {
         // Only the follower can create their own follow relationship
         // followerId is the uid of the follower
         allow create: if isAuthenticated()
-          && followerId == request.auth.uid
-          && request.resource.data.followedAt is timestamp;
+          && followerId == request.auth.uid;
 
         // Only the follower can delete their own follow relationship
         allow delete: if isAuthenticated()
@@ -155,8 +166,7 @@ service cloud.firestore {
 
         // Only the user can manage their own following list
         // followingId is the uid of the user being followed
-        allow create: if isOwner(userId)
-          && request.resource.data.followedAt is timestamp;
+        allow create: if isOwner(userId);
 
         allow delete: if isOwner(userId);
 
@@ -171,8 +181,7 @@ service cloud.firestore {
 
         // Anyone can create notifications (for likes, comments, etc.)
         allow create: if isAuthenticated()
-          && request.resource.data.createdAt is timestamp
-          && request.resource.data.type in ['like', 'comment', 'follow'];
+          && request.resource.data.type in ['like', 'comment', 'follow', 'mention'];
 
         // Only the user can update their notifications (e.g., mark as read)
         allow update: if isOwner(userId);
@@ -187,10 +196,7 @@ service cloud.firestore {
         allow read: if isOwner(userId);
 
         // Only the user can block other users
-        allow create: if isOwner(userId)
-          && request.resource.data.blockedBy == request.auth.uid
-          && request.resource.data.blockedUserId is string
-          && request.resource.data.createdAt is timestamp;
+        allow create: if isOwner(userId);
 
         // Only the user can unblock users
         allow delete: if isOwner(userId);
@@ -206,27 +212,25 @@ service cloud.firestore {
       allow read: if isAuthenticated();
 
       // Only authenticated users can create posts
+      // More flexible - allows additional fields like plainText, richText, tags, etc.
       allow create: if isAuthenticated()
-        && isValidPostData()
-        && request.resource.data.uid == request.auth.uid;
+        && hasValidPostCoreFields();
 
-      // Only the post owner can update their post
-      // Allow partial updates for counter fields (likeCount, shareCount, commentCount)
-      // or full updates with complete validation
+      // Allow post updates in these cases:
+      // 1. Post owner updating their post (any fields)
+      // 2. Anyone updating counter fields (likeCount, shareCount, commentCount, viewCount)
       allow update: if isAuthenticated()
         && (
-          // Full post update with validation (post owner only)
-          (resource.data.uid == request.auth.uid
-            && isValidPostData()
-            && request.resource.data.uid == resource.data.uid
-            && request.resource.data.authorName == resource.data.authorName)
-          // OR partial update for counter fields only
+          // Post owner can update their own post
+          (resource.data.createdBy == request.auth.uid
+            && request.resource.data.createdBy == resource.data.createdBy)
+          // OR anyone can update counter fields only
           || isPostCounterUpdate()
         );
 
       // Only the post owner can delete their post
       allow delete: if isAuthenticated()
-        && resource.data.uid == request.auth.uid;
+        && resource.data.createdBy == request.auth.uid;
 
       // Likes subcollection
       match /likes/{likeId} {
@@ -237,8 +241,7 @@ service cloud.firestore {
         // likeId should be the user's uid
         allow create: if isAuthenticated()
           && likeId == request.auth.uid
-          && request.resource.data.uid == request.auth.uid
-          && request.resource.data.createdAt is timestamp;
+          && request.resource.data.uid == request.auth.uid;
 
         // Only the user can unlike their own like
         allow delete: if isAuthenticated()
@@ -255,19 +258,17 @@ service cloud.firestore {
 
         // Only authenticated users can create comments
         allow create: if isAuthenticated()
-          && isValidCommentData()
-          && request.resource.data.uid == request.auth.uid;
+          && hasValidCommentCoreFields();
 
         // Only the comment owner can update their comment
         allow update: if isAuthenticated()
           && resource.data.uid == request.auth.uid
-          && isValidCommentData()
-          && request.resource.data.uid == resource.data.uid;
+          && request.resource.data.uid == request.auth.uid;
 
         // The comment owner or post owner can delete comments
         allow delete: if isAuthenticated()
           && (resource.data.uid == request.auth.uid
-              || get(/databases/$(database)/documents/posts/$(postId)).data.uid == request.auth.uid);
+              || get(/databases/$(database)/documents/posts/$(postId)).data.createdBy == request.auth.uid);
       }
     }
 
@@ -283,8 +284,7 @@ service cloud.firestore {
         && request.resource.data.reportType in ['post', 'comment', 'profile', 'message']
         && request.resource.data.reason in ['harassment', 'spam', 'inappropriateContent', 'violence', 'hateSpeech', 'childSafety', 'sexualContent', 'falseInformation', 'other']
         && isValidString(request.resource.data.description, 10, 500)
-        && request.resource.data.status == 'pending'
-        && request.resource.data.createdAt is timestamp;
+        && request.resource.data.status == 'pending';
 
       // Only admins can update reports (status, review notes)
       // For now, we'll prevent updates. Admins will use Firebase Console or Admin SDK
