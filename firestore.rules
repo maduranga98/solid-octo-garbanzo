@@ -63,10 +63,16 @@ service cloud.firestore {
       return affectedKeys.hasOnly(['likeCount', 'shareCount', 'commentCount']);
     }
 
-    // Check if update is only modifying allowed user counter fields
+    // Check if update is only modifying allowed user counter fields (own profile)
     function isUserCounterUpdate() {
       let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
       return affectedKeys.hasOnly(['followingCount', 'followersCount']);
+    }
+
+    // Check if update is only modifying followersCount (when someone follows you)
+    function isFollowerCountUpdate() {
+      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return affectedKeys.hasOnly(['followersCount']);
     }
 
     // Validate comment data
@@ -88,18 +94,24 @@ service cloud.firestore {
         && isValidUserData()
         && request.resource.data.uid == userId;
 
-      // Only the user can update their own document
-      // Allow partial updates for counter fields (followingCount, followersCount)
-      // or full updates with complete validation
-      allow update: if isOwner(userId)
+      // Allow user document updates in these cases:
+      // 1. Owner updating their own profile (full or partial)
+      // 2. Anyone updating followersCount (when they follow/unfollow this user)
+      allow update: if isAuthenticated()
         && (
-          // Full profile update with validation
-          (isValidUserData()
-            && request.resource.data.uid == userId
-            && request.resource.data.uid == resource.data.uid)
-          // OR partial update for counter fields only
-          || (isUserCounterUpdate()
-            && request.resource.data.uid == resource.data.uid)
+          // Owner updating their own document
+          (isOwner(userId)
+            && (
+              // Full profile update with validation
+              (isValidUserData()
+                && request.resource.data.uid == userId
+                && request.resource.data.uid == resource.data.uid)
+              // OR partial update for counter fields only
+              || isUserCounterUpdate()
+            )
+          )
+          // OR anyone can update followersCount (when they follow/unfollow)
+          || isFollowerCountUpdate()
         );
 
       // Only the user can delete their own document
