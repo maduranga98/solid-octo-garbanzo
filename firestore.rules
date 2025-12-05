@@ -327,6 +327,27 @@ service cloud.firestore {
         && resource.data.status == 'pending';
     }
 
+    // Comment Likes collection rules (top-level collection for comment likes)
+    match /commentLikes/{likeId} {
+      // Anyone can read comment likes (for like count, checking like status)
+      allow read: if isAuthenticated();
+
+      // Only authenticated users can like comments
+      // The likeId should be in format: commentId_userId
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.commentId is string
+        && request.resource.data.postId is string;
+
+      // Users can delete their own comment likes
+      // The likeId contains the userId, so we check if it ends with the current user's uid
+      allow delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      // Prevent updates to comment likes
+      allow update: if false;
+    }
+
     // Chats collection rules
     match /chats/{chatId} {
       // Users can read chats they're part of
