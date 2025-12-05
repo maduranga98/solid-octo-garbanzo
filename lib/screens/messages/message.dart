@@ -358,11 +358,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _isBlocked = false;
+  bool _isCheckingBlock = true;
 
   @override
   void initState() {
     super.initState();
     _markAsRead();
+    _checkBlockStatus();
+  }
+
+  Future<void> _checkBlockStatus() async {
+    final currentUser = _auth.currentUser;
+    if (currentUser != null) {
+      final reportRepo = ref.read(reportRepositoryProvider);
+      final isBlocked = await reportRepo.isUserBlocked(
+        currentUser.uid,
+        widget.otherUserId,
+      );
+      if (mounted) {
+        setState(() {
+          _isBlocked = isBlocked;
+          _isCheckingBlock = false;
+        });
+      }
+    }
   }
 
   @override
@@ -490,6 +510,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 );
               } else if (value == 'block') {
                 _showBlockDialog(context, widget.otherUserId, widget.otherUserName);
+              } else if (value == 'unblock') {
+                _showUnblockDialog(context, widget.otherUserId, widget.otherUserName);
               }
             },
             itemBuilder: (context) => [
@@ -503,16 +525,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 'block',
-                child: Row(
-                  children: [
-                    Icon(Icons.block_outlined, size: 20),
-                    SizedBox(width: 12),
-                    Text('Block User'),
-                  ],
+              if (!_isCheckingBlock)
+                PopupMenuItem(
+                  value: _isBlocked ? 'unblock' : 'block',
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isBlocked ? Icons.check_circle_outline : Icons.block_outlined,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(_isBlocked ? 'Unblock User' : 'Block User'),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -726,9 +752,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
                   );
 
+                  if (mounted) {
+                    setState(() {
+                      _isBlocked = true;
+                    });
+                  }
+
                   if (context.mounted) {
                     Navigator.pop(context);
-                    Navigator.pop(context); // Also pop the chat screen
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('$username has been blocked'),
@@ -754,6 +785,67 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               foregroundColor: Colors.white,
             ),
             child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUnblockDialog(BuildContext context, String userId, String username) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unblock User'),
+        content: Text(
+          'Are you sure you want to unblock @$username? You will be able to see their messages and interact with them again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final reportRepo = ref.read(reportRepositoryProvider);
+                final currentUser = ref.read(firebaseAuthProvider).currentUser;
+
+                if (currentUser != null) {
+                  await reportRepo.unblockUser(currentUser.uid, userId);
+
+                  if (mounted) {
+                    setState(() {
+                      _isBlocked = false;
+                    });
+                  }
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$username has been unblocked'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to unblock user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Unblock'),
           ),
         ],
       ),
