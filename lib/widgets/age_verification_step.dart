@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AgeVerificationStep extends StatefulWidget {
   final DateTime? initialDate;
@@ -77,6 +78,20 @@ class _AgeVerificationStepState extends State<AgeVerificationStep> {
       });
       _checkAge();
       HapticFeedback.selectionClick();
+    }
+  }
+
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Could not open link'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -236,6 +251,36 @@ class _AgeVerificationStepState extends State<AgeVerificationStep> {
                     'Since you are under 13 years old, we need permission from your parent or guardian to create an account. This is required by the Children\'s Online Privacy Protection Act (COPPA).',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () => _launchURL('https://www.versewing.com/child-safety-policy'),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Read our Child Safety Policy',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.open_in_new,
+                          size: 12,
+                          color: Colors.blue,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
