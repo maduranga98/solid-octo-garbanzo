@@ -251,7 +251,7 @@ service cloud.firestore {
         // likeId should be the user's uid
         allow create: if isAuthenticated()
           && likeId == request.auth.uid
-          && request.resource.data.uid == request.auth.uid;
+          && request.resource.data.userId == request.auth.uid;
 
         // Only the user can unlike their own like
         allow delete: if isAuthenticated()
@@ -279,6 +279,27 @@ service cloud.firestore {
         allow delete: if isAuthenticated()
           && (resource.data.uid == request.auth.uid
               || get(/databases/$(database)/documents/posts/$(postId)).data.createdBy == request.auth.uid);
+
+        // Replies subcollection (nested under comments)
+        match /replies/{replyId} {
+          // Anyone can read replies
+          allow read: if isAuthenticated();
+
+          // Only authenticated users can create replies
+          allow create: if isAuthenticated()
+            && hasValidCommentCoreFields();
+
+          // Only the reply owner can update their reply
+          allow update: if isAuthenticated()
+            && resource.data.uid == request.auth.uid
+            && request.resource.data.uid == request.auth.uid;
+
+          // The reply owner, comment owner, or post owner can delete replies
+          allow delete: if isAuthenticated()
+            && (resource.data.uid == request.auth.uid
+                || get(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)).data.uid == request.auth.uid
+                || get(/databases/$(database)/documents/posts/$(postId)).data.createdBy == request.auth.uid);
+        }
       }
     }
 
