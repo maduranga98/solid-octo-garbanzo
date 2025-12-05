@@ -23,6 +23,14 @@ class UserModel {
   // FCM token for push notifications
   final String? fcmToken;
 
+  // Child safety and age verification fields
+  final DateTime? dateOfBirth;
+  final bool isAgeVerified;
+  final bool requiresParentalConsent;
+  final bool parentalConsentGiven;
+  final DateTime? parentalConsentDate;
+  final List<String> blockedUsers;
+
   UserModel({
     required this.uid,
     required this.firstname,
@@ -41,7 +49,37 @@ class UserModel {
     this.preferredWritingLanguage = 'English',
     this.exploreInternational = true,
     this.fcmToken,
+    this.dateOfBirth,
+    this.isAgeVerified = false,
+    this.requiresParentalConsent = false,
+    this.parentalConsentGiven = false,
+    this.parentalConsentDate,
+    this.blockedUsers = const [],
   });
+
+  // Helper method to calculate age
+  int? get age {
+    if (dateOfBirth == null) return null;
+    final now = DateTime.now();
+    int age = now.year - dateOfBirth!.year;
+    if (now.month < dateOfBirth!.month ||
+        (now.month == dateOfBirth!.month && now.day < dateOfBirth!.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  // Check if user is a minor (under 18)
+  bool get isMinor {
+    final userAge = age;
+    return userAge != null && userAge < 18;
+  }
+
+  // Check if user is under 13 (COPPA compliance)
+  bool get isUnder13 {
+    final userAge = age;
+    return userAge != null && userAge < 13;
+  }
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -72,6 +110,18 @@ class UserModel {
       preferredWritingLanguage: data['preferredWritingLanguage'] ?? 'English',
       exploreInternational: data['exploreInternational'] ?? true,
       fcmToken: data['fcmToken'],
+      dateOfBirth: data['dateOfBirth'] != null
+          ? (data['dateOfBirth'] as Timestamp).toDate()
+          : null,
+      isAgeVerified: data['isAgeVerified'] ?? false,
+      requiresParentalConsent: data['requiresParentalConsent'] ?? false,
+      parentalConsentGiven: data['parentalConsentGiven'] ?? false,
+      parentalConsentDate: data['parentalConsentDate'] != null
+          ? (data['parentalConsentDate'] as Timestamp).toDate()
+          : null,
+      blockedUsers: data['blockedUsers'] != null
+          ? List<String>.from(data['blockedUsers'] as List<dynamic>)
+          : [],
     );
   }
 
@@ -102,6 +152,18 @@ class UserModel {
       preferredWritingLanguage: data['preferredWritingLanguage'] ?? 'English',
       exploreInternational: data['exploreInternational'] ?? true,
       fcmToken: data['fcmToken'],
+      dateOfBirth: data['dateOfBirth'] != null
+          ? (data['dateOfBirth'] as Timestamp).toDate()
+          : null,
+      isAgeVerified: data['isAgeVerified'] ?? false,
+      requiresParentalConsent: data['requiresParentalConsent'] ?? false,
+      parentalConsentGiven: data['parentalConsentGiven'] ?? false,
+      parentalConsentDate: data['parentalConsentDate'] != null
+          ? (data['parentalConsentDate'] as Timestamp).toDate()
+          : null,
+      blockedUsers: data['blockedUsers'] != null
+          ? List<String>.from(data['blockedUsers'] as List<dynamic>)
+          : [],
     );
   }
 
@@ -124,6 +186,14 @@ class UserModel {
       "preferredWritingLanguage": preferredWritingLanguage,
       "exploreInternational": exploreInternational,
       "fcmToken": fcmToken,
+      "dateOfBirth": dateOfBirth != null ? Timestamp.fromDate(dateOfBirth!) : null,
+      "isAgeVerified": isAgeVerified,
+      "requiresParentalConsent": requiresParentalConsent,
+      "parentalConsentGiven": parentalConsentGiven,
+      "parentalConsentDate": parentalConsentDate != null
+          ? Timestamp.fromDate(parentalConsentDate!)
+          : null,
+      "blockedUsers": blockedUsers,
     };
   }
 
@@ -144,6 +214,12 @@ class UserModel {
     String? preferredWritingLanguage,
     bool? exploreInternational,
     String? fcmToken,
+    DateTime? dateOfBirth,
+    bool? isAgeVerified,
+    bool? requiresParentalConsent,
+    bool? parentalConsentGiven,
+    DateTime? parentalConsentDate,
+    List<String>? blockedUsers,
   }) {
     return UserModel(
       uid: uid,
@@ -165,6 +241,12 @@ class UserModel {
           preferredWritingLanguage ?? this.preferredWritingLanguage,
       exploreInternational: exploreInternational ?? this.exploreInternational,
       fcmToken: fcmToken ?? this.fcmToken,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      isAgeVerified: isAgeVerified ?? this.isAgeVerified,
+      requiresParentalConsent: requiresParentalConsent ?? this.requiresParentalConsent,
+      parentalConsentGiven: parentalConsentGiven ?? this.parentalConsentGiven,
+      parentalConsentDate: parentalConsentDate ?? this.parentalConsentDate,
+      blockedUsers: blockedUsers ?? this.blockedUsers,
     );
   }
 }

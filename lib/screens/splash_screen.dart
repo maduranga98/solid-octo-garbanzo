@@ -46,8 +46,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
@@ -61,42 +63,46 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     // App Logo
                     Container(
-                      width: 120,
-                      height: 120,
+                      width: 150,
+                      height: 150,
                       decoration: BoxDecoration(
-                        color: Colors.blue[600],
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.blue.withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFF6366F1,
+                            ).withValues(alpha: 0.3),
+
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.flash_on,
-                        color: Colors.white,
-                        size: 64,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/inkwing-logo.jpg',
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 32),
                     // App Name
                     Text(
-                      'MyApp',
+                      'VerseWing',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
+                        color: isDark ? Colors.white : Colors.grey[800],
                         letterSpacing: 1.2,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Welcome back',
+                      'Where Words Take Flight Forever',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey[600],
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
                         fontWeight: FontWeight.w300,
                       ),
                     ),
@@ -107,8 +113,8 @@ class _SplashScreenState extends State<SplashScreen>
                       height: 32,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.blue[600]!,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF6366F1), // Primary indigo color
                         ),
                       ),
                     ),

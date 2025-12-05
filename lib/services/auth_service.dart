@@ -1,11 +1,14 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:poem_application/models/user_model.dart';
-import 'package:poem_application/repositories/user_repository.dart';
-import 'package:poem_application/screens/auth/user_preferences_intro_screen.dart';
+import 'package:versewing/models/user_model.dart';
+import 'package:versewing/repositories/user_repository.dart';
+import 'package:versewing/screens/auth/user_preferences_intro_screen.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -42,7 +45,12 @@ class AuthService {
         print("⚠️ Notification permission denied");
         return null;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error getting FCM token in AuthService.getFCMToken',
+      );
       print("❌ Error getting FCM token: $e");
       return null;
     }
@@ -59,7 +67,13 @@ class AuthService {
         });
         print("✅ FCM Token updated in Firestore");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error updating FCM token in AuthService.updateFCMToken',
+        additionalInfo: {'uid': uid},
+      );
       print("❌ Error updating FCM token: $e");
     }
   }
@@ -69,6 +83,7 @@ class AuthService {
     required String email,
     required String password,
     required UserModel userData,
+
     required BuildContext context,
   }) async {
     try {
@@ -147,19 +162,46 @@ class AuthService {
         }
 
         return credential;
-      } catch (firestoreError) {
+      } catch (firestoreError, stackTrace) {
+        await CrashlyticsHelper.recordError(
+          firestoreError,
+          stackTrace,
+          reason:
+              'Firestore error during user creation in AuthService.signUpWithEmailAndPassword',
+          additionalInfo: {'email': email},
+          fatal: true,
+        );
         print("❌ Firestore error, cleaning up Firebase user: $firestoreError");
         try {
           await credential.user?.delete();
-        } catch (deleteError) {
+        } catch (deleteError, deleteStackTrace) {
+          await CrashlyticsHelper.recordError(
+            deleteError,
+            deleteStackTrace,
+            reason: 'Failed to cleanup Firebase user after Firestore error',
+          );
           print("❌ Failed to cleanup Firebase user: $deleteError");
         }
         throw Exception('Failed to create user profile: $firestoreError');
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Firebase Auth error during signup',
+        additionalInfo: {'email': email, 'authCode': e.code},
+        fatal: true,
+      );
       print("❌ Firebase Auth error: ${e.code} - ${e.message}");
       throw _handleAuthError(e);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason:
+            'General signup error in AuthService.signUpWithEmailAndPassword',
+        fatal: true,
+      );
       print("❌ General signup error: $e");
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
@@ -180,7 +222,13 @@ class AuthService {
 
       // Check availability in Firestore
       return await _userRepository.isUsernameAvailable(username);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error checking username availability',
+        additionalInfo: {'username': username},
+      );
       print("Error checking username availability: $e");
       return false;
     }
@@ -220,7 +268,14 @@ class AuthService {
       }
 
       return credential;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Firebase Auth error during sign in',
+        additionalInfo: {'email': email, 'authCode': e.code},
+        fatal: true,
+      );
       throw _handleAuthError(e);
     }
   }
@@ -267,66 +322,13 @@ class AuthService {
 
       print("✅ Firebase authentication successful");
 
-      // Check if this is a new user
+      // Check if this is an existing user
       if (userCredential.user != null) {
         final userExists = await doesUserDocumentExist(
           userCredential.user!.uid,
         );
 
-        if (!userExists) {
-          print("📝 Creating new user document for Google Sign-In user");
-
-          // Get FCM Token
-          String? fcmToken = await getFCMToken();
-
-          // Extract name parts
-          String displayName = userCredential.user!.displayName ?? '';
-          List<String> nameParts = displayName.split(' ');
-          String firstName = nameParts.isNotEmpty ? nameParts[0] : '';
-          String lastName = nameParts.length > 1
-              ? nameParts.sublist(1).join(' ')
-              : '';
-
-          // Generate username from email
-          String baseUsername = userCredential.user!.email!
-              .split('@')[0]
-              .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-          String username = baseUsername;
-          int counter = 1;
-
-          // Ensure username is unique
-          while (!await isUsernameAvailable(username)) {
-            username = '${baseUsername}_$counter';
-            counter++;
-          }
-
-          // Create user model with correct types
-          final newUser = UserModel(
-            uid: userCredential.user!.uid,
-            firstname: firstName,
-            lastname: lastName,
-            email: userCredential.user!.email ?? '',
-            userName: username,
-            type: [], // Default type
-            country: '', // Will be updated later
-            photoURl:
-                userCredential.user!.photoURL ?? '', // Get Google profile photo
-            postCount: 0,
-            followersCount: 0,
-            followingCount: 0,
-            createdAt:
-                DateTime.now(), // Changed from Timestamp.now() to DateTime.now()
-            fcmToken: fcmToken,
-            preferredReadingLanguages: [
-              'English',
-            ], // Changed from const ['English'] to ['English']
-            preferredWritingLanguage: 'English',
-            exploreInternational: true,
-          );
-
-          await _userRepository.createNewUser(newUser);
-          print("✅ New user document created successfully");
-        } else {
+        if (userExists) {
           // Update FCM token for existing user
           await updateFCMToken(userCredential.user!.uid);
 
@@ -341,21 +343,45 @@ class AuthService {
                 .update({'photoURl': userCredential.user!.photoURL});
             print("✅ Updated photo URL from Google profile");
           }
+        } else {
+          // New user - don't create document yet, let GoogleUserInfoScreen handle it
+          print(
+            "📝 New Google user - will collect info in GoogleUserInfoScreen",
+          );
         }
       }
 
       return userCredential;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Firebase Auth error during Google Sign-In',
+        additionalInfo: {'authCode': e.code},
+        fatal: true,
+      );
       print(
         "❌ Firebase Auth error during Google Sign-In: ${e.code} - ${e.message}",
       );
       throw _handleAuthError(e);
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Platform error during Google Sign-In',
+        fatal: true,
+      );
       print("❌ Platform error during Google Sign-In: $e");
       throw Exception(
         'Failed to sign in with Google. Please check your internet connection and try again.',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'General error during Google Sign-In',
+        fatal: true,
+      );
       print("❌ General error during Google Sign-In: $e");
       throw Exception('Failed to sign in with Google: $e');
     }
@@ -366,7 +392,13 @@ class AuthService {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
       return doc.exists;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error checking user document exists',
+        additionalInfo: {'uid': uid},
+      );
       print("❌ Error checking user document: $e");
       return false;
     }
@@ -388,7 +420,13 @@ class AuthService {
       await _auth.signOut();
       await _googleSignIn.signOut();
       print("✅ User signed out successfully");
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error signing out',
+        fatal: true,
+      );
       print("❌ Error signing out: $e");
       throw Exception('Failed to sign out: $e');
     }
@@ -398,7 +436,14 @@ class AuthService {
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error sending password reset email',
+        additionalInfo: {'email': email, 'authCode': e.code},
+        fatal: true,
+      );
       throw _handleAuthError(e);
     }
   }
@@ -430,7 +475,14 @@ class AuthService {
         // Update password
         await user.updatePassword(newPassword);
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error changing password',
+        additionalInfo: {'authCode': e.code},
+        fatal: true,
+      );
       throw _handleAuthError(e);
     }
   }
@@ -461,7 +513,14 @@ class AuthService {
           await updateUserData(user.uid, updatedUserData);
         }
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error updating email',
+        additionalInfo: {'newEmail': newEmail, 'authCode': e.code},
+        fatal: true,
+      );
       throw _handleAuthError(e);
     }
   }

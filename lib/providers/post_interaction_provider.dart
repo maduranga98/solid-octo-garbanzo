@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/services/post_interaction_service.dart';
+import 'package:versewing/services/post_interaction_service.dart';
 
 // Provider for PostInteractionService
 final postInteractionServiceProvider = Provider<PostInteractionService>((ref) {

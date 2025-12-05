@@ -2,33 +2,44 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 /// Service for managing Firebase Cloud Messaging (FCM) tokens and push notifications
 class FCMService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   /// Initialize FCM and request notification permissions
   Future<void> initialize() async {
     try {
+      // Initialize local notifications
+      await _initializeLocalNotifications();
+
       // Request permission for notifications (iOS)
-      NotificationSettings settings = await _firebaseMessaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
+      NotificationSettings settings = await _firebaseMessaging
+          .requestPermission(
+            alert: true,
+            announcement: false,
+            badge: true,
+            carPlay: false,
+            criticalAlert: false,
+            provisional: false,
+            sound: true,
+          );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         debugPrint('✅ User granted permission for notifications');
-      } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+      } else if (settings.authorizationStatus ==
+          AuthorizationStatus.provisional) {
         debugPrint('✅ User granted provisional permission for notifications');
       } else {
-        debugPrint('⚠️ User declined or has not accepted notification permissions');
+        debugPrint(
+          '⚠️ User declined or has not accepted notification permissions',
+        );
       }
 
       // Set foreground notification presentation options
@@ -44,7 +55,10 @@ class FCMService {
         debugPrint('Message data: ${message.data}');
 
         if (message.notification != null) {
-          debugPrint('Message also contained a notification: ${message.notification}');
+          debugPrint(
+            'Message also contained a notification: ${message.notification}',
+          );
+          _showLocalNotification(message);
         }
       });
 
@@ -52,19 +66,113 @@ class FCMService {
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         debugPrint('📬 A notification was tapped and opened the app!');
         debugPrint('Message data: ${message.data}');
+        _handleNotificationTap(message);
       });
 
       // Handle messages when app is terminated
-      RemoteMessage? initialMessage = await _firebaseMessaging.getInitialMessage();
+      RemoteMessage? initialMessage = await _firebaseMessaging
+          .getInitialMessage();
       if (initialMessage != null) {
         debugPrint('📭 App opened from terminated state via notification!');
         debugPrint('Message data: ${initialMessage.data}');
+        _handleNotificationTap(initialMessage);
       }
 
       debugPrint('✅ FCM Service initialized successfully');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error initializing FCM Service',
+        additionalInfo: {'method': 'initialize'},
+        fatal: false,
+      );
       debugPrint('❌ Error initializing FCM Service: $e');
     }
+  }
+
+  /// Initialize local notifications
+  Future<void> _initializeLocalNotifications() async {
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        debugPrint('Local notification tapped: ${response.payload}');
+        // Handle notification tap
+      },
+    );
+
+    // Create Android notification channel
+    const androidChannel = AndroidNotificationChannel(
+      'high_importance_channel',
+      'High Importance Notifications',
+      description: 'This channel is used for important notifications.',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(androidChannel);
+  }
+
+  /// Show local notification for foreground messages
+  Future<void> _showLocalNotification(RemoteMessage message) async {
+    const androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      channelDescription: 'This channel is used for important notifications.',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _localNotifications.show(
+      message.hashCode,
+      message.notification?.title ?? 'New Notification',
+      message.notification?.body ?? '',
+      notificationDetails,
+      payload: json.encode(message.data),
+    );
+  }
+
+  /// Handle notification tap
+  void _handleNotificationTap(RemoteMessage message) {
+    final data = message.data;
+    final type = data['type'];
+
+    debugPrint('Handling notification of type: $type');
+    // TODO: Navigate to appropriate screen based on notification type
+    // This can be implemented based on your app's routing logic
   }
 
   /// Get the current FCM token for this device
@@ -73,7 +181,14 @@ class FCMService {
       final token = await _firebaseMessaging.getToken();
       debugPrint('📱 FCM Token: $token');
       return token;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error getting FCM token',
+        additionalInfo: {'method': 'getToken'},
+        fatal: false,
+      );
       debugPrint('❌ Error getting FCM token: $e');
       return null;
     }
@@ -89,7 +204,14 @@ class FCMService {
         });
         debugPrint('✅ FCM token updated for user: $userId');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error updating user FCM token in Firestore',
+        additionalInfo: {'method': 'updateUserToken', 'userId': userId},
+        fatal: false,
+      );
       debugPrint('❌ Error updating user FCM token: $e');
     }
   }
@@ -102,7 +224,14 @@ class FCMService {
       });
       await _firebaseMessaging.deleteToken();
       debugPrint('✅ FCM token deleted for user: $userId');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error deleting user FCM token from Firestore',
+        additionalInfo: {'method': 'deleteUserToken', 'userId': userId},
+        fatal: false,
+      );
       debugPrint('❌ Error deleting user FCM token: $e');
     }
   }
@@ -111,9 +240,7 @@ class FCMService {
   void listenToTokenRefresh(String userId) {
     _firebaseMessaging.onTokenRefresh.listen((newToken) {
       debugPrint('🔄 FCM token refreshed: $newToken');
-      _firestore.collection('users').doc(userId).update({
-        'fcmToken': newToken,
-      });
+      _firestore.collection('users').doc(userId).update({'fcmToken': newToken});
     });
   }
 
@@ -128,7 +255,10 @@ class FCMService {
   }) async {
     try {
       // Get recipient's FCM token from Firestore
-      final userDoc = await _firestore.collection('users').doc(recipientUserId).get();
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(recipientUserId)
+          .get();
 
       if (!userDoc.exists) {
         debugPrint('❌ User document not found for: $recipientUserId');
@@ -178,7 +308,18 @@ class FCMService {
       });
 
       */
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error sending notification to user',
+        additionalInfo: {
+          'method': 'sendNotificationToUser',
+          'recipientUserId': recipientUserId,
+          'title': title,
+        },
+        fatal: false,
+      );
       debugPrint('❌ Error sending notification: $e');
     }
   }
@@ -232,7 +373,14 @@ class FCMService {
     try {
       await _firebaseMessaging.subscribeToTopic(topic);
       debugPrint('✅ Subscribed to topic: $topic');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error subscribing to FCM topic',
+        additionalInfo: {'method': 'subscribeToTopic', 'topic': topic},
+        fatal: false,
+      );
       debugPrint('❌ Error subscribing to topic: $e');
     }
   }
@@ -242,7 +390,14 @@ class FCMService {
     try {
       await _firebaseMessaging.unsubscribeFromTopic(topic);
       debugPrint('✅ Unsubscribed from topic: $topic');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error unsubscribing from FCM topic',
+        additionalInfo: {'method': 'unsubscribeFromTopic', 'topic': topic},
+        fatal: false,
+      );
       debugPrint('❌ Error unsubscribing from topic: $e');
     }
   }

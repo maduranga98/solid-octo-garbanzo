@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:poem_application/screens/auth/signup.dart';
-import 'package:poem_application/screens/auth/google_user_info_screen.dart';
-import 'package:poem_application/screens/home/home_screen.dart';
-import 'package:poem_application/services/auth_service.dart';
-import 'package:poem_application/widgets/emailInputField.dart';
-import 'package:poem_application/widgets/passwordInputField.dart';
+import 'package:versewing/screens/auth/signup.dart';
+import 'package:versewing/screens/auth/google_user_info_screen.dart';
+import 'package:versewing/screens/home/home_screen.dart';
+import 'package:versewing/services/auth_service.dart';
+import 'package:versewing/widgets/emailInputField.dart';
+import 'package:versewing/widgets/passwordInputField.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -108,7 +108,9 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
       }
 
       // Check if user document exists in Firestore
-      final userExists = await _authService.doesUserDocumentExist(credential.user!.uid);
+      final userExists = await _authService.doesUserDocumentExist(
+        credential.user!.uid,
+      );
 
       if (mounted) {
         if (userExists) {
@@ -124,9 +126,8 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => GoogleUserInfoScreen(
-                firebaseUser: credential.user!,
-              ),
+              builder: (context) =>
+                  GoogleUserInfoScreen(firebaseUser: credential.user!),
             ),
           );
         }
@@ -249,29 +250,49 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
   Widget _buildHeader(ThemeData theme) {
     return Column(
       children: [
-        // App Icon
+        // App Icon with Border
         Container(
-          height: 80,
-          width: 80,
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+              width: 2,
             ),
-            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                blurRadius: 20,
+                color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                blurRadius: 24,
                 offset: const Offset(0, 8),
+                spreadRadius: 0,
               ),
             ],
           ),
-          child: Icon(
-            Icons.auto_stories,
-            color: theme.colorScheme.onPrimary,
-            size: 40,
+          child: Container(
+            height: 80,
+            width: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.secondary,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Image.asset('assets/inkwing-logo.jpg', fit: BoxFit.cover),
+            ),
           ),
         ),
 
@@ -279,7 +300,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
 
         // App Title
         Text(
-          'Poetic',
+          'VerseWing',
           style: theme.textTheme.headlineLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,

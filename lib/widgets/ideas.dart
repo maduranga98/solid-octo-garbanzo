@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:versewing/pages/add_edit_idea_page.dart';
 
 // Provider to fetch ideas
 final getIdeasProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>(
@@ -232,149 +233,10 @@ class Ideas extends ConsumerWidget {
   }
 
   void _showIdeaDialog(BuildContext context, {Map<String, dynamic>? idea}) {
-    final titleController = TextEditingController(text: idea?['title'] ?? '');
-    final descController = TextEditingController(
-      text: idea?['description'] ?? '',
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddEditIdeaPage(idea: idea)),
     );
-    final isEditing = idea != null;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isEditing ? 'Edit Idea' : 'New Idea'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  hintText: 'Enter idea title',
-                  border: OutlineInputBorder(),
-                ),
-                textCapitalization: TextCapitalization.sentences,
-                maxLength: 100,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  hintText: 'Describe your idea...',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-                textCapitalization: TextCapitalization.sentences,
-                maxLines: 5,
-                maxLength: 500,
-              ),
-            ],
-          ),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final title = titleController.text.trim();
-              final description = descController.text.trim();
-
-              if (title.isEmpty && description.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please add at least a title or description'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-                return;
-              }
-
-              Navigator.pop(context);
-              _saveIdea(context, title, description, ideaId: idea?['id']);
-            },
-            child: Text(isEditing ? 'Update' : 'Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _saveIdea(
-    BuildContext context,
-    String title,
-    String description, {
-    String? ideaId,
-  }) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please sign in to save ideas'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-
-      final ideaData = {
-        'title': title,
-        'description': description,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-      if (ideaId != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('ideas')
-            .doc(ideaId)
-            .update(ideaData);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Idea updated successfully'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } else {
-        ideaData['createdAt'] = FieldValue.serverTimestamp();
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('ideas')
-            .add(ideaData);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Idea saved successfully'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving idea: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _deleteIdea(BuildContext context, String ideaId) async {

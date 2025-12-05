@@ -1,10 +1,10 @@
 // lib/screens/notifications/notifications_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/models/notification_model.dart';
-import 'package:poem_application/providers/auth_provider.dart';
-import 'package:poem_application/providers/notification_provider.dart';
-import 'package:poem_application/screens/profile/user_profile.dart';
+import 'package:versewing/models/notification_model.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/providers/notification_provider.dart';
+import 'package:versewing/screens/profile/user_profile.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationsScreen extends ConsumerStatefulWidget {

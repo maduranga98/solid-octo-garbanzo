@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:versewing/models/report_model.dart';
+import 'package:versewing/models/block_model.dart';
+import 'package:versewing/repositories/report_repository.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/widgets/report_dialog.dart';
 
 class MessageSection extends StatefulWidget {
   const MessageSection({Key? key}) : super(key: key);
@@ -329,7 +335,7 @@ class _MessageSectionState extends State<MessageSection> {
   }
 }
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   final String chatId;
   final String otherUserId;
   final String otherUserName;
@@ -344,19 +350,39 @@ class ChatScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _isBlocked = false;
+  bool _isCheckingBlock = true;
 
   @override
   void initState() {
     super.initState();
     _markAsRead();
+    _checkBlockStatus();
+  }
+
+  Future<void> _checkBlockStatus() async {
+    final currentUser = _auth.currentUser;
+    if (currentUser != null) {
+      final reportRepo = ref.read(reportRepositoryProvider);
+      final isBlocked = await reportRepo.isUserBlocked(
+        currentUser.uid,
+        widget.otherUserId,
+      );
+      if (mounted) {
+        setState(() {
+          _isBlocked = isBlocked;
+          _isCheckingBlock = false;
+        });
+      }
+    }
   }
 
   @override
@@ -421,6 +447,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: colorScheme.surfaceContainerLow,
       appBar: AppBar(
         backgroundColor: colorScheme.surface,
@@ -466,6 +493,55 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) async {
+              if (value == 'report') {
+                // For reporting messages, we'll report the conversation/chat
+                showReportDialog(
+                  context,
+                  reportType: ReportType.message,
+                  contentId: widget.chatId,
+                  contentAuthorId: widget.otherUserId,
+                  contentAuthorName: widget.otherUserName,
+                  chatId: widget.chatId,
+                  contentText: 'Chat conversation with ${widget.otherUserName}',
+                );
+              } else if (value == 'block') {
+                _showBlockDialog(context, widget.otherUserId, widget.otherUserName);
+              } else if (value == 'unblock') {
+                _showUnblockDialog(context, widget.otherUserId, widget.otherUserName);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.flag_outlined, size: 20),
+                    SizedBox(width: 12),
+                    Text('Report Conversation'),
+                  ],
+                ),
+              ),
+              if (!_isCheckingBlock)
+                PopupMenuItem(
+                  value: _isBlocked ? 'unblock' : 'block',
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isBlocked ? Icons.check_circle_outline : Icons.block_outlined,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(_isBlocked ? 'Unblock User' : 'Block User'),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -505,7 +581,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
@@ -523,63 +602,78 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.shadow.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
+          _buildInputArea(theme, colorScheme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea(ThemeData theme, ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: colorScheme.outline.withValues(alpha: 0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: 40,
+                  maxHeight: 120,
                 ),
-              ],
-            ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      maxLines: null,
-                      textInputAction: TextInputAction.send,
-                      style: TextStyle(color: colorScheme.onSurface),
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle: TextStyle(
-                          color: colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
+                child: TextField(
+                  controller: _messageController,
+                  minLines: 1,
+                  maxLines: 5,
+                  textCapitalization: TextCapitalization.sentences,
+                  style: TextStyle(color: colorScheme.onSurface, fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: 'Type a message...',
+                    hintStyle: TextStyle(
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
+                      fontSize: 15,
                     ),
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    isDense: true,
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      onPressed: _sendMessage,
-                      icon: const Icon(Icons.send, size: 20),
-                      color: colorScheme.onPrimary,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Container(
+              height: 48,
+              width: 48,
+              decoration: BoxDecoration(
+                color: colorScheme.primary,
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                onPressed: _sendMessage,
+                icon: const Icon(Icons.send, size: 20),
+                color: colorScheme.onPrimary,
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -592,7 +686,7 @@ class _ChatScreenState extends State<ChatScreen> {
     required ColorScheme colorScheme,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         mainAxisAlignment: isMe
             ? MainAxisAlignment.end
@@ -600,28 +694,158 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: isMe
                     ? colorScheme.primary
                     : colorScheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: colorScheme.shadow.withValues(alpha: 0.08),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: Radius.circular(isMe ? 16 : 4),
+                  bottomRight: Radius.circular(isMe ? 4 : 16),
+                ),
               ),
               child: Text(
                 text,
                 style: TextStyle(
                   color: isMe ? colorScheme.onPrimary : colorScheme.onSurface,
                   fontSize: 15,
+                  height: 1.4,
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBlockDialog(BuildContext context, String userId, String username) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Block User'),
+        content: Text(
+          'Are you sure you want to block @$username? You will no longer see their messages or interact with them.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final reportRepo = ref.read(reportRepositoryProvider);
+                final currentUser = ref.read(firebaseAuthProvider).currentUser;
+
+                if (currentUser != null) {
+                  await reportRepo.blockUser(
+                    BlockModel(
+                      docId: '',
+                      blockedBy: currentUser.uid,
+                      blockedUserId: userId,
+                      blockedUsername: username,
+                      createdAt: DateTime.now(),
+                      reason: 'Blocked from messages',
+                    ),
+                  );
+
+                  if (mounted) {
+                    setState(() {
+                      _isBlocked = true;
+                    });
+                  }
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$username has been blocked'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to block user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUnblockDialog(BuildContext context, String userId, String username) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unblock User'),
+        content: Text(
+          'Are you sure you want to unblock @$username? You will be able to see their messages and interact with them again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final reportRepo = ref.read(reportRepositoryProvider);
+                final currentUser = ref.read(firebaseAuthProvider).currentUser;
+
+                if (currentUser != null) {
+                  await reportRepo.unblockUser(currentUser.uid, userId);
+
+                  if (mounted) {
+                    setState(() {
+                      _isBlocked = false;
+                    });
+                  }
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$username has been unblocked'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to unblock user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Unblock'),
           ),
         ],
       ),

@@ -2,14 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/models/post_model.dart';
-import 'package:poem_application/providers/auth_provider.dart';
-import 'package:poem_application/providers/postRepositoryProvider.dart';
-import 'package:poem_application/providers/post_interaction_provider.dart';
-import 'package:poem_application/providers/user_provider.dart';
-import 'package:poem_application/screens/profile/user_profile.dart';
-import 'package:poem_application/widgets/commentsBottomSheet.dart';
-import 'package:poem_application/widgets/fullPostBottomSheet.dart';
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/providers/postRepositoryProvider.dart';
+import 'package:versewing/providers/post_interaction_provider.dart';
+import 'package:versewing/providers/user_provider.dart';
+import 'package:versewing/screens/profile/user_profile.dart';
+import 'package:versewing/widgets/commentsBottomSheet.dart';
+import 'package:versewing/widgets/fullPostBottomSheet.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class FollowingFeedScreen extends ConsumerWidget {
@@ -331,17 +331,17 @@ class _FollowingPostCard extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              UserProfile(userId: post.createdBy),
-                        ),
-                      );
-                    },
-                    child: Expanded(
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                UserProfile(userId: post.createdBy),
+                          ),
+                        );
+                      },
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

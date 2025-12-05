@@ -7,12 +7,44 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:773557992042:android:4dba74552a9d178fdea813",
+        "mobilesdk_app_id": "1:773557992042:android:81193b86941fcaebdea813",
         "android_client_info": {
-          "package_name": "com.example.poem_application"
+          "package_name": "com.versewing.app"
         }
       },
       "oauth_client": [
+        {
+          "client_id": "773557992042-2aunnbr02cl01bvrpe3gkr1vpf7ohp62.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.versewing.app",
+            "certificate_hash": "8d62075ad53f4f2b35652178f2206f287b528281"
+          }
+        },
+        {
+          "client_id": "773557992042-46u988at9c6fkd670bi9c7m2s6df03vk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.versewing.app",
+            "certificate_hash": "c407b745dc95b3019071be230d00999c3a89d5e8"
+          }
+        },
+        {
+          "client_id": "773557992042-la3h8sfobcp09okhmqgvv141hfrh4epl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.versewing.app",
+            "certificate_hash": "d5d0dc1dc9a2649adb46575b68d64c577a579abf"
+          }
+        },
+        {
+          "client_id": "773557992042-serj211regtko17cii925tp0b5piknr8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.versewing.app",
+            "certificate_hash": "e8c0439a718a1f05f7928b013d17cb3c6df08ae7"
+          }
+        },
         {
           "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
           "client_type": 3
@@ -31,46 +63,10 @@
               "client_type": 3
             },
             {
-              "client_id": "773557992042-emn4s3mi22li6dgafskkn3addn3igce6.apps.googleusercontent.com",
+              "client_id": "773557992042-4d8lgmrjts2av8797im13tidjlg1rdro.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.poeticPlatform"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:773557992042:android:2aff0c58fb236c19dea813",
-        "android_client_info": {
-          "package_name": "com.example.poetic_platform"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCXh6XPS6pJLU6NO4ZbicifxcwIgNWfzIw"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "773557992042-4pjapafonev5cmbt7pq4qq1dih7bpivs.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "773557992042-emn4s3mi22li6dgafskkn3addn3igce6.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.poeticPlatform"
+                "bundle_id": "com.example.poemApplication"
               }
             }
           ]

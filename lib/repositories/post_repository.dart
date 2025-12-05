@@ -1,8 +1,9 @@
 // ignore_for_file: avoid_print
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:poem_application/models/post_model.dart';
-import 'package:poem_application/models/saved_model.dart';
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/models/saved_model.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class SavedPost {
   final SavedModel savedData;
@@ -44,7 +45,17 @@ class PostRepository {
       final docRef = firestore.collection("posts").doc();
       final postWithId = data.copyWith(docId: docRef.id);
       await docRef.set(postWithId.toFirestore());
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in createPost while creating a new post',
+        additionalInfo: {
+          'createdBy': data.createdBy,
+          'operation': 'createPost',
+        },
+        fatal: true,
+      );
       print("Error in creating a post: $e");
     }
   }
@@ -53,7 +64,14 @@ class PostRepository {
   Future<void> deletePost(String postId) async {
     try {
       await firestore.collection('posts').doc(postId).delete();
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in deletePost while deleting post',
+        additionalInfo: {'postId': postId, 'operation': 'deletePost'},
+        fatal: true,
+      );
       print("print error in delect post: $e");
     }
   }
@@ -70,7 +88,18 @@ class PostRepository {
         return PostModel.fromFirestore(postDoc);
       }
       return null;
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in updatePost while updating post',
+        additionalInfo: {
+          'postId': postId,
+          'createdBy': data.createdBy,
+          'operation': 'updatePost',
+        },
+        fatal: false,
+      );
       print("Error in updating post: $e");
       return null;
     }

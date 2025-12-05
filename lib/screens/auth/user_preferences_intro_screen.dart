@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:poem_application/models/user_model.dart';
-import 'package:poem_application/repositories/user_repository.dart';
-import 'package:poem_application/screens/home/home_screen.dart';
+import 'package:versewing/models/user_model.dart';
+import 'package:versewing/repositories/user_repository.dart';
+import 'package:versewing/screens/home/home_screen.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 
 class UserPreferencesIntroScreen extends ConsumerStatefulWidget {
@@ -141,17 +141,73 @@ class _UserPreferencesIntroScreenState
 
   PageViewModel _buildWelcomePage(ThemeData theme, ColorScheme colorScheme) {
     return PageViewModel(
-      title: "Welcome to Poetic! ✨",
+      title: "",
       bodyWidget: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // App Logo with Border
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: colorScheme.primary.withValues(alpha: 0.3),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.primary.withValues(alpha: 0.15),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: Container(
+              height: 100,
+              width: 100,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [colorScheme.primary, colorScheme.secondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(26),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(26),
+                child: Image.asset(
+                  'assets/inkwing-logo.jpg',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
           Text(
-            "Let's personalize your experience",
+            "Welcome to InkWing! ✨",
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "Let's personalize your creative journey",
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium?.copyWith(
               color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -160,19 +216,27 @@ class _UserPreferencesIntroScreenState
             ),
             child: Icon(
               Icons.auto_stories_rounded,
-              size: 80,
+              size: 64,
               color: colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              "Swipe to customize your experience with language preferences and content discovery",
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
           ),
         ],
       ),
       decoration: PageDecoration(
-        titleTextStyle: theme.textTheme.headlineMedium!.copyWith(
-          fontWeight: FontWeight.bold,
-          color: colorScheme.onSurface,
-        ),
         bodyPadding: const EdgeInsets.all(24),
         imagePadding: const EdgeInsets.only(top: 40),
+        contentMargin: const EdgeInsets.symmetric(horizontal: 16),
       ),
     );
   }
@@ -185,6 +249,8 @@ class _UserPreferencesIntroScreenState
       title: "Preferred Reading Languages",
       bodyWidget: Column(
         children: [
+          Icon(Icons.menu_book_rounded, size: 64, color: colorScheme.primary),
+          const SizedBox(height: 24),
           Text(
             "Select all languages you'd like to read content in",
             textAlign: TextAlign.center,
@@ -227,6 +293,33 @@ class _UserPreferencesIntroScreenState
               );
             }).toList(),
           ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.primary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.info_outline, size: 20, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'At least one language must be selected',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
       decoration: PageDecoration(
@@ -247,6 +340,8 @@ class _UserPreferencesIntroScreenState
       title: "Preferred Writing Language",
       bodyWidget: Column(
         children: [
+          Icon(Icons.edit_note_rounded, size: 64, color: colorScheme.primary),
+          const SizedBox(height: 24),
           Text(
             "Select the primary language you'll create content in",
             textAlign: TextAlign.center,

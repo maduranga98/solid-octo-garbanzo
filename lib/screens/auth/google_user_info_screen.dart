@@ -6,25 +6,22 @@ import 'package:country_picker/country_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/models/user_model.dart';
-import 'package:poem_application/repositories/user_repository.dart';
-import 'package:poem_application/services/auth_service.dart';
-import 'package:poem_application/screens/auth/user_preferences_intro_screen.dart';
-import 'package:poem_application/providers/fcm_provider.dart';
-import 'package:poem_application/providers/firestore_provider.dart';
-import 'package:poem_application/widgets/inputfields.dart';
+import 'package:versewing/models/user_model.dart';
+import 'package:versewing/repositories/user_repository.dart';
+import 'package:versewing/services/auth_service.dart';
+import 'package:versewing/screens/auth/user_preferences_intro_screen.dart';
+import 'package:versewing/providers/fcm_provider.dart';
+import 'package:versewing/providers/firestore_provider.dart';
 
 /// Screen to collect additional user information after Google Sign-In
 class GoogleUserInfoScreen extends ConsumerStatefulWidget {
   final User firebaseUser;
 
-  const GoogleUserInfoScreen({
-    super.key,
-    required this.firebaseUser,
-  });
+  const GoogleUserInfoScreen({super.key, required this.firebaseUser});
 
   @override
-  ConsumerState<GoogleUserInfoScreen> createState() => _GoogleUserInfoScreenState();
+  ConsumerState<GoogleUserInfoScreen> createState() =>
+      _GoogleUserInfoScreenState();
 }
 
 class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
@@ -40,7 +37,7 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
   bool _isLoading = false;
   bool _isUploadingImage = false;
   Country? _selectedCountry;
-  List<String> _selectedTypes = [];
+  final List<String> _selectedTypes = [];
   File? _selectedImage;
   String? _uploadedImageUrl;
   bool _isUsernameAvailable = false;
@@ -145,8 +142,14 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
     setState(() => _isUploadingImage = true);
 
     try {
-      final fileName = 'profile_${widget.firebaseUser.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final ref = FirebaseStorage.instance.ref().child('profile_images').child(fileName);
+      // Use the correct path that matches storage.rules: users/{userId}/profile/{filename}
+      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('users')
+          .child(widget.firebaseUser.uid)
+          .child('profile')
+          .child(fileName);
 
       final uploadTask = ref.putFile(_selectedImage!);
       final snapshot = await uploadTask.whenComplete(() {});
@@ -165,10 +168,8 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
   }
 
   Future<void> _completeRegistration() async {
-    // Validation is already handled in _nextPage for each step
-    // Final validation check before creating the user
-    if (_usernameController.text.trim().isEmpty) {
-      _showErrorMessage('Username is required');
+    // Validate form if it's currently mounted (username step)
+    if (_formKey.currentState != null && !_formKey.currentState!.validate()) {
       return;
     }
 
@@ -203,7 +204,9 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
       final displayName = widget.firebaseUser.displayName ?? '';
       final nameParts = displayName.split(' ');
       final firstname = nameParts.isNotEmpty ? nameParts[0] : '';
-      final lastname = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+      final lastname = nameParts.length > 1
+          ? nameParts.sublist(1).join(' ')
+          : '';
 
       // Create user model
       final userModel = UserModel(
@@ -226,9 +229,7 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
       );
 
       // Save to Firestore
-      final userRepository = UserRepository(
-        ref.read(firestoreProvider),
-      );
+      final userRepository = UserRepository(ref.read(firestoreProvider));
       final createdUser = await userRepository.createNewUser(userModel);
 
       if (createdUser == null) {
@@ -294,7 +295,9 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
 
   void _nextPage() {
     if (_currentStep == 0) {
-      if (!_formKey.currentState!.validate()) return;
+      if (_formKey.currentState != null && !_formKey.currentState!.validate()) {
+        return;
+      }
       if (!_isUsernameAvailable) {
         _showErrorMessage('Username is not available');
         return;
@@ -339,7 +342,9 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
           LinearProgressIndicator(
             value: (_currentStep + 1) / 3,
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              theme.colorScheme.primary,
+            ),
           ),
 
           // Page view
@@ -463,12 +468,15 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    : _usernameController.text.isNotEmpty && _usernameController.text.length >= 3
-                        ? Icon(
-                            _isUsernameAvailable ? Icons.check_circle : Icons.cancel,
-                            color: _isUsernameAvailable ? Colors.green : Colors.red,
-                          )
-                        : null,
+                    : _usernameController.text.isNotEmpty &&
+                          _usernameController.text.length >= 3
+                    ? Icon(
+                        _isUsernameAvailable
+                            ? Icons.check_circle
+                            : Icons.cancel,
+                        color: _isUsernameAvailable ? Colors.green : Colors.red,
+                      )
+                    : null,
               ),
               onChanged: (value) {
                 _checkUsernameAvailability(value);
@@ -583,7 +591,9 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: (type['color'] as Color).withValues(alpha: 0.2),
+                          color: (type['color'] as Color).withValues(
+                            alpha: 0.2,
+                          ),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -606,17 +616,16 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
                             Text(
                               type['subtitle'] as String,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                       if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: type['color'] as Color,
-                        ),
+                        Icon(Icons.check_circle, color: type['color'] as Color),
                     ],
                   ),
                 ),
@@ -667,23 +676,20 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
                 ),
                 child: _selectedImage != null
                     ? ClipOval(
-                        child: Image.file(
-                          _selectedImage!,
+                        child: Image.file(_selectedImage!, fit: BoxFit.cover),
+                      )
+                    : widget.firebaseUser.photoURL != null
+                    ? ClipOval(
+                        child: Image.network(
+                          widget.firebaseUser.photoURL!,
                           fit: BoxFit.cover,
                         ),
                       )
-                    : widget.firebaseUser.photoURL != null
-                        ? ClipOval(
-                            child: Image.network(
-                              widget.firebaseUser.photoURL!,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Icon(
-                            Icons.add_a_photo,
-                            size: 50,
-                            color: theme.colorScheme.primary,
-                          ),
+                    : Icon(
+                        Icons.add_a_photo,
+                        size: 50,
+                        color: theme.colorScheme.primary,
+                      ),
               ),
             ),
           ),
@@ -760,8 +766,8 @@ class _GoogleUserInfoScreenState extends ConsumerState<GoogleUserInfoScreen> {
               onPressed: _isLoading || _isUploadingImage
                   ? null
                   : _currentStep < 2
-                      ? _nextPage
-                      : _completeRegistration,
+                  ? _nextPage
+                  : _completeRegistration,
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),

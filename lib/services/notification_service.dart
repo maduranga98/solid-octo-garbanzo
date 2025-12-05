@@ -1,8 +1,9 @@
 // lib/services/notification_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:poem_application/models/notification_model.dart';
-import 'package:poem_application/models/post_model.dart';
+import 'package:versewing/models/notification_model.dart';
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -44,7 +45,18 @@ class NotificationService {
 
       // Update unread count
       await _incrementUnreadCount(post.createdBy);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in createLikeNotification creating like notification',
+        additionalInfo: {
+          'postId': post.docId,
+          'postOwnerId': post.createdBy,
+          'senderId': currentUser?.uid,
+        },
+        fatal: false,
+      );
       print('Error creating like notification: $e');
     }
   }
@@ -89,7 +101,20 @@ class NotificationService {
 
       // Update unread count
       await _incrementUnreadCount(post.createdBy);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason:
+            'Error in createCommentNotification creating comment notification',
+        additionalInfo: {
+          'postId': post.docId,
+          'postOwnerId': post.createdBy,
+          'senderId': currentUser?.uid,
+          'commentId': commentId,
+        },
+        fatal: false,
+      );
       print('Error creating comment notification: $e');
     }
   }
@@ -132,7 +157,18 @@ class NotificationService {
 
       // Update unread count
       await _incrementUnreadCount(originalCommentUserId);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in createReplyNotification creating reply notification',
+        additionalInfo: {
+          'postId': postId,
+          'recipientId': originalCommentUserId,
+          'senderId': currentUser?.uid,
+        },
+        fatal: false,
+      );
       print('Error creating reply notification: $e');
     }
   }
@@ -164,7 +200,18 @@ class NotificationService {
 
       // Update unread count
       await _incrementUnreadCount(followedUserId);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason:
+            'Error in createFollowNotification creating follow notification',
+        additionalInfo: {
+          'followedUserId': followedUserId,
+          'senderId': currentUser?.uid,
+        },
+        fatal: false,
+      );
       print('Error creating follow notification: $e');
     }
   }
@@ -209,7 +256,14 @@ class NotificationService {
           .update({'isRead': true});
 
       await _decrementUnreadCount(userId);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in markAsRead marking notification as read',
+        additionalInfo: {'userId': userId, 'notificationId': notificationId},
+        fatal: false,
+      );
       print('Error marking notification as read: $e');
     }
   }
@@ -236,7 +290,14 @@ class NotificationService {
       await _firestore.collection('users').doc(userId).update({
         'unreadNotificationCount': 0,
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in markAllAsRead marking all notifications as read',
+        additionalInfo: {'userId': userId},
+        fatal: false,
+      );
       print('Error marking all notifications as read: $e');
     }
   }
@@ -250,7 +311,14 @@ class NotificationService {
           .collection('notifications')
           .doc(notificationId)
           .delete();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in deleteNotification deleting notification',
+        additionalInfo: {'userId': userId, 'notificationId': notificationId},
+        fatal: false,
+      );
       print('Error deleting notification: $e');
     }
   }
@@ -276,7 +344,14 @@ class NotificationService {
       await _firestore.collection('users').doc(userId).update({
         'unreadNotificationCount': 0,
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in deleteAllNotifications deleting all notifications',
+        additionalInfo: {'userId': userId},
+        fatal: false,
+      );
       print('Error deleting all notifications: $e');
     }
   }
@@ -289,11 +364,21 @@ class NotificationService {
       await _firestore.collection('users').doc(userId).update({
         'unreadNotificationCount': FieldValue.increment(1),
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
       // If field doesn't exist, create it
-      await _firestore.collection('users').doc(userId).set({
-        'unreadNotificationCount': 1,
-      }, SetOptions(merge: true));
+      try {
+        await _firestore.collection('users').doc(userId).set({
+          'unreadNotificationCount': 1,
+        }, SetOptions(merge: true));
+      } catch (e2, stackTrace2) {
+        await CrashlyticsHelper.recordError(
+          e2,
+          stackTrace2,
+          reason: 'Error in _incrementUnreadCount creating unread count field',
+          additionalInfo: {'userId': userId, 'originalError': e.toString()},
+          fatal: false,
+        );
+      }
     }
   }
 
@@ -303,7 +388,14 @@ class NotificationService {
       await _firestore.collection('users').doc(userId).update({
         'unreadNotificationCount': FieldValue.increment(-1),
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in _decrementUnreadCount decrementing unread count',
+        additionalInfo: {'userId': userId},
+        fatal: false,
+      );
       print('Error decrementing unread count: $e');
     }
   }
@@ -338,7 +430,18 @@ class NotificationService {
       }
 
       await batch.commit();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error in removeLikeNotification removing like notification',
+        additionalInfo: {
+          'postOwnerId': postOwnerId,
+          'postId': postId,
+          'senderId': currentUser?.uid,
+        },
+        fatal: false,
+      );
       print('Error removing like notification: $e');
     }
   }

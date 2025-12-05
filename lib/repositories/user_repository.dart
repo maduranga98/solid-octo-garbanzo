@@ -2,7 +2,8 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:poem_application/models/user_model.dart';
+import 'package:versewing/models/user_model.dart';
+import 'package:versewing/utils/crashlytics_helper.dart';
 
 class UserRepository {
   final FirebaseFirestore firestore;
@@ -64,7 +65,14 @@ class UserRepository {
         // ✅ Use safe parsing when reading back from Firestore
         try {
           return UserModel.fromFirestore(createdDoc);
-        } catch (parseError) {
+        } catch (parseError, stackTrace) {
+          await CrashlyticsHelper.recordError(
+            parseError,
+            stackTrace,
+            reason: 'Error parsing created user data in createNewUser',
+            additionalInfo: {'uid': userData.uid},
+            fatal: false,
+          );
           print("Error parsing created user data: $parseError");
           // Return the original userData since we know it's valid
           return userData;
@@ -73,10 +81,32 @@ class UserRepository {
         print("❌ Failed to verify user creation");
         return null;
       }
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Firebase error creating user in createNewUser',
+        additionalInfo: {
+          'uid': userData.uid,
+          'username': userData.userName,
+          'email': userData.email,
+        },
+        fatal: true,
+      );
       print("Firebase error creating user: ${e.message}");
       throw Exception('Failed to create user: ${e.message}');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error creating user in createNewUser',
+        additionalInfo: {
+          'uid': userData.uid,
+          'username': userData.userName,
+          'email': userData.email,
+        },
+        fatal: true,
+      );
       print("Error creating user: $e");
       throw Exception('Failed to create user: $e');
     }
@@ -96,7 +126,14 @@ class UserRepository {
           .get();
 
       return query.docs.isEmpty;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error checking username availability in isUsernameAvailable',
+        additionalInfo: {'username': username},
+        fatal: false,
+      );
       print("Error checking username availability: $e");
       return false;
     }
@@ -117,7 +154,14 @@ class UserRepository {
       }
       print("User document not found for UID: $uid");
       return null;
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error fetching user data in getUserData',
+        additionalInfo: {'uid': uid},
+        fatal: false,
+      );
       print("Error fetching user data: $e");
       return null;
     }
@@ -155,7 +199,14 @@ class UserRepository {
         return UserModel.fromFirestore(updatedDoc);
       }
       return null;
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error updating user data in updateUserData',
+        additionalInfo: {'uid': uid},
+        fatal: true,
+      );
       print("Error in updating user data: $e");
       throw Exception('Failed to update user: $e');
     }
@@ -205,7 +256,14 @@ class UserRepository {
         return UserModel.fromFirestore(updatedDoc);
       }
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error updating user fields in updateUserFields',
+        additionalInfo: {'uid': uid, 'updates': updates.keys.toList()},
+        fatal: true,
+      );
       print("Error updating user fields: $e");
       throw Exception('Failed to update user fields: $e');
     }
@@ -231,7 +289,14 @@ class UserRepository {
 
       print("User not found with username: $username");
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error getting user by username in getUserByUsername',
+        additionalInfo: {'username': username},
+        fatal: false,
+      );
       print("Error getting user by username: $e");
       return null;
     }
@@ -244,7 +309,14 @@ class UserRepository {
 
       final doc = await firestore.collection('users').doc(uid).get();
       return doc.exists;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error checking if user exists in userExists',
+        additionalInfo: {'uid': uid},
+        fatal: false,
+      );
       print("Error checking if user exists: $e");
       return false;
     }
@@ -310,7 +382,14 @@ class UserRepository {
       }
 
       return users;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error searching users in searchUsers',
+        additionalInfo: {'searchTerm': searchTerm},
+        fatal: false,
+      );
       print("Error searching users: $e");
       return [];
     }
@@ -334,7 +413,14 @@ class UserRepository {
       }
 
       return users;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error getting users by content type in getUsersByContentType',
+        additionalInfo: {'contentType': contentType, 'limit': limit},
+        fatal: false,
+      );
       print("Error getting users by content type: $e");
       return [];
     }
@@ -379,10 +465,24 @@ class UserRepository {
       } else {
         print("Warning: Current user UID doesn't match the UID to delete");
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Firebase Auth error deleting user in deleteUser',
+        additionalInfo: {'uid': uid},
+        fatal: true,
+      );
       print("Auth error deleting user: ${e.message}");
       throw Exception('Failed to delete user account: ${e.message}');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error deleting user in deleteUser',
+        additionalInfo: {'uid': uid},
+        fatal: true,
+      );
       print("Error deleting user: $e");
       throw Exception('Failed to delete user: $e');
     }
@@ -412,7 +512,14 @@ class UserRepository {
       }
 
       return users;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      await CrashlyticsHelper.recordError(
+        e,
+        stackTrace,
+        reason: 'Error getting users by IDs in getUsersByIds',
+        additionalInfo: {'uidsCount': uids.length, 'uids': uids},
+        fatal: false,
+      );
       print("Error getting users by IDs: $e");
       return [];
     }

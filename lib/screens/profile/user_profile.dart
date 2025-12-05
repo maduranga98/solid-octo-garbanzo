@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:poem_application/providers/auth_provider.dart';
-import 'package:poem_application/providers/user_provider.dart';
-import 'package:poem_application/screens/messages/message.dart';
-import 'package:poem_application/screens/profile/edit_profile_screen.dart';
-import 'package:poem_application/screens/profile/followers_following_screen.dart';
-import 'package:poem_application/widgets/draft.dart';
-import 'package:poem_application/widgets/ideas.dart';
-import 'package:poem_application/widgets/posted.dart';
+import 'package:versewing/models/report_model.dart';
+import 'package:versewing/models/block_model.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/providers/user_provider.dart';
+import 'package:versewing/repositories/report_repository.dart';
+import 'package:versewing/screens/messages/message.dart';
+import 'package:versewing/screens/profile/edit_profile_screen.dart';
+import 'package:versewing/screens/profile/followers_following_screen.dart';
+import 'package:versewing/widgets/draft.dart';
+import 'package:versewing/widgets/ideas.dart';
+import 'package:versewing/widgets/posted.dart';
+import 'package:versewing/widgets/report_dialog.dart';
 
 final isFollowingProvider = StreamProvider.family<bool, String>((ref, userId) {
   final currentUser = ref.watch(firebaseAuthProvider).currentUser;
@@ -72,7 +76,8 @@ class UserProfile extends ConsumerWidget {
     final profileUserId = userId ?? currentUser.uid;
     final isOwnProfile = profileUserId == currentUser.uid;
 
-    final userAsync = ref.watch(getUserDataProvider(profileUserId));
+    // Use stream provider for real-time updates of profile stats
+    final userAsync = ref.watch(userDataStreamProvider(profileUserId));
 
     return DefaultTabController(
       length: isOwnProfile ? 3 : 1,
@@ -98,7 +103,63 @@ class UserProfile extends ConsumerWidget {
                   backgroundColor: theme.scaffoldBackgroundColor,
                   foregroundColor: theme.textTheme.bodyLarge?.color,
                   elevation: 0,
-                  expandedHeight: isOwnProfile ? 380 : 380,
+                  expandedHeight: isOwnProfile ? 340 : 380,
+                  actions: isOwnProfile
+                      ? [
+                          IconButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const EditProfileScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: 'Edit Profile',
+                          ),
+                        ]
+                      : [
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            onSelected: (value) async {
+                              if (value == 'report') {
+                                showReportDialog(
+                                  context,
+                                  reportType: ReportType.profile,
+                                  contentId: user.uid,
+                                  contentAuthorId: user.uid,
+                                  contentAuthorName: user.userName,
+                                );
+                              } else if (value == 'block') {
+                                _showBlockDialog(context, ref, user);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'report',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.flag_outlined, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Report Profile'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'block',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.block_outlined, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Block User'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                   flexibleSpace: FlexibleSpaceBar(
                     background: _buildProfileHeader(
                       user,
@@ -186,160 +247,126 @@ class UserProfile extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
     final primaryColor = theme.primaryColor;
 
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isDark
-                      ? Colors.grey.shade600
-                      : primaryColor.withValues(alpha: 0.5),
-                  width: 3,
-                ),
-                boxShadow: isDark
-                    ? [
-                        BoxShadow(
-                          color: Colors.grey.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark
+                    ? Colors.grey.shade600
+                    : primaryColor.withValues(alpha: 0.5),
+                width: 3,
               ),
-              child: CircleAvatar(
-                radius: 42,
-                backgroundColor: isDark
-                    ? Colors.grey.shade800
-                    : primaryColor.withValues(alpha: 0.15),
-                backgroundImage:
-                    user.photoURl != null && user.photoURl!.isNotEmpty
-                    ? NetworkImage(user.photoURl!)
-                    : null,
-                child: user.photoURl == null || user.photoURl!.isEmpty
-                    ? Text(
-                        user.firstname != null && user.firstname.isNotEmpty
-                            ? user.firstname[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : primaryColor,
-                        ),
-                      )
-                    : null,
-              ),
+              boxShadow: isDark
+                  ? [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
             ),
-            const SizedBox(height: 14),
-            Text(
-              "${user.firstname ?? ''} ${user.lastname ?? ''}",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: theme.textTheme.bodyLarge?.color,
-              ),
+            child: CircleAvatar(
+              radius: 42,
+              backgroundColor: isDark
+                  ? Colors.grey.shade800
+                  : primaryColor.withValues(alpha: 0.15),
+              backgroundImage:
+                  user.photoURl != null && user.photoURl!.isNotEmpty
+                  ? NetworkImage(user.photoURl!)
+                  : null,
+              child: user.photoURl == null || user.photoURl!.isEmpty
+                  ? Text(
+                      user.firstname != null && user.firstname.isNotEmpty
+                          ? user.firstname[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : primaryColor,
+                      ),
+                    )
+                  : null,
             ),
-            Text(
-              "@${user.userName ?? ''}",
-              style: TextStyle(
-                fontSize: 15,
-                color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildStat(
-                  "Posts",
-                  user.postCount ?? 0,
-                  context,
-                  profileUserId,
-                  user.userName ?? '',
-                ),
-                _buildStatDivider(isDark),
-                _buildStat(
-                  "Followers",
-                  user.followersCount ?? 0,
-                  context,
-                  profileUserId,
-                  user.userName ?? '',
-                ),
-                _buildStatDivider(isDark),
-                _buildStat(
-                  "Following",
-                  user.followingCount ?? 0,
-                  context,
-                  profileUserId,
-                  user.userName ?? '',
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfo(
-                    Icons.email_outlined,
-                    user.email ?? '',
-                    context,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildInfo(
-                    Icons.location_on_outlined,
-                    user.country ?? '',
-                    context,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            if (isOwnProfile) ...[
-              _buildEditProfileButton(context, theme),
-            ] else ...[
-              _buildActionButtons(context, ref, profileUserId),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEditProfileButton(BuildContext context, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const EditProfileScreen(),
-              ),
-            );
-          },
-          icon: const Icon(Icons.edit_outlined, size: 18),
-          label: const Text('Edit Profile'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            elevation: 0,
           ),
-        ),
+          const SizedBox(height: 14),
+          Text(
+            "${user.firstname ?? ''} ${user.lastname ?? ''}",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: theme.textTheme.bodyLarge?.color,
+            ),
+          ),
+          Text(
+            "@${user.userName ?? ''}",
+            style: TextStyle(
+              fontSize: 15,
+              color: isDark ? Colors.grey.shade500 : Colors.grey.shade600,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildStat(
+                "Posts",
+                user.postCount ?? 0,
+                context,
+                profileUserId,
+                user.userName ?? '',
+              ),
+              _buildStatDivider(isDark),
+              _buildStat(
+                "Followers",
+                user.followersCount ?? 0,
+                context,
+                profileUserId,
+                user.userName ?? '',
+              ),
+              _buildStatDivider(isDark),
+              _buildStat(
+                "Following",
+                user.followingCount ?? 0,
+                context,
+                profileUserId,
+                user.userName ?? '',
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildInfo(
+                  Icons.email_outlined,
+                  user.email ?? '',
+                  context,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildInfo(
+                  Icons.location_on_outlined,
+                  user.country ?? '',
+                  context,
+                ),
+              ),
+            ],
+          ),
+          if (!isOwnProfile) ...[
+            const SizedBox(height: 20),
+            _buildActionButtons(context, ref, profileUserId),
+          ],
+        ],
       ),
     );
   }
@@ -665,6 +692,74 @@ class UserProfile extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  static void _showBlockDialog(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic user,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Block User'),
+        content: Text(
+          'Are you sure you want to block @${user.userName}? You will no longer see their posts or comments, and they will not be able to interact with your content.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final reportRepo = ref.read(reportRepositoryProvider);
+                final currentUser = ref.read(firebaseAuthProvider).currentUser;
+
+                if (currentUser != null) {
+                  await reportRepo.blockUser(
+                    BlockModel(
+                      docId: '',
+                      blockedBy: currentUser.uid,
+                      blockedUserId: user.uid,
+                      blockedUsername: user.userName,
+                      createdAt: DateTime.now(),
+                      reason: 'Blocked from profile',
+                    ),
+                  );
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${user.userName} has been blocked'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to block user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
     );
   }
 }

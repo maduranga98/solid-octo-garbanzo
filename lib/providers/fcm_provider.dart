@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/services/fcm_service.dart';
+import 'package:versewing/services/fcm_service.dart';
 
 /// Provider for FCM Service instance
 final fcmServiceProvider = Provider<FCMService>((ref) {

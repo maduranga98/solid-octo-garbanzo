@@ -3,23 +3,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:poem_application/models/post_model.dart';
-import 'package:poem_application/providers/auth_provider.dart';
-import 'package:poem_application/providers/follow_provider.dart';
-import 'package:poem_application/providers/postRepositoryProvider.dart';
-import 'package:poem_application/providers/post_interaction_provider.dart';
-import 'package:poem_application/providers/user_provider.dart';
-import 'package:poem_application/screens/auth/login.dart';
-import 'package:poem_application/screens/following/following_feed.dart';
-import 'package:poem_application/screens/messages/message.dart';
-import 'package:poem_application/screens/notifications/notifications_screen.dart';
-import 'package:poem_application/screens/profile/user_profile.dart'
+import 'package:versewing/models/post_model.dart';
+import 'package:versewing/providers/auth_provider.dart';
+import 'package:versewing/providers/follow_provider.dart';
+import 'package:versewing/providers/postRepositoryProvider.dart';
+import 'package:versewing/providers/post_interaction_provider.dart';
+import 'package:versewing/providers/user_provider.dart';
+import 'package:versewing/screens/auth/login.dart';
+import 'package:versewing/screens/following/following_feed.dart';
+import 'package:versewing/screens/messages/message.dart';
+import 'package:versewing/screens/notifications/notifications_screen.dart';
+import 'package:versewing/screens/profile/user_profile.dart'
     hide isFollowingProvider;
-import 'package:poem_application/screens/saved/saved_post.dart';
-import 'package:poem_application/screens/search/user_search_screen.dart';
-import 'package:poem_application/widgets/commentsBottomSheet.dart';
-import 'package:poem_application/widgets/fullPostBottomSheet.dart';
-import 'package:poem_application/widgets/theme_switcher.dart';
+import 'package:versewing/screens/safety/reports_history_screen.dart';
+import 'package:versewing/screens/saved/saved_post.dart';
+import 'package:versewing/screens/search/user_search_screen.dart';
+import 'package:versewing/widgets/commentsBottomSheet.dart';
+import 'package:versewing/widgets/fullPostBottomSheet.dart';
+import 'package:versewing/widgets/theme_switcher.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -88,10 +89,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Avatar
+                      // App Logo
                       Container(
+                        width: 60,
+                        height: 60,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
@@ -101,13 +104,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
-                          radius: 35,
-                          backgroundColor: Colors.white,
-                          child: Icon(
-                            Icons.person,
-                            size: 40,
-                            color: colorScheme.primary,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(9),
+                          child: Image.asset(
+                            'assets/inkwing-logo.jpg',
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),
@@ -124,7 +125,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       const SizedBox(height: 4),
                       // App name
                       Text(
-                        'Poetic Platform',
+                        'VerseWing - Where Words Take Flight Forever',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                         ),
@@ -201,6 +202,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 );
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('My Reports'),
+              // subtitle: const Text('Track your safety reports'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReportsHistoryScreen(),
+                  ),
+                );
+              },
+            ),
             const Divider(height: 1),
 
             // App Info Section
@@ -261,24 +276,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               title: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [colorScheme.primary, colorScheme.secondary],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: Icon(
-                      Icons.auto_stories,
-                      color: colorScheme.onPrimary,
-                      size: 20,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/inkwing-logo.jpg',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Poetic',
+                    'VerseWing',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
@@ -393,7 +413,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ? posts.where((post) => post.workType == workType).toList()
               : posts;
 
-          print(filteredPosts);
+          // print(filteredPosts);
           if (filteredPosts.isEmpty) {
             return _buildEmptyState(workType);
           }
@@ -560,23 +580,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   ),
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _getWorkTypeColor(
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getWorkTypeColor(
+                                      post.workType,
+                                    ).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
                                     post.workType,
-                                  ).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  post.workType,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: _getWorkTypeColor(post.workType),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 10,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: _getWorkTypeColor(post.workType),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
                                 ),
                               ),
@@ -898,7 +922,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
           error: (error, stack) {
             // Log the error for debugging
-            print('Follow button error: $error');
+            // print('Follow button error: $error');
             // Show a default "Follow" button on error
             return TextButton(
               onPressed: () => _handleFollow(post.createdBy),
@@ -959,7 +983,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             const SizedBox(height: 8),
             Text(
               workType != null
-                  ? 'Be the first to share your ${workType}!'
+                  ? 'Be the first to share your $workType!'
                   : 'Start following creators to see their posts',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.7),
@@ -1229,24 +1253,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final service = ref.read(postInteractionServiceProvider);
 
     try {
-      await service.toggleBookmark(post);
+      final isBookmarked = await service.toggleBookmark(post);
 
       if (mounted) {
         HapticFeedback.mediumImpact();
-        // UI updates automatically via stream
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    isBookmarked
+                        ? 'Saved to your collection'
+                        : 'Removed from saved posts',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: isBookmarked ? Colors.green : Colors.grey[700],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+            action: isBookmarked
+                ? SnackBarAction(
+                    label: 'View',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SavedPostScreen(),
+                        ),
+                      );
+                    },
+                  )
+                : null,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save post: $e'),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Failed to save post: $e')),
+              ],
+            ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -1300,17 +1374,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [colorScheme.primary, colorScheme.secondary],
-                ),
                 borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.auto_stories, color: Colors.white),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/inkwing-logo.jpg',
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
-            const Text('About Poetic'),
+            const Text('About VerseWing'),
           ],
         ),
         content: SingleChildScrollView(
@@ -1327,7 +1412,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                'Poetic is a platform for writers and poets to share their creative works with the world.',
+                'VerseWing - Where Words Take Flight Forever. A platform for writers and poets to share their creative works with the world.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.8),
                   height: 1.5,
@@ -1349,7 +1434,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               _buildFeatureItem('✨ Rich text formatting support'),
               const SizedBox(height: 16),
               Text(
-                '© 2025 Poetic Platform. All rights reserved.',
+                '© 2025 VerseWing. All rights reserved.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
