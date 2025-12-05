@@ -17,15 +17,18 @@ initializeApp();
 
 /**
  * Helper function to validate FCM token format
+ * @param {string} token - The FCM token to validate
+ * @return {boolean} True if token is valid, false otherwise
  */
 function isValidFCMToken(token) {
-  return typeof token === "string" &&
-         token.length > 0 &&
-         token.length < 500;
+  return typeof token === "string" && token.length > 0 && token.length < 500;
 }
 
 /**
  * Helper function to sanitize string input
+ * @param {string} str - The string to sanitize
+ * @param {number} maxLength - Maximum length of the sanitized string
+ * @return {string} Sanitized string
  */
 function sanitizeString(str, maxLength = 1000) {
   if (typeof str !== "string") return "";
@@ -34,6 +37,9 @@ function sanitizeString(str, maxLength = 1000) {
 
 /**
  * Helper function to validate user authentication
+ * @param {Object} request - The request object
+ * @return {string} The authenticated user's UID
+ * @throws {HttpsError} If user is not authenticated
  */
 function requireAuth(request) {
   if (!request.auth) {
@@ -65,10 +71,7 @@ exports.sendNotification = onCall(async (request) => {
 
   // Validate FCM token format
   if (!isValidFCMToken(token)) {
-    throw new HttpsError(
-        "invalid-argument",
-        "Invalid FCM token format",
-    );
+    throw new HttpsError("invalid-argument", "Invalid FCM token format");
   }
 
   // Sanitize inputs
@@ -103,8 +106,10 @@ exports.sendNotification = onCall(async (request) => {
     return {success: true, messageId: response};
   } catch (error) {
     console.error("Error sending notification:", error);
-    if (error.code === "messaging/invalid-registration-token" ||
-        error.code === "messaging/registration-token-not-registered") {
+    if (
+      error.code === "messaging/invalid-registration-token" ||
+      error.code === "messaging/registration-token-not-registered"
+    ) {
       throw new HttpsError("not-found", "Invalid or expired FCM token");
     }
     throw new HttpsError("internal", "Failed to send notification");
@@ -345,18 +350,12 @@ exports.sendBatchNotifications = onCall(async (request) => {
   // Validate all tokens
   const validTokens = tokens.filter((token) => isValidFCMToken(token));
   if (validTokens.length === 0) {
-    throw new HttpsError(
-        "invalid-argument",
-        "No valid FCM tokens provided",
-    );
+    throw new HttpsError("invalid-argument", "No valid FCM tokens provided");
   }
 
   // Validate title and body
   if (!title || !body) {
-    throw new HttpsError(
-        "invalid-argument",
-        "title and body are required",
-    );
+    throw new HttpsError("invalid-argument", "title and body are required");
   }
 
   // Sanitize inputs
@@ -454,19 +453,21 @@ exports.sendReportUpdateNotification = onDocumentUpdated(
           case "underReview":
             notificationTitle = "Report Under Review";
             notificationBody =
-              "Your report is being reviewed by our moderation team.";
+            "Your report is being reviewed by our moderation team.";
             break;
           case "resolved":
             notificationTitle = "Report Resolved";
+            // eslint-disable-next-line max-len
             notificationBody =
-              "Your report has been reviewed and appropriate action has been taken. " +
-              "Thank you for helping keep our community safe.";
+            // eslint-disable-next-line max-len
+            "Your report has been reviewed and appropriate action has been taken. Thank you for helping keep our community safe.";
             break;
           case "dismissed":
             notificationTitle = "Report Update";
+            // eslint-disable-next-line max-len
             notificationBody =
-              "Your report has been reviewed. " +
-              "We couldn\'t find a violation of our community guidelines.";
+            // eslint-disable-next-line max-len
+            "Your report has been reviewed. We could not find a violation of our community guidelines.";
             break;
           default:
             notificationBody = "Your report status has been updated.";
@@ -488,9 +489,7 @@ exports.sendReportUpdateNotification = onDocumentUpdated(
         };
 
         await getMessaging().send(message);
-        console.log(
-            `Report update notification sent to user ${reportedBy}`,
-        );
+        console.log(`Report update notification sent to user ${reportedBy}`);
 
         return null;
       } catch (error) {

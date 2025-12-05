@@ -205,7 +205,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ListTile(
               leading: const Icon(Icons.shield_outlined),
               title: const Text('My Reports'),
-              subtitle: const Text('Track your safety reports'),
+              // subtitle: const Text('Track your safety reports'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
