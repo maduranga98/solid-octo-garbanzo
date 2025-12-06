@@ -105,12 +105,13 @@ service cloud.firestore {
     }
 
     // Validate comment/reply fields
+    // App sends: text, authorId, authorName, postId
     function hasValidCommentCoreFields() {
       let data = request.resource.data;
-      return isValidString(data.comment, 1, 1000)
-        && data.uid is string
-        && data.uid == request.auth.uid
-        && data.userName is string
+      return isValidString(data.text, 1, 1000)
+        && data.authorId is string
+        && data.authorId == request.auth.uid
+        && data.authorName is string
         && data.postId is string;
     }
 
@@ -400,8 +401,8 @@ service cloud.firestore {
 
         // Only comment owner can update
         allow update: if isAuthenticated()
-          && resource.data.uid == request.auth.uid
-          && request.resource.data.uid == request.auth.uid
+          && resource.data.authorId == request.auth.uid
+          && request.resource.data.authorId == request.auth.uid
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt', 'postId']);
 
         // Comment owner OR post owner can delete
@@ -423,14 +424,14 @@ service cloud.firestore {
 
           // Only reply owner can update
           allow update: if isAuthenticated()
-            && resource.data.uid == request.auth.uid
-            && request.resource.data.uid == request.auth.uid
+            && resource.data.authorId == request.auth.uid
+            && request.resource.data.authorId == request.auth.uid
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt', 'postId']);
 
           // Reply owner, comment owner, OR post owner can delete
           allow delete: if isAuthenticated()
-            && (resource.data.uid == request.auth.uid
-                || get(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)).data.uid == request.auth.uid
+            && (resource.data.authorId == request.auth.uid
+                || get(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)).data.authorId == request.auth.uid
                 || get(/databases/$(database)/documents/posts/$(postId)).data.createdBy == request.auth.uid);
         }
       }
