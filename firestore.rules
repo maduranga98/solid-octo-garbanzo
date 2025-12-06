@@ -46,10 +46,10 @@ service cloud.firestore {
     }
 
     // Validate timestamp is recent (within last 5 minutes)
-    function isRecentTimestamp(timestamp) {
-      return timestamp is timestamp
-        && timestamp <= request.time + duration.value(5, 'm')
-        && timestamp >= request.time - duration.value(5, 'm');
+    function isRecentTimestamp(ts) {
+      return ts is timestamp
+        && ts <= request.time + duration.value(5, 'm')
+        && ts >= request.time - duration.value(5, 'm');
     }
 
 
