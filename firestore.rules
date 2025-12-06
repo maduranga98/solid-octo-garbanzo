@@ -277,7 +277,6 @@ service cloud.firestore {
       // FOLLOWING SUBCOLLECTION
       // ----------------------------------------
       match /following/{followingId} {
-        // Anyone can read following list
         allow read: if isAuthenticated();
 
         // Only owner can manage their following list
@@ -392,7 +391,6 @@ service cloud.firestore {
       // COMMENTS SUBCOLLECTION
       // ----------------------------------------
       match /comments/{commentId} {
-        // Anyone can read comments
         allow read: if isAuthenticated();
 
         // Anyone can create comments
@@ -408,7 +406,7 @@ service cloud.firestore {
 
         // Comment owner OR post owner can delete
         allow delete: if isAuthenticated()
-          && (resource.data.uid == request.auth.uid
+          && (resource.data.authorId == request.auth.uid
               || get(/databases/$(database)/documents/posts/$(postId)).data.createdBy == request.auth.uid);
 
         // ----------------------------------------
@@ -485,8 +483,7 @@ service cloud.firestore {
 
       // Users can delete their own pending reports
       allow delete: if isAuthenticated()
-        && resource.data.reportedBy == request.auth.uid
-        && resource.data.status == 'pending';
+        && resource.data.reportedBy == request.auth.uid;
     }
 
     // ========================================
@@ -497,11 +494,9 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && request.auth.uid in resource.data.participants;
 
-      // Users can create chats
+      // Users can create chats if they're a participant
       allow create: if isAuthenticated()
-        && request.auth.uid in request.resource.data.participants
-        && request.resource.data.participants is list
-        && request.resource.data.participants.size() == 2;
+        && request.auth.uid in request.resource.data.participants;
 
       // Participants can update chat metadata (last message, unread count)
       allow update: if isAuthenticated()
