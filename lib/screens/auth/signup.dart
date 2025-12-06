@@ -50,7 +50,6 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
   List<String> _selectedTypes = [];
   bool _acceptTerms = false;
   File? _selectedImage;
-  String? _uploadedImageUrl;
 
   // Age verification
   DateTime? _dateOfBirth;
@@ -319,16 +318,13 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
         throw Exception('Failed to create user account');
       }
 
-      print("✅ Firebase user created with UID: ${credential.user!.uid}");
 
       // Step 3: Upload image BEFORE creating Firestore document
       String photoUrl = '';
       if (_selectedImage != null) {
-        print("📤 Uploading profile picture...");
         final uploadedUrl = await _uploadImage(credential.user!.uid);
         if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
           photoUrl = uploadedUrl;
-          print("✅ Profile picture uploaded: $photoUrl");
         } else {
           print("⚠️ Failed to upload profile picture");
         }
@@ -446,7 +442,6 @@ class _SignupState extends ConsumerState<Signup> with TickerProviderStateMixin {
       if (uploadTask.state == TaskState.success) {
         final downloadUrl = await uploadTask.ref.getDownloadURL();
         print("✅ Image uploaded successfully: $downloadUrl");
-        setState(() => _uploadedImageUrl = downloadUrl);
         return downloadUrl;
       } else {
         print("❌ Upload failed with state: ${uploadTask.state}");
