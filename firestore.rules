@@ -1,0 +1,417 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // HELPER FUNCTIONS
+    // ==========================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user is the owner of the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if user is blocked by another user
+    function isBlockedBy(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)/blockedUsers/$(request.auth.uid));
+    }
+
+    // Validate string field is not empty
+    function isValidString(field) {
+      return field is string && field.size() > 0;
+    }
+
+    // Validate username format (3-20 chars, alphanumeric + underscore)
+    function isValidUsername(username) {
+      return username is string
+        && username.size() >= 3
+        && username.size() <= 20
+        && username.matches('^[a-zA-Z0-9_]+$');
+    }
+
+    // Validate email format
+    function isValidEmail(email) {
+      return email is string && email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    }
+
+    // Check if incoming data has only allowed fields
+    function hasOnlyFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    // Validate timestamp is recent (within last 5 minutes)
+    function isRecentTimestamp(timestamp) {
+      return timestamp is timestamp
+        && timestamp <= request.time + duration.value(5, 'm')
+        && timestamp >= request.time - duration.value(5, 'm');
+    }
+
+
+    // ==========================================
+    // USERS COLLECTION
+    // ==========================================
+
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (for social features)
+      allow read: if isAuthenticated() && !isBlockedBy(userId);
+
+      // Only the user can create their own profile
+      allow create: if isOwner(userId)
+        && isValidString(request.resource.data.firstname)
+        && isValidString(request.resource.data.lastname)
+        && isValidEmail(request.resource.data.email)
+        && isValidUsername(request.resource.data.userName)
+        && request.resource.data.uid == userId
+        && request.resource.data.type is list
+        && request.resource.data.postCount == 0
+        && request.resource.data.followersCount == 0
+        && request.resource.data.followingCount == 0
+        && isRecentTimestamp(request.resource.data.createdAt);
+
+      // Only the user can update their own profile
+      allow update: if isOwner(userId)
+        // Cannot change immutable fields
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt
+        // Validate counter fields are numbers
+        && request.resource.data.postCount is int
+        && request.resource.data.followersCount is int
+        && request.resource.data.followingCount is int;
+
+      // Only the user can delete their own profile
+      allow delete: if isOwner(userId);
+
+
+      // ------------------------------------------
+      // FOLLOWING SUBCOLLECTION
+      // ------------------------------------------
+      match /following/{targetUserId} {
+        // Users can read their own following list
+        allow read: if isOwner(userId);
+
+        // Users can follow others (create following document)
+        allow create: if isOwner(userId)
+          && isAuthenticated();
+
+        // Users can unfollow (delete following document)
+        allow delete: if isOwner(userId);
+      }
+
+
+      // ------------------------------------------
+      // FOLLOWERS SUBCOLLECTION
+      // ------------------------------------------
+      match /followers/{followerId} {
+        // Users can read their own followers list
+        allow read: if isOwner(userId);
+
+        // Follower can create their follower document
+        allow create: if isOwner(followerId)
+          && isAuthenticated();
+
+        // Follower can remove themselves (unfollow)
+        allow delete: if isOwner(followerId);
+      }
+
+
+      // ------------------------------------------
+      // BOOKMARKS SUBCOLLECTION
+      // ------------------------------------------
+      match /bookmarks/{postId} {
+        // Only the user can read their own bookmarks
+        allow read: if isOwner(userId);
+
+        // Only the user can create their own bookmarks
+        allow create: if isOwner(userId)
+          && isValidString(request.resource.data.postId)
+          && isRecentTimestamp(request.resource.data.bookmarkedAt);
+
+        // Only the user can delete their own bookmarks
+        allow delete: if isOwner(userId);
+      }
+
+
+      // ------------------------------------------
+      // NOTIFICATIONS SUBCOLLECTION
+      // ------------------------------------------
+      match /notifications/{notificationId} {
+        // Only the user can read their own notifications
+        allow read: if isOwner(userId);
+
+        // System/functions can create notifications (relaxed for Cloud Functions)
+        // Users can create notifications for others (mentions, replies, etc.)
+        allow create: if isAuthenticated()
+          && request.resource.data.recipientId == userId
+          && isValidString(request.resource.data.senderId)
+          && isValidString(request.resource.data.type)
+          && request.resource.data.isRead == false
+          && isRecentTimestamp(request.resource.data.createdAt);
+
+        // Only the recipient can update (mark as read)
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+
+        // Only the recipient can delete their notifications
+        allow delete: if isOwner(userId);
+      }
+
+
+      // ------------------------------------------
+      // BLOCKED USERS SUBCOLLECTION
+      // ------------------------------------------
+      match /blockedUsers/{blockedUserId} {
+        // Only the user can read their blocked list
+        allow read: if isOwner(userId);
+
+        // Only the user can block others
+        allow create: if isOwner(userId)
+          && request.resource.data.blockedBy == userId
+          && isValidString(request.resource.data.blockedUserId)
+          && isRecentTimestamp(request.resource.data.createdAt);
+
+        // Only the user can unblock
+        allow delete: if isOwner(userId);
+      }
+
+
+      // ------------------------------------------
+      // IDEAS SUBCOLLECTION (Drafts)
+      // ------------------------------------------
+      match /ideas/{ideaId} {
+        // Only the user can access their own ideas/drafts
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+
+    // ==========================================
+    // POSTS COLLECTION
+    // ==========================================
+
+    match /posts/{postId} {
+      // Anyone authenticated can read posts
+      allow read: if isAuthenticated();
+
+      // Only authenticated users can create posts
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && isValidString(request.resource.data.authorName)
+        && isValidString(request.resource.data.title)
+        && isValidString(request.resource.data.description)
+        && isValidString(request.resource.data.workType)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.commentCount == 0
+        && request.resource.data.likeCount == 0
+        && request.resource.data.shareCount == 0
+        && request.resource.data.viewCount == 0
+        && isRecentTimestamp(request.resource.data.createdAt);
+
+      // Only the post author can update their post
+      allow update: if isAuthenticated()
+        && resource.data.uid == request.auth.uid
+        // Cannot change immutable fields
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        // Validate counter fields
+        && request.resource.data.commentCount is int
+        && request.resource.data.likeCount is int
+        && request.resource.data.shareCount is int
+        && request.resource.data.viewCount is int;
+
+      // Only the post author can delete their post
+      allow delete: if isAuthenticated()
+        && resource.data.uid == request.auth.uid;
+
+
+      // ------------------------------------------
+      // LIKES SUBCOLLECTION
+      // ------------------------------------------
+      match /likes/{userId} {
+        // Anyone can read likes (for like counts and UI)
+        allow read: if isAuthenticated();
+
+        // Only authenticated users can like (create like document)
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == request.auth.uid
+          && isRecentTimestamp(request.resource.data.likedAt);
+
+        // Only the liker can unlike (delete like document)
+        allow delete: if isOwner(userId);
+      }
+
+
+      // ------------------------------------------
+      // COMMENTS SUBCOLLECTION
+      // ------------------------------------------
+      match /comments/{commentId} {
+        // Anyone authenticated can read comments
+        allow read: if isAuthenticated();
+
+        // Only authenticated users can create comments
+        allow create: if isAuthenticated()
+          && request.resource.data.authorId == request.auth.uid
+          && isValidString(request.resource.data.authorName)
+          && isValidString(request.resource.data.text)
+          && request.resource.data.postId == postId
+          && isRecentTimestamp(request.resource.data.createdAt);
+
+        // Only the comment author can update their comment
+        allow update: if isAuthenticated()
+          && resource.data.authorId == request.auth.uid
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.postId == resource.data.postId
+          && request.resource.data.createdAt == resource.data.createdAt;
+
+        // Comment author or post author can delete comments
+        allow delete: if isAuthenticated()
+          && (resource.data.authorId == request.auth.uid
+              || get(/databases/$(database)/documents/posts/$(postId)).data.uid == request.auth.uid);
+
+
+        // --------------------------------------
+        // REPLIES SUBCOLLECTION (nested under comments)
+        // --------------------------------------
+        match /replies/{replyId} {
+          // Anyone authenticated can read replies
+          allow read: if isAuthenticated();
+
+          // Only authenticated users can create replies
+          allow create: if isAuthenticated()
+            && request.resource.data.authorId == request.auth.uid
+            && isValidString(request.resource.data.authorName)
+            && isValidString(request.resource.data.text)
+            && isRecentTimestamp(request.resource.data.createdAt);
+
+          // Only the reply author can update their reply
+          allow update: if isAuthenticated()
+            && resource.data.authorId == request.auth.uid
+            && request.resource.data.authorId == resource.data.authorId
+            && request.resource.data.createdAt == resource.data.createdAt;
+
+          // Reply author, comment author, or post author can delete replies
+          allow delete: if isAuthenticated()
+            && (resource.data.authorId == request.auth.uid
+                || get(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)).data.authorId == request.auth.uid
+                || get(/databases/$(database)/documents/posts/$(postId)).data.uid == request.auth.uid);
+        }
+      }
+    }
+
+
+    // ==========================================
+    // COMMENT LIKES COLLECTION
+    // ==========================================
+
+    match /commentLikes/{likeId} {
+      // Anyone authenticated can read comment likes
+      allow read: if isAuthenticated();
+
+      // Only authenticated users can like comments
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && isValidString(request.resource.data.commentId)
+        && isValidString(request.resource.data.postId)
+        && isRecentTimestamp(request.resource.data.likedAt);
+
+      // Only the liker can unlike
+      allow delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+    }
+
+
+    // ==========================================
+    // REPORTS COLLECTION
+    // ==========================================
+
+    match /reports/{reportId} {
+      // Users can only read their own reports
+      allow read: if isAuthenticated()
+        && resource.data.reportedBy == request.auth.uid;
+
+      // Any authenticated user can create a report
+      allow create: if isAuthenticated()
+        && request.resource.data.reportedBy == request.auth.uid
+        && isValidString(request.resource.data.reporterEmail)
+        && isValidString(request.resource.data.reporterName)
+        && isValidString(request.resource.data.reportType)
+        && request.resource.data.reportType in ['post', 'comment', 'profile', 'message']
+        && isValidString(request.resource.data.reason)
+        && request.resource.data.reason in ['harassment', 'spam', 'inappropriateContent', 'violence', 'hateSpeech', 'childSafety', 'sexualContent', 'falseInformation', 'other']
+        && isValidString(request.resource.data.description)
+        && request.resource.data.status == 'pending'
+        && isRecentTimestamp(request.resource.data.createdAt);
+
+      // No user updates or deletes (admin only - handled via Cloud Functions/Admin SDK)
+      allow update, delete: if false;
+    }
+
+
+    // ==========================================
+    // CHATS COLLECTION
+    // ==========================================
+
+    match /chats/{chatId} {
+      // Only participants can read chat metadata
+      allow read: if isAuthenticated()
+        && request.auth.uid in resource.data.participants;
+
+      // Any authenticated user can create a chat
+      allow create: if isAuthenticated()
+        && request.auth.uid in request.resource.data.participants
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() >= 1;
+
+      // Only participants can update chat metadata
+      allow update: if isAuthenticated()
+        && request.auth.uid in resource.data.participants
+        && request.auth.uid in request.resource.data.participants;
+
+      // Only participants can delete chats
+      allow delete: if isAuthenticated()
+        && request.auth.uid in resource.data.participants;
+
+
+      // ------------------------------------------
+      // MESSAGES SUBCOLLECTION
+      // ------------------------------------------
+      match /messages/{messageId} {
+        // Only chat participants can read messages
+        allow read: if isAuthenticated()
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+
+        // Only chat participants can send messages
+        allow create: if isAuthenticated()
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+          && isValidString(request.resource.data.text)
+          && isRecentTimestamp(request.resource.data.createdAt);
+
+        // Only message sender can update their message
+        allow update: if isAuthenticated()
+          && resource.data.senderId == request.auth.uid
+          && request.resource.data.senderId == resource.data.senderId
+          && request.resource.data.createdAt == resource.data.createdAt;
+
+        // Only message sender can delete their message
+        allow delete: if isAuthenticated()
+          && resource.data.senderId == request.auth.uid;
+      }
+    }
+
+
+    // ==========================================
+    // DEFAULT DENY ALL OTHER PATHS
+    // ==========================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
