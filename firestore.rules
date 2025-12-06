@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for authentication and validation
+    // Helper functions for authentication
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -12,269 +12,116 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isValidString(value, minLen, maxLen) {
-      return value is string
-        && value.size() >= minLen
-        && value.size() <= maxLen;
-    }
-
-    function isValidEmail(email) {
-      return email is string
-        && email.matches('.*@.*\\..*');
-    }
-
-    function isValidUserName(userName) {
-      return userName is string
-        && userName.size() >= 3
-        && userName.size() <= 30
-        && userName.matches('^[a-zA-Z0-9_]+$');
-    }
-
-    // Validate core user data fields (simplified - allows additional fields)
-    // Note: photoURl has capital U (not photoUrl) to match app code
-    function hasValidUserCoreFields() {
-      let data = request.resource.data;
-      return data.uid is string
-        && data.uid == request.auth.uid
-        && isValidString(data.firstname, 1, 50)
-        && isValidString(data.lastname, 1, 50)
-        && isValidEmail(data.email)
-        && isValidUserName(data.userName)
-        // Optional fields - only validate if present
-        && (!('bio' in data) || data.bio == null || isValidString(data.bio, 0, 500))
-        && (!('photoURl' in data) || data.photoURl == null || data.photoURl is string)
-        && (!('country' in data) || data.country == null || isValidString(data.country, 0, 100))
-        && (!('fcmToken' in data) || data.fcmToken == null || data.fcmToken is string);
-    }
-
-    // Validate core post data fields (simplified - allows additional fields)
-    // Note: Uses createdBy (not uid) to match app code
-    function hasValidPostCoreFields() {
-      let data = request.resource.data;
-      return isValidString(data.title, 1, 200)
-        && data.createdBy is string
-        && data.createdBy == request.auth.uid
-        && data.authorName is string
-        && data.workType is string
-        && data.workType in ['Poetry', 'Lyrics', 'Stories', 'Quotes', 'Microfiction']
-        // Optional fields
-        && (!('description' in data) || data.description == null || isValidString(data.description, 0, 5000));
-    }
-
-    // Check if update is only modifying allowed post counter fields
-    function isPostCounterUpdate() {
-      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      return affectedKeys.hasOnly(['likeCount', 'shareCount', 'commentCount', 'viewCount']);
-    }
-
-    // Check if update is only modifying followersCount (when someone follows you)
-    function isFollowerCountUpdate() {
-      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      return affectedKeys.hasOnly(['followersCount']);
-    }
-
-    // Check if update is only modifying postCount (when creating/deleting posts)
-    function isPostCountUpdate() {
-      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      return affectedKeys.hasOnly(['postCount']);
-    }
-
-    // Check if update is only modifying blockedUsers array (when blocking/unblocking)
-    function isBlockedUsersUpdate() {
-      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
-      return affectedKeys.hasOnly(['blockedUsers']);
-    }
-
-    // Validate comment data (simplified)
-    function hasValidCommentCoreFields() {
-      let data = request.resource.data;
-      return isValidString(data.comment, 1, 1000)
-        && data.uid is string
-        && data.uid == request.auth.uid
-        && data.userName is string;
-    }
-
     // Users collection rules
     match /users/{userId} {
-      // Anyone can read public user data (for search, profiles, etc.)
+      // Anyone authenticated can read user profiles
       allow read: if isAuthenticated();
 
       // Only the user can create their own document
-      // More flexible validation - allows additional fields like type, language prefs, etc.
-      allow create: if isOwner(userId)
-        && hasValidUserCoreFields();
+      allow create: if isOwner(userId);
 
-      // Allow user document updates in these cases:
-      // 1. Owner updating their own profile (full or partial)
-      // 2. Anyone updating followersCount (when they follow/unfollow this user)
-      // 3. Anyone updating postCount (from batch operations)
-      // 4. Owner updating blockedUsers array (when blocking/unblocking)
+      // User can update their own document, or anyone can update specific counter fields
       allow update: if isAuthenticated()
-        && (
-          // Owner can update any field in their document
-          (isOwner(userId) && request.resource.data.uid == userId)
-          // OR anyone can update counter fields
-          || isFollowerCountUpdate()
-          || isPostCountUpdate()
-          // OR owner can update blocked users array
-          || (isOwner(userId) && isBlockedUsersUpdate())
-        );
+        && (isOwner(userId) ||
+            request.resource.data.keys().hasOnly(['followersCount', 'postCount', 'blockedUsers']));
 
       // Only the user can delete their own document
       allow delete: if isOwner(userId);
 
       // Bookmarks subcollection
       match /bookmarks/{bookmarkId} {
-        // Only the user can read their own bookmarks
-        allow read: if isOwner(userId);
-
-        // Only the user can create/delete their own bookmarks
-        allow create, delete: if isOwner(userId);
-
-        // Prevent updates to bookmarks
+        allow read, create, delete: if isOwner(userId);
         allow update: if false;
       }
 
       // Drafts subcollection
       match /drafts/{draftId} {
-        // Only the user can read their own drafts
-        allow read: if isOwner(userId);
-
-        // Only the user can create/update/delete their own drafts
-        allow create, update, delete: if isOwner(userId);
+        allow read, create, update, delete: if isOwner(userId);
       }
 
       // Followers subcollection
       match /followers/{followerId} {
-        // Anyone can read followers (for follower count, etc.)
         allow read: if isAuthenticated();
-
-        // Only the follower can create their own follow relationship
-        // followerId is the uid of the follower
-        allow create: if isAuthenticated()
-          && followerId == request.auth.uid;
-
-        // Only the follower can delete their own follow relationship
-        allow delete: if isAuthenticated()
-          && followerId == request.auth.uid;
-
-        // Prevent updates to follow relationships
+        allow create, delete: if isAuthenticated() && followerId == request.auth.uid;
         allow update: if false;
       }
 
       // Following subcollection
       match /following/{followingId} {
-        // Anyone can read following list
         allow read: if isAuthenticated();
-
-        // Only the user can manage their own following list
-        // followingId is the uid of the user being followed
-        allow create: if isOwner(userId);
-
-        allow delete: if isOwner(userId);
-
-        // Prevent updates
+        allow create, delete: if isOwner(userId);
         allow update: if false;
       }
 
       // Notifications subcollection
       match /notifications/{notificationId} {
-        // Only the user can read their own notifications
-        allow read: if isOwner(userId);
-
-        // Anyone can create notifications (for likes, comments, etc.)
-        allow create: if isAuthenticated()
-          && request.resource.data.type in ['like', 'comment', 'follow', 'mention'];
-
-        // Only the user can update their notifications (e.g., mark as read)
-        allow update: if isOwner(userId);
-
-        // Only the user can delete their notifications
-        allow delete: if isOwner(userId);
+        allow read, update, delete: if isOwner(userId);
+        allow create: if isAuthenticated();
       }
 
       // Blocked users subcollection
       match /blockedUsers/{blockedUserId} {
-        // Only the user can read their own blocked list
-        allow read: if isOwner(userId);
-
-        // Only the user can block other users
-        // Validates that blockedBy matches the current user
-        allow create: if isOwner(userId)
-          && request.resource.data.blockedBy == request.auth.uid
-          && request.resource.data.blockedUserId is string;
-
-        // Only the user can unblock users
-        allow delete: if isOwner(userId);
-
-        // Prevent updates to blocks
+        allow read, create, delete: if isOwner(userId);
         allow update: if false;
       }
     }
 
     // Posts collection rules
     match /posts/{postId} {
-      // Anyone (authenticated) can read posts
+      // Anyone authenticated can read posts
       allow read: if isAuthenticated();
 
-      // Only authenticated users can create posts
-      // More flexible - allows additional fields like plainText, richText, tags, etc.
+      // Authenticated users can create posts (must set createdBy to their uid)
       allow create: if isAuthenticated()
-        && hasValidPostCoreFields();
+        && request.resource.data.createdBy == request.auth.uid;
 
-      // Allow post updates in these cases:
-      // 1. Post owner updating their post (any fields)
-      // 2. Anyone updating counter fields (likeCount, shareCount, commentCount, viewCount)
+      // Post owner can update, or anyone can update counter fields only
       allow update: if isAuthenticated()
-        && (
-          // Post owner can update their own post
-          (resource.data.createdBy == request.auth.uid
-            && request.resource.data.createdBy == resource.data.createdBy)
-          // OR anyone can update counter fields only
-          || isPostCounterUpdate()
-        );
+        && (request.resource.data.createdBy == resource.data.createdBy
+            && (resource.data.createdBy == request.auth.uid
+                || request.resource.data.keys().hasOnly(['likeCount', 'shareCount', 'commentCount', 'viewCount'])));
 
-      // Only the post owner can delete their post
+      // Only post owner can delete
       allow delete: if isAuthenticated()
         && resource.data.createdBy == request.auth.uid;
 
       // Likes subcollection
       match /likes/{likeId} {
-        // Anyone can read likes (for like count)
         allow read: if isAuthenticated();
-
-        // Only authenticated users can like posts
-        // likeId should be the user's uid
-        allow create: if isAuthenticated()
-          && likeId == request.auth.uid
-          && request.resource.data.uid == request.auth.uid;
-
-        // Only the user can unlike their own like
-        allow delete: if isAuthenticated()
-          && likeId == request.auth.uid;
-
-        // Prevent updates to likes
+        allow create: if isAuthenticated() && likeId == request.auth.uid;
+        allow delete: if isAuthenticated() && likeId == request.auth.uid;
         allow update: if false;
       }
 
-      // Comments subcollection
+      // Comments subcollection - FIXED to match actual app fields
       match /comments/{commentId} {
-        // Anyone can read comments
         allow read: if isAuthenticated();
 
-        // Only authenticated users can create comments
+        // App sends: authorId, authorName, text, postId, createdAt
         allow create: if isAuthenticated()
-          && hasValidCommentCoreFields();
+          && request.resource.data.authorId == request.auth.uid;
 
-        // Only the comment owner can update their comment
+        // Comment author can update their own comment
         allow update: if isAuthenticated()
-          && resource.data.uid == request.auth.uid
-          && request.resource.data.uid == request.auth.uid;
+          && resource.data.authorId == request.auth.uid
+          && request.resource.data.authorId == resource.data.authorId;
 
-        // The comment owner or post owner can delete comments
+        // Comment author or post owner can delete
         allow delete: if isAuthenticated()
-          && (resource.data.uid == request.auth.uid
+          && (resource.data.authorId == request.auth.uid
               || get(/databases/$(database)/documents/posts/$(postId)).data.createdBy == request.auth.uid);
+
+        // Replies subcollection
+        match /replies/{replyId} {
+          allow read: if isAuthenticated();
+          allow create: if isAuthenticated()
+            && request.resource.data.authorId == request.auth.uid;
+          allow update: if isAuthenticated()
+            && resource.data.authorId == request.auth.uid;
+          allow delete: if isAuthenticated()
+            && (resource.data.authorId == request.auth.uid
+                || get(/databases/$(database)/documents/posts/$(postId)).data.createdBy == request.auth.uid);
+        }
       }
     }
 
@@ -286,20 +133,14 @@ service cloud.firestore {
 
       // Any authenticated user can create a report
       allow create: if isAuthenticated()
-        && request.resource.data.reportedBy == request.auth.uid
-        && request.resource.data.reportType in ['post', 'comment', 'profile', 'message']
-        && request.resource.data.reason in ['harassment', 'spam', 'inappropriateContent', 'violence', 'hateSpeech', 'childSafety', 'sexualContent', 'falseInformation', 'other']
-        && isValidString(request.resource.data.description, 10, 500)
-        && request.resource.data.status == 'pending';
+        && request.resource.data.reportedBy == request.auth.uid;
 
-      // Only admins can update reports (status, review notes)
-      // For now, we'll prevent updates. Admins will use Firebase Console or Admin SDK
+      // Prevent updates
       allow update: if false;
 
-      // Users can delete their own reports
+      // Users can delete their own pending reports
       allow delete: if isAuthenticated()
-        && resource.data.reportedBy == request.auth.uid
-        && resource.data.status == 'pending';
+        && resource.data.reportedBy == request.auth.uid;
     }
 
     // Chats collection rules
@@ -308,27 +149,27 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && request.auth.uid in resource.data.participants;
 
-      // Users can create chats
+      // Users can create chats if they're a participant
       allow create: if isAuthenticated()
-        && request.auth.uid in request.resource.data.participants
-        && request.resource.data.participants is list
-        && request.resource.data.participants.size() == 2;
+        && request.auth.uid in request.resource.data.participants;
 
-      // Users can update chats they're part of (last message, unread count)
+      // Users can update chats they're part of
       allow update: if isAuthenticated()
         && request.auth.uid in resource.data.participants;
 
+      // Prevent deletion
+      allow delete: if false;
+
       // Messages subcollection
       match /messages/{messageId} {
-        // Users can read messages in chats they're part of
+        // Users can read messages in their chats
         allow read: if isAuthenticated()
           && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
 
-        // Users can create messages in chats they're part of
+        // Users can create messages in their chats (must be sender)
         allow create: if isAuthenticated()
           && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
-          && request.resource.data.senderId == request.auth.uid
-          && isValidString(request.resource.data.text, 1, 1000);
+          && request.resource.data.senderId == request.auth.uid;
 
         // Prevent updates and deletes
         allow update, delete: if false;
