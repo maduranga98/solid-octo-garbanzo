@@ -188,6 +188,15 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardHeight = mediaQuery.viewInsets.bottom;
+    final screenHeight = mediaQuery.size.height;
+
+    // Calculate max filter height based on available space
+    // Reserve space for AppBar (~56), search bar (~80), results list (min 100), and padding
+    final maxFilterHeight = keyboardHeight > 0
+        ? (screenHeight - keyboardHeight - 280).clamp(150.0, 300.0)
+        : 350.0;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -216,6 +225,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               ],
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
@@ -315,7 +325,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                   ],
                 ),
                 // Filter Panel
-                if (_showFilters) _buildFilterPanel(theme),
+                if (_showFilters) _buildFilterPanel(theme, maxFilterHeight),
               ],
             ),
           ),
@@ -407,10 +417,10 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
     );
   }
 
-  Widget _buildFilterPanel(ThemeData theme) {
+  Widget _buildFilterPanel(ThemeData theme, double maxHeight) {
     return Container(
       margin: const EdgeInsets.only(top: 12),
-      constraints: const BoxConstraints(maxHeight: 400),
+      constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
