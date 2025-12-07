@@ -9,6 +9,7 @@ import 'package:versewing/providers/follow_provider.dart';
 import 'package:versewing/providers/postRepositoryProvider.dart';
 import 'package:versewing/providers/post_interaction_provider.dart';
 import 'package:versewing/providers/user_provider.dart';
+import 'package:versewing/providers/notification_provider.dart';
 import 'package:versewing/screens/auth/login.dart';
 import 'package:versewing/screens/following/following_feed.dart';
 import 'package:versewing/screens/messages/message.dart';
@@ -319,21 +320,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   },
                   tooltip: 'Search',
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.notifications_outlined,
-                    color: colorScheme.onSurface,
+                // Notification button with unread badge
+                if (currentUser != null)
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final unreadCountAsync = ref.watch(
+                        unreadNotificationCountProvider(currentUser.uid),
+                      );
+
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.notifications_outlined,
+                              color: colorScheme.onSurface,
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => NotificationsScreen(),
+                                ),
+                              );
+                            },
+                            tooltip: 'Notifications',
+                          ),
+                          // Unread badge
+                          unreadCountAsync.when(
+                            data: (count) {
+                              if (count > 0) {
+                                return Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: colorScheme.surface,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 18,
+                                      minHeight: 18,
+                                    ),
+                                    child: Text(
+                                      count > 99 ? '99+' : count.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+                        ],
+                      );
+                    },
+                  )
+                else
+                  IconButton(
+                    icon: Icon(
+                      Icons.notifications_outlined,
+                      color: colorScheme.onSurface,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NotificationsScreen(),
+                        ),
+                      );
+                    },
+                    tooltip: 'Notifications',
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => NotificationsScreen(),
-                      ),
-                    );
-                  },
-                  tooltip: 'Notifications',
-                ),
                 const SizedBox(width: 4),
               ],
               bottom: PreferredSize(

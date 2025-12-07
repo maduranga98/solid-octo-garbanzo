@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,6 +37,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   List<String> _selectedReadingLanguages = [];
   String _selectedWritingLanguage = 'English';
   bool _exploreInternational = true;
+
+  // Username search
+  Timer? _usernameDebounce;
+  List<UserModel> _usernameSuggestions = [];
+  bool _isSearchingUsername = false;
+  bool _usernameAvailable = true;
+  String _usernameCheckMessage = '';
 
   // Content types (same as google_user_info_screen)
   final List<Map<String, dynamic>> _contentTypes = [
@@ -106,7 +114,74 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _firstnameController.dispose();
     _lastnameController.dispose();
     _usernameController.dispose();
+    _usernameDebounce?.cancel();
     super.dispose();
+  }
+
+  void _onUsernameChanged(String value) {
+    // Cancel previous timer
+    _usernameDebounce?.cancel();
+
+    if (value.trim().isEmpty || value.trim().length < 3) {
+      setState(() {
+        _usernameSuggestions = [];
+        _isSearchingUsername = false;
+        _usernameCheckMessage = '';
+        _usernameAvailable = true;
+      });
+      return;
+    }
+
+    // Don't check if it's the same as current username
+    if (value.trim() == _currentUser?.userName) {
+      setState(() {
+        _usernameSuggestions = [];
+        _isSearchingUsername = false;
+        _usernameCheckMessage = '';
+        _usernameAvailable = true;
+      });
+      return;
+    }
+
+    setState(() => _isSearchingUsername = true);
+
+    // Debounce the search
+    _usernameDebounce = Timer(const Duration(milliseconds: 500), () async {
+      await _checkUsernameAvailability(value.trim());
+    });
+  }
+
+  Future<void> _checkUsernameAvailability(String username) async {
+    try {
+      final userRepository = ref.read(userRepositoryProvider);
+      final results = await userRepository.searchUsers(username);
+
+      // Check if exact match exists
+      final exactMatch = results.where((u) =>
+        u.userName.toLowerCase() == username.toLowerCase()
+      ).toList();
+
+      setState(() {
+        _isSearchingUsername = false;
+        _usernameSuggestions = results.take(5).toList();
+
+        if (exactMatch.isNotEmpty) {
+          _usernameAvailable = false;
+          _usernameCheckMessage = 'Username already taken';
+        } else {
+          _usernameAvailable = true;
+          _usernameCheckMessage = results.isEmpty
+            ? 'Username available!'
+            : 'Username available! Similar usernames exist';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isSearchingUsername = false;
+        _usernameCheckMessage = 'Error checking username';
+        _usernameAvailable = true;
+      });
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -576,6 +651,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             TextFormField(
               controller: _usernameController,
               enabled: !_isLoading,
+              onChanged: _onUsernameChanged,
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
                 LengthLimitingTextInputFormatter(20),
@@ -584,6 +660,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 labelText: 'Username',
                 hintText: 'Choose a username',
                 prefixIcon: const Icon(Icons.alternate_email),
+                suffixIcon: _isSearchingUsername
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : _usernameCheckMessage.isNotEmpty
+                    ? Icon(
+                        _usernameAvailable ? Icons.check_circle : Icons.error,
+                        color: _usernameAvailable ? Colors.green : Colors.red,
+                      )
+                    : null,
+                helperText: _usernameCheckMessage.isNotEmpty
+                    ? _usernameCheckMessage
+                    : null,
+                helperStyle: TextStyle(
+                  color: _usernameAvailable ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -608,9 +706,60 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
                   return 'Username can only contain letters, numbers, and underscores';
                 }
+                if (!_usernameAvailable && value.trim() != _currentUser?.userName) {
+                  return 'This username is already taken';
+                }
                 return null;
               },
             ),
+            if (_usernameSuggestions.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 200),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  ),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(8),
+                  itemCount: _usernameSuggestions.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final user = _usernameSuggestions[index];
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 16,
+                        backgroundImage: user.photoURl != null
+                            ? NetworkImage(user.photoURl!)
+                            : null,
+                        child: user.photoURl == null
+                            ? const Icon(Icons.person, size: 16)
+                            : null,
+                      ),
+                      title: Text(
+                        '@${user.userName}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${user.firstname} ${user.lastname}',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      trailing: user.userName.toLowerCase() ==
+                              _usernameController.text.trim().toLowerCase()
+                          ? const Icon(Icons.warning, color: Colors.red, size: 18)
+                          : null,
+                    );
+                  },
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Email (Read-only)
