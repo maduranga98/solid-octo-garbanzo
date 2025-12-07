@@ -410,150 +410,154 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   Widget _buildFilterPanel(ThemeData theme) {
     return Container(
       margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(maxHeight: 400),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Filters',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Filters',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              if (_activeFilterCount > 0)
-                TextButton(
-                  onPressed: _clearFilters,
-                  child: const Text('Clear All'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
+                if (_activeFilterCount > 0)
+                  TextButton(
+                    onPressed: _clearFilters,
+                    child: const Text('Clear All'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
 
-          // Content Type Filter
-          Text(
-            'Content Type',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _contentTypes.map((type) {
-              final isSelected = _selectedContentTypes.contains(type['value']);
-              return FilterChip(
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(type['icon'] as IconData, size: 16),
-                    const SizedBox(width: 4),
-                    Text(type['title'] as String),
-                  ],
-                ),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selectedContentTypes.add(type['value'] as String);
-                    } else {
-                      _selectedContentTypes.remove(type['value']);
-                    }
-                  });
-                  _performSearch(_searchController.text);
-                },
-                selectedColor: theme.colorScheme.primary.withOpacity(0.3),
-                checkmarkColor: theme.colorScheme.primary,
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // Language Filter
-          Text(
-            'Language',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _languages.map((language) {
-              final isSelected = _selectedLanguages.contains(language);
-              return FilterChip(
-                label: Text(language),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selectedLanguages.add(language);
-                    } else {
-                      _selectedLanguages.remove(language);
-                    }
-                  });
-                  _performSearch(_searchController.text);
-                },
-                selectedColor: theme.colorScheme.primary.withOpacity(0.3),
-                checkmarkColor: theme.colorScheme.primary,
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // Country Filter
-          Text(
-            'Country',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () {
-              showCountryPicker(
-                context: context,
-                showPhoneCode: false,
-                onSelect: (Country country) {
-                  setState(() {
-                    _selectedCountry = country.name;
-                  });
-                  _performSearch(_searchController.text);
-                },
-              );
-            },
-            icon: const Icon(Icons.public),
-            label: Text(_selectedCountry ?? 'Select Country'),
-            style: OutlinedButton.styleFrom(
-              backgroundColor: _selectedCountry != null
-                  ? theme.colorScheme.primary.withOpacity(0.1)
-                  : null,
-            ),
-          ),
-          if (_selectedCountry != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Chip(
-                label: Text(_selectedCountry!),
-                onDeleted: () {
-                  setState(() {
-                    _selectedCountry = null;
-                  });
-                  _performSearch(_searchController.text);
-                },
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+            // Content Type Filter
+            Text(
+              'Content Type',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
             ),
-        ],
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _contentTypes.map((type) {
+                final isSelected = _selectedContentTypes.contains(type['value']);
+                return FilterChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(type['icon'] as IconData, size: 16),
+                      const SizedBox(width: 4),
+                      Text(type['title'] as String),
+                    ],
+                  ),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedContentTypes.add(type['value'] as String);
+                      } else {
+                        _selectedContentTypes.remove(type['value']);
+                      }
+                    });
+                    _performSearch(_searchController.text);
+                  },
+                  selectedColor: theme.colorScheme.primary.withOpacity(0.3),
+                  checkmarkColor: theme.colorScheme.primary,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+
+            // Language Filter
+            Text(
+              'Language',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _languages.map((language) {
+                final isSelected = _selectedLanguages.contains(language);
+                return FilterChip(
+                  label: Text(language),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedLanguages.add(language);
+                      } else {
+                        _selectedLanguages.remove(language);
+                      }
+                    });
+                    _performSearch(_searchController.text);
+                  },
+                  selectedColor: theme.colorScheme.primary.withOpacity(0.3),
+                  checkmarkColor: theme.colorScheme.primary,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+
+            // Country Filter
+            Text(
+              'Country',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () {
+                showCountryPicker(
+                  context: context,
+                  showPhoneCode: false,
+                  onSelect: (Country country) {
+                    setState(() {
+                      _selectedCountry = country.name;
+                    });
+                    _performSearch(_searchController.text);
+                  },
+                );
+              },
+              icon: const Icon(Icons.public),
+              label: Text(_selectedCountry ?? 'Select Country'),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: _selectedCountry != null
+                    ? theme.colorScheme.primary.withOpacity(0.1)
+                    : null,
+              ),
+            ),
+            if (_selectedCountry != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Chip(
+                  label: Text(_selectedCountry!),
+                  onDeleted: () {
+                    setState(() {
+                      _selectedCountry = null;
+                    });
+                    _performSearch(_searchController.text);
+                  },
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
