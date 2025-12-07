@@ -631,15 +631,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           const SizedBox(height: 2),
                           Row(
                             children: [
-                              Text(
-                                timeago.format(
-                                  post.createdAt,
-                                  locale: 'en_short',
-                                ),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurface.withValues(
-                                    alpha: 0.6,
+                              Flexible(
+                                child: Text(
+                                  timeago.format(
+                                    post.createdAt,
+                                    locale: 'en_short',
                                   ),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               Text(

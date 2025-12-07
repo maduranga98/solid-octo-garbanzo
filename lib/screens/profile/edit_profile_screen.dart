@@ -154,25 +154,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _checkUsernameAvailability(String username) async {
     try {
       final userRepository = ref.read(userRepositoryProvider);
-      final results = await userRepository.searchUsers(username);
-
-      // Check if exact match exists
-      final exactMatch = results.where((u) =>
-        u.userName.toLowerCase() == username.toLowerCase()
-      ).toList();
+      final isAvailable = await userRepository.isUsernameAvailable(username);
 
       setState(() {
         _isSearchingUsername = false;
-        _usernameSuggestions = results.take(5).toList();
+        _usernameSuggestions = []; // Don't show similar usernames
 
-        if (exactMatch.isNotEmpty) {
+        if (!isAvailable) {
           _usernameAvailable = false;
           _usernameCheckMessage = 'Username already taken';
         } else {
           _usernameAvailable = true;
-          _usernameCheckMessage = results.isEmpty
-            ? 'Username available!'
-            : 'Username available! Similar usernames exist';
+          _usernameCheckMessage = 'Username available!';
         }
       });
     } catch (e) {
@@ -712,54 +705,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 return null;
               },
             ),
-            if (_usernameSuggestions.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 200),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                  ),
-                ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.all(8),
-                  itemCount: _usernameSuggestions.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final user = _usernameSuggestions[index];
-                    return ListTile(
-                      dense: true,
-                      leading: CircleAvatar(
-                        radius: 16,
-                        backgroundImage: user.photoURl != null
-                            ? NetworkImage(user.photoURl!)
-                            : null,
-                        child: user.photoURl == null
-                            ? const Icon(Icons.person, size: 16)
-                            : null,
-                      ),
-                      title: Text(
-                        '@${user.userName}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      subtitle: Text(
-                        '${user.firstname} ${user.lastname}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      trailing: user.userName.toLowerCase() ==
-                              _usernameController.text.trim().toLowerCase()
-                          ? const Icon(Icons.warning, color: Colors.red, size: 18)
-                          : null,
-                    );
-                  },
-                ),
-              ),
-            ],
             const SizedBox(height: 16),
 
             // Email (Read-only)
