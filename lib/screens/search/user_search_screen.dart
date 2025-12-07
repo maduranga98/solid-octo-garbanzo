@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:country_picker/country_picker.dart';
 import 'package:versewing/providers/auth_provider.dart';
 import 'package:versewing/providers/follow_provider.dart';
 import 'package:versewing/screens/profile/user_profile.dart'
@@ -20,6 +21,26 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   bool _isSearching = false;
   bool _hasSearched = false;
 
+  // Advanced search filters
+  List<String> _selectedContentTypes = [];
+  List<String> _selectedLanguages = [];
+  String? _selectedCountry;
+  bool _showFilters = false;
+
+  // Available options
+  final List<Map<String, dynamic>> _contentTypes = [
+    {'title': 'Poetry', 'value': 'poetry', 'icon': Icons.auto_stories},
+    {'title': 'Lyrics', 'value': 'lyrics', 'icon': Icons.music_note},
+    {'title': 'Stories', 'value': 'stories', 'icon': Icons.menu_book},
+    {'title': 'Quotes', 'value': 'quotes', 'icon': Icons.format_quote},
+    {'title': 'Microfiction', 'value': 'microfiction', 'icon': Icons.bolt},
+  ];
+
+  final List<String> _languages = [
+    'English', 'Spanish', 'French', 'German', 'Italian',
+    'Portuguese', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Hindi'
+  ];
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -27,7 +48,8 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   }
 
   Future<void> _performSearch(String query) async {
-    if (query.trim().isEmpty) {
+    if (query.trim().isEmpty && _selectedContentTypes.isEmpty &&
+        _selectedLanguages.isEmpty && _selectedCountry == null) {
       setState(() {
         _searchResults = [];
         _hasSearched = false;
@@ -42,44 +64,92 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
 
     try {
       final searchQuery = query.trim().toLowerCase();
-
-      // Search by username, firstname, or lastname
-      final usernameQuery = await FirebaseFirestore.instance
-          .collection('users')
-          .where('userName', isGreaterThanOrEqualTo: searchQuery)
-          .where('userName', isLessThanOrEqualTo: '$searchQuery\uf8ff')
-          .limit(20)
-          .get();
-
-      final firstnameQuery = await FirebaseFirestore.instance
-          .collection('users')
-          .where('firstname', isGreaterThanOrEqualTo: searchQuery)
-          .where('firstname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
-          .limit(20)
-          .get();
-
-      final lastnameQuery = await FirebaseFirestore.instance
-          .collection('users')
-          .where('lastname', isGreaterThanOrEqualTo: searchQuery)
-          .where('lastname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
-          .limit(20)
-          .get();
-
-      // Combine results and remove duplicates
       final Map<String, DocumentSnapshot> uniqueUsers = {};
 
-      for (var doc in usernameQuery.docs) {
-        uniqueUsers[doc.id] = doc;
+      // If text query exists, search by username, firstname, or lastname
+      if (searchQuery.isNotEmpty) {
+        final usernameQuery = await FirebaseFirestore.instance
+            .collection('users')
+            .where('userName', isGreaterThanOrEqualTo: searchQuery)
+            .where('userName', isLessThanOrEqualTo: '$searchQuery\uf8ff')
+            .limit(20)
+            .get();
+
+        final firstnameQuery = await FirebaseFirestore.instance
+            .collection('users')
+            .where('firstname', isGreaterThanOrEqualTo: searchQuery)
+            .where('firstname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
+            .limit(20)
+            .get();
+
+        final lastnameQuery = await FirebaseFirestore.instance
+            .collection('users')
+            .where('lastname', isGreaterThanOrEqualTo: searchQuery)
+            .where('lastname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
+            .limit(20)
+            .get();
+
+        for (var doc in usernameQuery.docs) {
+          uniqueUsers[doc.id] = doc;
+        }
+        for (var doc in firstnameQuery.docs) {
+          uniqueUsers[doc.id] = doc;
+        }
+        for (var doc in lastnameQuery.docs) {
+          uniqueUsers[doc.id] = doc;
+        }
+      } else {
+        // No text query, get all users with limit
+        final allUsers = await FirebaseFirestore.instance
+            .collection('users')
+            .limit(50)
+            .get();
+        for (var doc in allUsers.docs) {
+          uniqueUsers[doc.id] = doc;
+        }
       }
-      for (var doc in firstnameQuery.docs) {
-        uniqueUsers[doc.id] = doc;
+
+      // Apply client-side filters
+      List<DocumentSnapshot> filteredResults = uniqueUsers.values.toList();
+
+      // Filter by content type
+      if (_selectedContentTypes.isNotEmpty) {
+        filteredResults = filteredResults.where((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data == null) return false;
+
+          final userTypes = List<String>.from(data['type'] ?? []);
+          return _selectedContentTypes.any((type) => userTypes.contains(type));
+        }).toList();
       }
-      for (var doc in lastnameQuery.docs) {
-        uniqueUsers[doc.id] = doc;
+
+      // Filter by language
+      if (_selectedLanguages.isNotEmpty) {
+        filteredResults = filteredResults.where((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data == null) return false;
+
+          final readingLangs = List<String>.from(data['preferredReadingLanguages'] ?? []);
+          final writingLang = data['preferredWritingLanguage'] ?? '';
+
+          return _selectedLanguages.any((lang) =>
+            readingLangs.contains(lang) || writingLang == lang
+          );
+        }).toList();
+      }
+
+      // Filter by country
+      if (_selectedCountry != null) {
+        filteredResults = filteredResults.where((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data == null) return false;
+
+          return data['country'] == _selectedCountry;
+        }).toList();
       }
 
       setState(() {
-        _searchResults = uniqueUsers.values.toList();
+        _searchResults = filteredResults;
         _isSearching = false;
       });
     } catch (e) {
@@ -96,6 +166,23 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
         );
       }
     }
+  }
+
+  int get _activeFilterCount {
+    int count = 0;
+    if (_selectedContentTypes.isNotEmpty) count++;
+    if (_selectedLanguages.isNotEmpty) count++;
+    if (_selectedCountry != null) count++;
+    return count;
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _selectedContentTypes.clear();
+      _selectedLanguages.clear();
+      _selectedCountry = null;
+    });
+    _performSearch(_searchController.text);
   }
 
   @override
@@ -128,54 +215,108 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                 ),
               ],
             ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                // Debounce search
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  if (_searchController.text == value) {
-                    _performSearch(value);
-                  }
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Search by name or username...',
-                hintStyle: TextStyle(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                  fontSize: 15,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.4,
-                          ),
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchResults = [];
-                            _hasSearched = false;
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (value) {
+                          // Debounce search
+                          Future.delayed(const Duration(milliseconds: 500), () {
+                            if (_searchController.text == value) {
+                              _performSearch(value);
+                            }
                           });
                         },
-                      )
-                    : null,
-                filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                        decoration: InputDecoration(
+                          hintText: 'Search by name or username...',
+                          hintStyle: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                            fontSize: 15,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(
+                                    Icons.clear,
+                                    color: theme.colorScheme.onSurface.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _searchResults = [];
+                                      _hasSearched = false;
+                                    });
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: theme.colorScheme.surfaceContainerHighest,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Filter button
+                    Stack(
+                      children: [
+                        IconButton.filled(
+                          onPressed: () {
+                            setState(() => _showFilters = !_showFilters);
+                          },
+                          icon: Icon(
+                            _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+                          ),
+                          style: IconButton.styleFrom(
+                            backgroundColor: _showFilters
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.surfaceContainerHighest,
+                            foregroundColor: _showFilters
+                                ? theme.colorScheme.onPrimary
+                                : theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        if (_activeFilterCount > 0)
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.error,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '$_activeFilterCount',
+                                style: TextStyle(
+                                  color: theme.colorScheme.onError,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
+                // Filter Panel
+                if (_showFilters) _buildFilterPanel(theme),
+              ],
             ),
           ),
 
@@ -261,6 +402,157 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterPanel(ThemeData theme) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Filters',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (_activeFilterCount > 0)
+                TextButton(
+                  onPressed: _clearFilters,
+                  child: const Text('Clear All'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Content Type Filter
+          Text(
+            'Content Type',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _contentTypes.map((type) {
+              final isSelected = _selectedContentTypes.contains(type['value']);
+              return FilterChip(
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(type['icon'] as IconData, size: 16),
+                    const SizedBox(width: 4),
+                    Text(type['title'] as String),
+                  ],
+                ),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedContentTypes.add(type['value'] as String);
+                    } else {
+                      _selectedContentTypes.remove(type['value']);
+                    }
+                  });
+                  _performSearch(_searchController.text);
+                },
+                selectedColor: theme.colorScheme.primary.withOpacity(0.3),
+                checkmarkColor: theme.colorScheme.primary,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+
+          // Language Filter
+          Text(
+            'Language',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _languages.map((language) {
+              final isSelected = _selectedLanguages.contains(language);
+              return FilterChip(
+                label: Text(language),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedLanguages.add(language);
+                    } else {
+                      _selectedLanguages.remove(language);
+                    }
+                  });
+                  _performSearch(_searchController.text);
+                },
+                selectedColor: theme.colorScheme.primary.withOpacity(0.3),
+                checkmarkColor: theme.colorScheme.primary,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+
+          // Country Filter
+          Text(
+            'Country',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () {
+              showCountryPicker(
+                context: context,
+                showPhoneCode: false,
+                onSelect: (Country country) {
+                  setState(() {
+                    _selectedCountry = country.name;
+                  });
+                  _performSearch(_searchController.text);
+                },
+              );
+            },
+            icon: const Icon(Icons.public),
+            label: Text(_selectedCountry ?? 'Select Country'),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: _selectedCountry != null
+                  ? theme.colorScheme.primary.withOpacity(0.1)
+                  : null,
+            ),
+          ),
+          if (_selectedCountry != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Chip(
+                label: Text(_selectedCountry!),
+                onDeleted: () {
+                  setState(() {
+                    _selectedCountry = null;
+                  });
+                  _performSearch(_searchController.text);
+                },
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+              ),
+            ),
         ],
       ),
     );

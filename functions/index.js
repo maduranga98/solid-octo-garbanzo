@@ -406,6 +406,107 @@ exports.sendBatchNotifications = onCall(async (request) => {
 });
 
 /**
+ * Send notification when a new message is received
+ * Triggered when a new message is created in a chat
+ */
+exports.sendMessageNotification = onDocumentCreated(
+    "chats/{chatId}/messages/{messageId}",
+    async (event) => {
+      try {
+        const chatId = event.params.chatId;
+        const messageData = event.data.data();
+        const senderId = messageData.senderId;
+        const messageText = messageData.text || "";
+        const db = getFirestore();
+
+        // Get chat metadata to find the recipient
+        const chatDoc = await db.collection("chats").doc(chatId).get();
+
+        if (!chatDoc.exists) {
+          console.log("Chat not found");
+          return null;
+        }
+
+        const chatData = chatDoc.data();
+        const participants = chatData.participants || [];
+
+        // Find the recipient (the user who is not the sender)
+        const recipientId = participants.find((id) => id !== senderId);
+
+        if (!recipientId) {
+          console.log("No recipient found");
+          return null;
+        }
+
+        // Get sender's information
+        const senderDoc = await db.collection("users").doc(senderId).get();
+
+        if (!senderDoc.exists) {
+          console.log("Sender not found");
+          return null;
+        }
+
+        const senderData = senderDoc.data();
+        const senderName =
+        `${senderData.firstname || ""} ${senderData.lastname || ""}`.trim() ||
+        "Someone";
+
+        // Get recipient's FCM token
+        const recipientDoc = await db.collection("users").doc(recipientId).get();
+
+        if (!recipientDoc.exists) {
+          console.log("Recipient not found");
+          return null;
+        }
+
+        const recipientData = recipientDoc.data();
+        const fcmToken = recipientData.fcmToken;
+
+        if (!fcmToken || !isValidFCMToken(fcmToken)) {
+          console.log("No valid FCM token for recipient");
+          return null;
+        }
+
+        // Create message preview (limit to 100 characters)
+        const messagePreview =
+        messageText.length > 100 ?
+          messageText.substring(0, 100) + "..." :
+          messageText;
+
+        const message = {
+          notification: {
+            title: `💬 ${senderName}`,
+            body: messagePreview || "Sent you a message",
+          },
+          data: {
+            type: "message",
+            chatId: chatId,
+            senderId: senderId,
+            senderName: senderName,
+            click_action: "FLUTTER_NOTIFICATION_CLICK",
+          },
+          token: fcmToken,
+          android: {
+            priority: "high",
+            notification: {
+              sound: "default",
+              channelId: "high_importance_channel",
+            },
+          },
+          apns: {payload: {aps: {sound: "default", badge: 1}}},
+        };
+
+        const response = await getMessaging().send(message);
+        console.log("Message notification sent:", response);
+        return {success: true};
+      } catch (error) {
+        console.error("Error sending message notification:", error);
+        return null;
+      }
+    },
+);
+
+/**
  * Send notification when a report is reviewed/updated
  * Triggered when a report document is updated
  */
