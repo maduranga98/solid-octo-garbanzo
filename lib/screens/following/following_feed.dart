@@ -248,6 +248,12 @@ class _FollowingPostCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    // Validate createdBy is not empty to prevent UID error
+    if (post.createdBy.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     final userAsync = ref.watch(getUserDataProvider(post.createdBy));
     final currentUser = ref.watch(firebaseAuthProvider).currentUser;
 
