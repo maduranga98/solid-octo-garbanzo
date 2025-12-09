@@ -17,14 +17,25 @@ final getDraftsProvider =
           .collection('users')
           .doc(user.uid)
           .collection('drafts')
-          .orderBy('updatedAt', descending: true)
           .snapshots()
           .map((snapshot) {
-            return snapshot.docs.map((doc) {
+            // Get all drafts and sort them client-side
+            final drafts = snapshot.docs.map((doc) {
               final data = doc.data();
               data['id'] = doc.id;
               return data;
             }).toList();
+
+            // Sort by updatedAt if available, otherwise by createdAt
+            drafts.sort((a, b) {
+              final aTime = (a['updatedAt'] as Timestamp?)?.millisecondsSinceEpoch ??
+                            (a['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+              final bTime = (b['updatedAt'] as Timestamp?)?.millisecondsSinceEpoch ??
+                            (b['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+              return bTime.compareTo(aTime); // Descending order
+            });
+
+            return drafts;
           });
     });
 

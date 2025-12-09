@@ -70,63 +70,93 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
       // If text query exists, search by username, firstname, or lastname
       if (searchQuery.isNotEmpty) {
         // Search username (stored in lowercase)
-        final usernameQuery = await FirebaseFirestore.instance
-            .collection('users')
-            .where('userName', isGreaterThanOrEqualTo: searchQueryLower)
-            .where('userName', isLessThanOrEqualTo: '$searchQueryLower\uf8ff')
-            .limit(20)
-            .get();
+        try {
+          final usernameQuery = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userName', isGreaterThanOrEqualTo: searchQueryLower)
+              .where('userName', isLessThanOrEqualTo: '$searchQueryLower\uf8ff')
+              .limit(20)
+              .get();
+          for (var doc in usernameQuery.docs) {
+            if (doc.data()['userName'] != null) {
+              uniqueUsers[doc.id] = doc;
+            }
+          }
+        } catch (e) {
+          // Handle case where userName field doesn't exist
+          print('Error searching username: $e');
+        }
 
         // Search firstname (case-insensitive by searching both cases)
-        final firstnameQueryLower = await FirebaseFirestore.instance
-            .collection('users')
-            .where('firstname', isGreaterThanOrEqualTo: searchQueryLower)
-            .where('firstname', isLessThanOrEqualTo: '$searchQueryLower\uf8ff')
-            .limit(10)
-            .get();
+        try {
+          final firstnameQueryLower = await FirebaseFirestore.instance
+              .collection('users')
+              .where('firstname', isGreaterThanOrEqualTo: searchQueryLower)
+              .where('firstname', isLessThanOrEqualTo: '$searchQueryLower\uf8ff')
+              .limit(10)
+              .get();
+          for (var doc in firstnameQueryLower.docs) {
+            if (doc.data()['firstname'] != null) {
+              uniqueUsers[doc.id] = doc;
+            }
+          }
+        } catch (e) {
+          print('Error searching firstname (lower): $e');
+        }
 
-        final firstnameQueryOriginal = await FirebaseFirestore.instance
-            .collection('users')
-            .where('firstname', isGreaterThanOrEqualTo: searchQuery)
-            .where('firstname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
-            .limit(10)
-            .get();
+        try {
+          final firstnameQueryOriginal = await FirebaseFirestore.instance
+              .collection('users')
+              .where('firstname', isGreaterThanOrEqualTo: searchQuery)
+              .where('firstname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
+              .limit(10)
+              .get();
+          for (var doc in firstnameQueryOriginal.docs) {
+            if (doc.data()['firstname'] != null) {
+              uniqueUsers[doc.id] = doc;
+            }
+          }
+        } catch (e) {
+          print('Error searching firstname (original): $e');
+        }
 
         // Search lastname (case-insensitive by searching both cases)
-        final lastnameQueryLower = await FirebaseFirestore.instance
-            .collection('users')
-            .where('lastname', isGreaterThanOrEqualTo: searchQueryLower)
-            .where('lastname', isLessThanOrEqualTo: '$searchQueryLower\uf8ff')
-            .limit(10)
-            .get();
+        try {
+          final lastnameQueryLower = await FirebaseFirestore.instance
+              .collection('users')
+              .where('lastname', isGreaterThanOrEqualTo: searchQueryLower)
+              .where('lastname', isLessThanOrEqualTo: '$searchQueryLower\uf8ff')
+              .limit(10)
+              .get();
+          for (var doc in lastnameQueryLower.docs) {
+            if (doc.data()['lastname'] != null) {
+              uniqueUsers[doc.id] = doc;
+            }
+          }
+        } catch (e) {
+          print('Error searching lastname (lower): $e');
+        }
 
-        final lastnameQueryOriginal = await FirebaseFirestore.instance
-            .collection('users')
-            .where('lastname', isGreaterThanOrEqualTo: searchQuery)
-            .where('lastname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
-            .limit(10)
-            .get();
-
-        for (var doc in usernameQuery.docs) {
-          uniqueUsers[doc.id] = doc;
+        try {
+          final lastnameQueryOriginal = await FirebaseFirestore.instance
+              .collection('users')
+              .where('lastname', isGreaterThanOrEqualTo: searchQuery)
+              .where('lastname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
+              .limit(10)
+              .get();
+          for (var doc in lastnameQueryOriginal.docs) {
+            if (doc.data()['lastname'] != null) {
+              uniqueUsers[doc.id] = doc;
+            }
+          }
+        } catch (e) {
+          print('Error searching lastname (original): $e');
         }
-        for (var doc in firstnameQueryLower.docs) {
-          uniqueUsers[doc.id] = doc;
-        }
-        for (var doc in firstnameQueryOriginal.docs) {
-          uniqueUsers[doc.id] = doc;
-        }
-        for (var doc in lastnameQueryLower.docs) {
-          uniqueUsers[doc.id] = doc;
-        }
-        for (var doc in lastnameQueryOriginal.docs) {
-          uniqueUsers[doc.id] = doc;
-        }
-      } else {
-        // No text query, get all users with limit
+      } else if (_selectedContentTypes.isNotEmpty || _selectedLanguages.isNotEmpty || _selectedCountry != null) {
+        // Only filters applied without search text - fetch limited set of users
         final allUsers = await FirebaseFirestore.instance
             .collection('users')
-            .limit(50)
+            .limit(100)
             .get();
         for (var doc in allUsers.docs) {
           uniqueUsers[doc.id] = doc;
@@ -215,12 +245,14 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
     final mediaQuery = MediaQuery.of(context);
     final keyboardHeight = mediaQuery.viewInsets.bottom;
     final screenHeight = mediaQuery.size.height;
+    final appBarHeight = AppBar().preferredSize.height;
+    final statusBarHeight = mediaQuery.padding.top;
 
     // Calculate max filter height based on available space
-    // Reserve space for AppBar (~56), search bar (~80), results list (min 100), and padding
+    // Account for: StatusBar + AppBar + SearchBar + padding + minimum space for results
     final maxFilterHeight = keyboardHeight > 0
-        ? (screenHeight - keyboardHeight - 280).clamp(150.0, 300.0)
-        : 350.0;
+        ? (screenHeight - statusBarHeight - appBarHeight - keyboardHeight - 200).clamp(120.0, 250.0)
+        : 300.0;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
