@@ -121,6 +121,14 @@ service cloud.firestore {
       match /ideas/{ideaId} {
         allow read, write: if isOwner(userId);
       }
+
+      // ------------------------------------------
+      // DRAFTS SUBCOLLECTION
+      // ------------------------------------------
+      match /drafts/{draftId} {
+        // Only the user can access their own drafts
+        allow read, write: if isOwner(userId);
+      }
     }
 
 
