@@ -63,39 +63,63 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
     });
 
     try {
-      final searchQuery = query.trim().toLowerCase();
+      final searchQuery = query.trim();
+      final searchQueryLower = searchQuery.toLowerCase();
       final Map<String, DocumentSnapshot> uniqueUsers = {};
 
       // If text query exists, search by username, firstname, or lastname
       if (searchQuery.isNotEmpty) {
+        // Search username (stored in lowercase)
         final usernameQuery = await FirebaseFirestore.instance
             .collection('users')
-            .where('userName', isGreaterThanOrEqualTo: searchQuery)
-            .where('userName', isLessThanOrEqualTo: '$searchQuery\uf8ff')
+            .where('userName', isGreaterThanOrEqualTo: searchQueryLower)
+            .where('userName', isLessThanOrEqualTo: '$searchQueryLower\uf8ff')
             .limit(20)
             .get();
 
-        final firstnameQuery = await FirebaseFirestore.instance
+        // Search firstname (case-insensitive by searching both cases)
+        final firstnameQueryLower = await FirebaseFirestore.instance
+            .collection('users')
+            .where('firstname', isGreaterThanOrEqualTo: searchQueryLower)
+            .where('firstname', isLessThanOrEqualTo: '$searchQueryLower\uf8ff')
+            .limit(10)
+            .get();
+
+        final firstnameQueryOriginal = await FirebaseFirestore.instance
             .collection('users')
             .where('firstname', isGreaterThanOrEqualTo: searchQuery)
             .where('firstname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
-            .limit(20)
+            .limit(10)
             .get();
 
-        final lastnameQuery = await FirebaseFirestore.instance
+        // Search lastname (case-insensitive by searching both cases)
+        final lastnameQueryLower = await FirebaseFirestore.instance
+            .collection('users')
+            .where('lastname', isGreaterThanOrEqualTo: searchQueryLower)
+            .where('lastname', isLessThanOrEqualTo: '$searchQueryLower\uf8ff')
+            .limit(10)
+            .get();
+
+        final lastnameQueryOriginal = await FirebaseFirestore.instance
             .collection('users')
             .where('lastname', isGreaterThanOrEqualTo: searchQuery)
             .where('lastname', isLessThanOrEqualTo: '$searchQuery\uf8ff')
-            .limit(20)
+            .limit(10)
             .get();
 
         for (var doc in usernameQuery.docs) {
           uniqueUsers[doc.id] = doc;
         }
-        for (var doc in firstnameQuery.docs) {
+        for (var doc in firstnameQueryLower.docs) {
           uniqueUsers[doc.id] = doc;
         }
-        for (var doc in lastnameQuery.docs) {
+        for (var doc in firstnameQueryOriginal.docs) {
+          uniqueUsers[doc.id] = doc;
+        }
+        for (var doc in lastnameQueryLower.docs) {
+          uniqueUsers[doc.id] = doc;
+        }
+        for (var doc in lastnameQueryOriginal.docs) {
           uniqueUsers[doc.id] = doc;
         }
       } else {
