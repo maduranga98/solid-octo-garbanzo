@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
 import 'package:versewing/utils/crashlytics_helper.dart';
 
 /// Service for managing Firebase Cloud Messaging (FCM) tokens and push notifications
@@ -12,6 +12,10 @@ class FCMService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  // Global navigator key to handle navigation from anywhere
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   /// Initialize FCM and request notification permissions
   Future<void> initialize() async {
@@ -93,8 +97,9 @@ class FCMService {
 
   /// Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
+    // ✅ FIXED: Use proper notification icon
     const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+      '@drawable/ic_notification', // Changed from @mipmap/ic_launcher
     );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -111,7 +116,15 @@ class FCMService {
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         debugPrint('Local notification tapped: ${response.payload}');
-        // Handle notification tap
+        // Handle notification tap with payload
+        if (response.payload != null) {
+          try {
+            final data = json.decode(response.payload!);
+            _navigateBasedOnData(data);
+          } catch (e) {
+            debugPrint('Error parsing notification payload: $e');
+          }
+        }
       },
     );
 
@@ -134,6 +147,7 @@ class FCMService {
 
   /// Show local notification for foreground messages
   Future<void> _showLocalNotification(RemoteMessage message) async {
+    // ✅ FIXED: Use proper notification icon and brand color
     const androidDetails = AndroidNotificationDetails(
       'high_importance_channel',
       'High Importance Notifications',
@@ -142,7 +156,8 @@ class FCMService {
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification', // Changed from @mipmap/ic_launcher
+      color: Color(0xFF6366F1), // VerseWing brand color
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -165,14 +180,92 @@ class FCMService {
     );
   }
 
-  /// Handle notification tap
+  /// ✅ FIXED: Handle notification tap with proper navigation
   void _handleNotificationTap(RemoteMessage message) {
     final data = message.data;
-    final type = data['type'];
+    _navigateBasedOnData(data);
+  }
 
-    debugPrint('Handling notification of type: $type');
-    // TODO: Navigate to appropriate screen based on notification type
-    // This can be implemented based on your app's routing logic
+  /// Navigate to appropriate screen based on notification data
+  void _navigateBasedOnData(Map<String, dynamic> data) {
+    final type = data['type'];
+    debugPrint('🧭 Navigating based on notification type: $type');
+
+    // Get the navigator context
+    final context = navigatorKey.currentContext;
+    if (context == null) {
+      debugPrint('❌ Navigator context is null, cannot navigate');
+      return;
+    }
+
+    try {
+      switch (type) {
+        case 'like':
+        case 'comment':
+          // Navigate to the specific post
+          final postId = data['postId'];
+          if (postId != null) {
+            debugPrint('📍 Navigating to post: $postId');
+            // Navigate to post detail screen
+            Navigator.of(
+              context,
+            ).pushNamed('/post-detail', arguments: {'postId': postId});
+          } else {
+            // If no postId, go to home feed
+            _navigateToHome(context);
+          }
+          break;
+
+        case 'follow':
+          // Navigate to the follower's profile
+          final userId = data['userId'] ?? data['followerId'];
+          if (userId != null) {
+            debugPrint('📍 Navigating to user profile: $userId');
+            Navigator.of(
+              context,
+            ).pushNamed('/profile', arguments: {'userId': userId});
+          } else {
+            _navigateToHome(context);
+          }
+          break;
+
+        case 'message':
+          // Navigate to the chat
+          final chatId = data['chatId'];
+          if (chatId != null) {
+            debugPrint('📍 Navigating to chat: $chatId');
+            Navigator.of(
+              context,
+            ).pushNamed('/chat', arguments: {'chatId': chatId});
+          } else {
+            _navigateToHome(context);
+          }
+          break;
+
+        case 'report_update':
+          // Navigate to notifications screen
+          debugPrint('📍 Navigating to notifications screen');
+          Navigator.of(context).pushNamed('/notifications');
+          break;
+
+        default:
+          // Default: Navigate to home feed
+          debugPrint('📍 Unknown notification type, navigating to home');
+          _navigateToHome(context);
+          break;
+      }
+    } catch (e) {
+      debugPrint('❌ Error during navigation: $e');
+      // Fallback to home
+      _navigateToHome(context);
+    }
+  }
+
+  /// Navigate to home feed (default action)
+  void _navigateToHome(BuildContext context) {
+    debugPrint('🏠 Navigating to home feed');
+    // Navigate to home and clear stack
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
   /// Get the current FCM token for this device
@@ -201,6 +294,7 @@ class FCMService {
       if (token != null) {
         await _firestore.collection('users').doc(userId).update({
           'fcmToken': token,
+          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
         });
         debugPrint('✅ FCM token updated for user: $userId');
       }
@@ -221,6 +315,7 @@ class FCMService {
     try {
       await _firestore.collection('users').doc(userId).update({
         'fcmToken': FieldValue.delete(),
+        'fcmTokenUpdatedAt': FieldValue.delete(),
       });
       await _firebaseMessaging.deleteToken();
       debugPrint('✅ FCM token deleted for user: $userId');
@@ -240,132 +335,68 @@ class FCMService {
   void listenToTokenRefresh(String userId) {
     _firebaseMessaging.onTokenRefresh.listen((newToken) {
       debugPrint('🔄 FCM token refreshed: $newToken');
-      _firestore.collection('users').doc(userId).update({'fcmToken': newToken});
+      _firestore.collection('users').doc(userId).update({
+        'fcmToken': newToken,
+        'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+      });
     });
   }
 
-  /// Send a notification to a specific user
-  /// Note: This requires a backend server with Firebase Admin SDK
-  /// For client-side implementation, you'll need to use Cloud Functions or your backend
-  Future<void> sendNotificationToUser({
-    required String recipientUserId,
-    required String title,
-    required String body,
-    Map<String, dynamic>? data,
-  }) async {
-    try {
-      // Get recipient's FCM token from Firestore
-      final userDoc = await _firestore
-          .collection('users')
-          .doc(recipientUserId)
-          .get();
-
-      if (!userDoc.exists) {
-        debugPrint('❌ User document not found for: $recipientUserId');
-        return;
-      }
-
-      final fcmToken = userDoc.data()?['fcmToken'] as String?;
-
-      if (fcmToken == null || fcmToken.isEmpty) {
-        debugPrint('⚠️ No FCM token found for user: $recipientUserId');
-        return;
-      }
-
-      // TODO: This should be called from a backend server or Cloud Function
-      // For now, we'll just log the notification details
-      debugPrint('📤 Would send notification:');
-      debugPrint('  To: $fcmToken');
-      debugPrint('  Title: $title');
-      debugPrint('  Body: $body');
-      debugPrint('  Data: $data');
-
-      // NOTE: Sending notifications from client is NOT recommended for production
-      // You should set up a backend service or Firebase Cloud Function
-      // Example Cloud Function implementation is provided below:
-      /*
-
-      // Firebase Cloud Function (Node.js)
-      const functions = require('firebase-functions');
-      const admin = require('firebase-admin');
-      admin.initializeApp();
-
-      exports.sendNotification = functions.https.onCall(async (data, context) => {
-        const { token, title, body, data: notificationData } = data;
-
-        const message = {
-          notification: { title, body },
-          data: notificationData || {},
-          token: token,
-        };
-
-        try {
-          const response = await admin.messaging().send(message);
-          return { success: true, response };
-        } catch (error) {
-          throw new functions.https.HttpsError('internal', error.message);
-        }
-      });
-
-      */
-    } catch (e, stackTrace) {
-      await CrashlyticsHelper.recordError(
-        e,
-        stackTrace,
-        reason: 'Error sending notification to user',
-        additionalInfo: {
-          'method': 'sendNotificationToUser',
-          'recipientUserId': recipientUserId,
-          'title': title,
-        },
-        fatal: false,
-      );
-      debugPrint('❌ Error sending notification: $e');
-    }
-  }
+  // ✅ ADDED: Stub methods for backward compatibility with existing code
+  // These methods don't actually send notifications anymore - Cloud Functions handle that
+  // They just log that the notification will be sent by Cloud Functions
 
   /// Send notification when someone likes a post
+  /// Note: This is now handled automatically by Cloud Functions
+  /// This method exists for backward compatibility
   Future<void> sendLikeNotification({
     required String postOwnerId,
     required String likerName,
     required String postTitle,
   }) async {
-    // Don't send notification if user likes their own post
-    // This check should be done before calling this method
+    debugPrint('📤 Like notification will be sent by Cloud Functions');
+    debugPrint('  Post Owner: $postOwnerId');
+    debugPrint('  Liker: $likerName');
+    debugPrint('  Post: $postTitle');
 
-    await sendNotificationToUser(
-      recipientUserId: postOwnerId,
-      title: '❤️ New Like',
-      body: '$likerName liked your post "$postTitle"',
-      data: {
-        'type': 'like',
-        'postOwnerId': postOwnerId,
-        'likerName': likerName,
-      },
-    );
+    // Cloud Functions automatically trigger when a like is added to Firestore
+    // No need to do anything here - the notification is handled server-side
   }
 
   /// Send notification when someone comments on a post
+  /// Note: This is now handled automatically by Cloud Functions
+  /// This method exists for backward compatibility
   Future<void> sendCommentNotification({
     required String postOwnerId,
     required String commenterName,
     required String postTitle,
     required String commentText,
   }) async {
-    // Don't send notification if user comments on their own post
-    // This check should be done before calling this method
-
-    await sendNotificationToUser(
-      recipientUserId: postOwnerId,
-      title: '💬 New Comment',
-      body: '$commenterName commented on your post "$postTitle"',
-      data: {
-        'type': 'comment',
-        'postOwnerId': postOwnerId,
-        'commenterName': commenterName,
-        'commentText': commentText,
-      },
+    debugPrint('📤 Comment notification will be sent by Cloud Functions');
+    debugPrint('  Post Owner: $postOwnerId');
+    debugPrint('  Commenter: $commenterName');
+    debugPrint('  Post: $postTitle');
+    debugPrint(
+      '  Comment: ${commentText.substring(0, commentText.length > 50 ? 50 : commentText.length)}...',
     );
+
+    // Cloud Functions automatically trigger when a comment is added to Firestore
+    // No need to do anything here - the notification is handled server-side
+  }
+
+  /// Send notification when someone follows a user
+  /// Note: This is now handled automatically by Cloud Functions
+  /// This method exists for backward compatibility
+  Future<void> sendFollowNotification({
+    required String userId,
+    required String followerName,
+  }) async {
+    debugPrint('📤 Follow notification will be sent by Cloud Functions');
+    debugPrint('  User: $userId');
+    debugPrint('  Follower: $followerName');
+
+    // Cloud Functions automatically trigger when a follower is added to Firestore
+    // No need to do anything here - the notification is handled server-side
   }
 
   /// Subscribe to a topic (for broadcast notifications)
