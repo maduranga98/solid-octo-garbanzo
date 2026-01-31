@@ -664,3 +664,365 @@ exports.cleanupFCMToken = onDocumentDeleted(
       return null;
     },
 );
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * BADGE SYSTEM - Auto-award badges based on user achievements
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/**
+ * Helper function to award a badge to a user
+ */
+async function awardBadge(userId, badgeId) {
+  const db = getFirestore();
+
+  try {
+    // Check if user already has this badge
+    const existingBadge = await db
+        .collection("users")
+        .doc(userId)
+        .collection("badges")
+        .doc(badgeId)
+        .get();
+
+    if (existingBadge.exists) {
+      logger.info(`User ${userId} already has badge ${badgeId}`);
+      return false;
+    }
+
+    // Get badge configuration
+    const badgeConfig = await db
+        .collection("badges_config")
+        .doc(badgeId)
+        .get();
+
+    if (!badgeConfig.exists) {
+      logger.error(`Badge config not found for ${badgeId}`);
+      return false;
+    }
+
+    const badgeData = badgeConfig.data();
+
+    // Create badge in user's badges subcollection
+    const batch = db.batch();
+
+    const badgeRef = db
+        .collection("users")
+        .doc(userId)
+        .collection("badges")
+        .doc(badgeId);
+
+    batch.set(badgeRef, {
+      id: badgeId,
+      name: badgeData.name,
+      description: badgeData.description,
+      icon: badgeData.icon,
+      category: badgeData.category,
+      earnedAt: getFirestore.FieldValue.serverTimestamp(),
+      isPrimary: false,
+    });
+
+    // Increment user's badge count
+    const userRef = db.collection("users").doc(userId);
+    batch.update(userRef, {
+      badgeCount: getFirestore.FieldValue.increment(1),
+    });
+
+    await batch.commit();
+
+    logger.info(`✅ Badge ${badgeId} awarded to user ${userId}`);
+    return true;
+  } catch (error) {
+    logger.error(`Error awarding badge ${badgeId} to user ${userId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * ✅ ACTIVE: Award Pioneer badge to first 100 users
+ */
+exports.checkPioneerBadge = onDocumentCreated(
+    {
+      document: "users/{userId}",
+      region: "us-central1",
+    },
+    async (event) => {
+      try {
+        const userId = event.params.userId;
+        const db = getFirestore();
+
+        logger.info(`Checking Pioneer badge for new user: ${userId}`);
+
+        // Count total users ordered by creation date
+        const usersSnapshot = await db
+            .collection("users")
+            .orderBy("createdAt")
+            .get();
+
+        const userCount = usersSnapshot.docs.length;
+
+        logger.info(`Total users: ${userCount}`);
+
+        // Award Pioneer badge if user is within first 100
+        if (userCount <= 100) {
+          await awardBadge(userId, "pioneer");
+          logger.info(`✅ Pioneer badge awarded to user ${userId} (user #${userCount})`);
+        } else {
+          logger.info(`User ${userId} is not in first 100 (user #${userCount})`);
+        }
+
+        return null;
+      } catch (error) {
+        logger.error("Error checking Pioneer badge:", error);
+        return null;
+      }
+    },
+);
+
+/**
+ * ✅ ACTIVE: Award Fresh Ink badge to freshers
+ */
+exports.checkFresherBadge = onDocumentCreated(
+    {
+      document: "users/{userId}",
+      region: "us-central1",
+    },
+    async (event) => {
+      try {
+        const userId = event.params.userId;
+        const userData = event.data.data();
+
+        logger.info(`Checking Fresher badge for new user: ${userId}`);
+
+        // Check if user marked themselves as fresher
+        if (userData.isFresher === true) {
+          await awardBadge(userId, "fresh_ink");
+          logger.info(`✅ Fresh Ink badge awarded to user ${userId}`);
+        } else {
+          logger.info(`User ${userId} is not a fresher`);
+        }
+
+        return null;
+      } catch (error) {
+        logger.error("Error checking Fresher badge:", error);
+        return null;
+      }
+    },
+);
+
+/**
+ * ✅ ACTIVE: Award First Words badge on first post
+ */
+exports.checkFirstPostBadge = onDocumentCreated(
+    {
+      document: "posts/{postId}",
+      region: "us-central1",
+    },
+    async (event) => {
+      try {
+        const postData = event.data.data();
+        const userId = postData.createdBy || postData.uid;
+        const db = getFirestore();
+
+        logger.info(`Checking First Words badge for user: ${userId}`);
+
+        // Count user's total posts
+        const postsSnapshot = await db
+            .collection("posts")
+            .where("createdBy", "==", userId)
+            .get();
+
+        const postCount = postsSnapshot.docs.length;
+
+        logger.info(`User ${userId} has ${postCount} posts`);
+
+        // Award First Words badge if this is their first post
+        if (postCount === 1) {
+          await awardBadge(userId, "first_words");
+          logger.info(`✅ First Words badge awarded to user ${userId}`);
+        }
+
+        return null;
+      } catch (error) {
+        logger.error("Error checking First Words badge:", error);
+        return null;
+      }
+    },
+);
+
+/**
+ * ✅ ACTIVE: Award Prolific Writer badge at 50 posts
+ */
+exports.checkProlificWriterBadge = onDocumentCreated(
+    {
+      document: "posts/{postId}",
+      region: "us-central1",
+    },
+    async (event) => {
+      try {
+        const postData = event.data.data();
+        const userId = postData.createdBy || postData.uid;
+        const db = getFirestore();
+
+        logger.info(`Checking Prolific Writer badge for user: ${userId}`);
+
+        // Count user's total posts
+        const postsSnapshot = await db
+            .collection("posts")
+            .where("createdBy", "==", userId)
+            .get();
+
+        const postCount = postsSnapshot.docs.length;
+
+        logger.info(`User ${userId} has ${postCount} posts`);
+
+        // Award Prolific Writer badge at exactly 50 posts
+        if (postCount === 50) {
+          await awardBadge(userId, "prolific_writer");
+          logger.info(`✅ Prolific Writer badge awarded to user ${userId}`);
+        }
+
+        return null;
+      } catch (error) {
+        logger.error("Error checking Prolific Writer badge:", error);
+        return null;
+      }
+    },
+);
+
+/**
+ * ✅ ACTIVE: Award Engaged Reader badge at 100 comments
+ */
+exports.checkEngagedReaderBadge = onDocumentCreated(
+    {
+      document: "posts/{postId}/comments/{commentId}",
+      region: "us-central1",
+    },
+    async (event) => {
+      try {
+        const commentData = event.data.data();
+        const userId = commentData.userId || commentData.authorId;
+        const db = getFirestore();
+
+        logger.info(`Checking Engaged Reader badge for user: ${userId}`);
+
+        // Count user's total comments across all posts
+        const postsSnapshot = await db.collection("posts").get();
+
+        let totalComments = 0;
+
+        for (const postDoc of postsSnapshot.docs) {
+          const commentsSnapshot = await db
+              .collection("posts")
+              .doc(postDoc.id)
+              .collection("comments")
+              .where("userId", "==", userId)
+              .get();
+
+          totalComments += commentsSnapshot.docs.length;
+
+          // Early exit if we've reached 100
+          if (totalComments >= 100) break;
+        }
+
+        logger.info(`User ${userId} has ${totalComments} comments`);
+
+        // Award Engaged Reader badge at exactly 100 comments
+        if (totalComments === 100) {
+          await awardBadge(userId, "engaged_reader");
+          logger.info(`✅ Engaged Reader badge awarded to user ${userId}`);
+        }
+
+        return null;
+      } catch (error) {
+        logger.error("Error checking Engaged Reader badge:", error);
+        return null;
+      }
+    },
+);
+
+/**
+ * ✅ ACTIVE: Award Rising Star badge (1000 likes in first month)
+ */
+exports.checkRisingStarBadge = onDocumentCreated(
+    {
+      document: "posts/{postId}/likes/{likeId}",
+      region: "us-central1",
+    },
+    async (event) => {
+      try {
+        const postId = event.params.postId;
+        const db = getFirestore();
+
+        // Get post data to find the author
+        const postDoc = await db.collection("posts").doc(postId).get();
+        if (!postDoc.exists) {
+          logger.warn("Post not found");
+          return null;
+        }
+
+        const postData = postDoc.data();
+        const userId = postData.createdBy || postData.uid;
+
+        logger.info(`Checking Rising Star badge for user: ${userId}`);
+
+        // Get user's creation date
+        const userDoc = await db.collection("users").doc(userId).get();
+        if (!userDoc.exists) {
+          logger.warn("User not found");
+          return null;
+        }
+
+        const userData = userDoc.data();
+        const createdAt = userData.createdAt ? userData.createdAt.toDate() : null;
+
+        if (!createdAt) {
+          logger.warn("User creation date not found");
+          return null;
+        }
+
+        // Check if user is within first 30 days
+        const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+
+        if (daysSinceCreation > 30) {
+          logger.info(`User ${userId} is beyond first month (${daysSinceCreation.toFixed(0)} days)`);
+          return null;
+        }
+
+        // Count total likes on all user's posts
+        const userPostsSnapshot = await db
+            .collection("posts")
+            .where("createdBy", "==", userId)
+            .get();
+
+        let totalLikes = 0;
+
+        for (const postDoc of userPostsSnapshot.docs) {
+          const likesSnapshot = await db
+              .collection("posts")
+              .doc(postDoc.id)
+              .collection("likes")
+              .get();
+
+          totalLikes += likesSnapshot.docs.length;
+
+          // Early exit if we've reached 1000
+          if (totalLikes >= 1000) break;
+        }
+
+        logger.info(`User ${userId} has ${totalLikes} total likes (within first ${daysSinceCreation.toFixed(0)} days)`);
+
+        // Award Rising Star badge at exactly 1000 likes within first month
+        if (totalLikes === 1000 && daysSinceCreation <= 30) {
+          await awardBadge(userId, "rising_star");
+          logger.info(`✅ Rising Star badge awarded to user ${userId}`);
+        }
+
+        return null;
+      } catch (error) {
+        logger.error("Error checking Rising Star badge:", error);
+        return null;
+      }
+    },
+);

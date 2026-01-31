@@ -8,6 +8,7 @@ import 'package:versewing/models/post_model.dart';
 import 'package:versewing/providers/auth_provider.dart';
 import 'package:versewing/providers/user_provider.dart';
 import 'package:versewing/screens/profile/user_profile.dart';
+import 'package:versewing/services/post_view_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class FullPostBottomSheet extends ConsumerWidget {
@@ -83,21 +84,22 @@ class FullPostBottomSheet extends ConsumerWidget {
     );
   }
 
-  /// Increment view count only if viewer is not the post author
+  /// Track view with cooldown to prevent spam
   Future<void> _incrementViewCount(WidgetRef ref) async {
     try {
       final currentUser = ref.read(firebaseAuthProvider).currentUser;
 
-      // Only increment if user is logged in and is not the post author
+      // Only track if user is logged in and is not the post author
       if (currentUser != null && currentUser.uid != post.createdBy) {
-        await FirebaseFirestore.instance
-            .collection("posts")
-            .doc(post.docId)
-            .update({"viewCount": FieldValue.increment(1)});
+        // Use PostViewService with 2-second delay for better accuracy
+        await Future.delayed(const Duration(seconds: 2));
+
+        final viewService = PostViewService();
+        await viewService.trackPostView(post.docId);
       }
     } catch (e) {
       // Silently fail - view count is not critical
-      print('Error incrementing view count: $e');
+      print('Error tracking view: $e');
     }
   }
 

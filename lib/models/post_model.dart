@@ -16,6 +16,8 @@ class PostModel {
   final int? likeCount;
   final int? shareCount;
   final int? viewCount;
+  final int? uniqueReaders;
+  final DateTime? lastViewedAt;
   final DateTime createdAt;
 
   PostModel({
@@ -34,6 +36,8 @@ class PostModel {
     this.likeCount,
     this.shareCount,
     this.viewCount,
+    this.uniqueReaders,
+    this.lastViewedAt,
     required this.createdAt,
   });
 
@@ -73,6 +77,10 @@ class PostModel {
       likeCount: _safeToInt(data['likeCount']),
       shareCount: _safeToInt(data['shareCount']),
       viewCount: _safeToInt(data['viewCount']),
+      uniqueReaders: _safeToInt(data['uniqueReaders']),
+      lastViewedAt: data['lastViewedAt'] != null
+          ? (data['lastViewedAt'] as Timestamp).toDate()
+          : null,
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -98,6 +106,10 @@ class PostModel {
       likeCount: _safeToInt(data['likeCount']),
       shareCount: _safeToInt(data['shareCount']),
       viewCount: _safeToInt(data['viewCount']),
+      uniqueReaders: _safeToInt(data['uniqueReaders']),
+      lastViewedAt: data['lastViewedAt'] != null
+          ? (data['lastViewedAt'] as Timestamp).toDate()
+          : null,
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -121,6 +133,10 @@ class PostModel {
       "likeCount": likeCount ?? 0,
       "shareCount": shareCount ?? 0,
       "viewCount": viewCount ?? 0,
+      "uniqueReaders": uniqueReaders ?? 0,
+      "lastViewedAt": lastViewedAt != null
+          ? Timestamp.fromDate(lastViewedAt!)
+          : null,
       "createdAt": Timestamp.fromDate(createdAt),
     };
   }
@@ -141,6 +157,8 @@ class PostModel {
     int? likeCount,
     int? shareCount,
     int? viewCount,
+    int? uniqueReaders,
+    DateTime? lastViewedAt,
     DateTime? createdAt,
   }) {
     return PostModel(
@@ -159,6 +177,8 @@ class PostModel {
       likeCount: likeCount ?? this.likeCount,
       shareCount: shareCount ?? this.shareCount,
       viewCount: viewCount ?? this.viewCount,
+      uniqueReaders: uniqueReaders ?? this.uniqueReaders,
+      lastViewedAt: lastViewedAt ?? this.lastViewedAt,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -203,6 +223,8 @@ class PostModel {
         other.likeCount == likeCount &&
         other.shareCount == shareCount &&
         other.viewCount == viewCount &&
+        other.uniqueReaders == uniqueReaders &&
+        other.lastViewedAt == lastViewedAt &&
         other.createdAt == createdAt;
   }
 
@@ -222,6 +244,8 @@ class PostModel {
         likeCount.hashCode ^
         shareCount.hashCode ^
         viewCount.hashCode ^
+        uniqueReaders.hashCode ^
+        lastViewedAt.hashCode ^
         createdAt.hashCode;
   }
 }

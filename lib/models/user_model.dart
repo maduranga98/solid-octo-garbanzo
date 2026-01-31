@@ -13,6 +13,10 @@ class UserModel {
   final int postCount;
   final int followersCount;
   final int followingCount;
+  final int badgeCount;
+  final int totalLikes;
+  final int totalComments;
+  final bool isFresher;
   final DateTime createdAt;
 
   // New fields for language preferences
@@ -44,6 +48,10 @@ class UserModel {
     required this.postCount,
     required this.followersCount,
     required this.followingCount,
+    this.badgeCount = 0,
+    this.totalLikes = 0,
+    this.totalComments = 0,
+    this.isFresher = false,
     required this.createdAt,
     this.preferredReadingLanguages = const ['English'],
     this.preferredWritingLanguage = 'English',
@@ -99,6 +107,10 @@ class UserModel {
       postCount: data['postCount'] ?? 0,
       followersCount: data['followersCount'] ?? 0,
       followingCount: data['followingCount'] ?? 0,
+      badgeCount: data['badgeCount'] ?? 0,
+      totalLikes: data['totalLikes'] ?? 0,
+      totalComments: data['totalComments'] ?? 0,
+      isFresher: data['isFresher'] ?? false,
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -141,6 +153,10 @@ class UserModel {
       postCount: data['postCount'] ?? 0,
       followersCount: data['followersCount'] ?? 0,
       followingCount: data['followingCount'] ?? 0,
+      badgeCount: data['badgeCount'] ?? 0,
+      totalLikes: data['totalLikes'] ?? 0,
+      totalComments: data['totalComments'] ?? 0,
+      isFresher: data['isFresher'] ?? false,
       createdAt: data['createdAt'] != null
           ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -181,6 +197,10 @@ class UserModel {
       "postCount": postCount,
       "followersCount": followersCount,
       "followingCount": followingCount,
+      "badgeCount": badgeCount,
+      "totalLikes": totalLikes,
+      "totalComments": totalComments,
+      "isFresher": isFresher,
       "createdAt": Timestamp.fromDate(createdAt),
       "preferredReadingLanguages": preferredReadingLanguages,
       "preferredWritingLanguage": preferredWritingLanguage,
@@ -209,6 +229,10 @@ class UserModel {
     int? postCount,
     int? followersCount,
     int? followingCount,
+    int? badgeCount,
+    int? totalLikes,
+    int? totalComments,
+    bool? isFresher,
     DateTime? createdAt,
     List<String>? preferredReadingLanguages,
     String? preferredWritingLanguage,
@@ -234,6 +258,10 @@ class UserModel {
       postCount: postCount ?? this.postCount,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
+      badgeCount: badgeCount ?? this.badgeCount,
+      totalLikes: totalLikes ?? this.totalLikes,
+      totalComments: totalComments ?? this.totalComments,
+      isFresher: isFresher ?? this.isFresher,
       createdAt: createdAt ?? this.createdAt,
       preferredReadingLanguages:
           preferredReadingLanguages ?? this.preferredReadingLanguages,
