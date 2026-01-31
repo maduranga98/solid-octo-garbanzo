@@ -160,7 +160,7 @@ class PostInteractionService {
         shareText,
         subject: post.title.isNotEmpty
             ? post.title
-            : 'Check out this post on Poetic',
+            : 'Check out this post on VerseWing',
       );
 
       if (result.status == ShareResultStatus.success) {
@@ -209,8 +209,8 @@ class PostInteractionService {
   /// Copy post link to clipboard
   Future<void> copyPostLink(PostModel post, BuildContext context) async {
     try {
-      // Create a shareable link (replace with your actual deep link)
-      final postLink = 'https://poetic.app/post/${post.docId}';
+      // VerseWing Play Store link
+      final postLink = 'https://play.google.com/store/apps/details?id=com.versewing.app';
 
       await Clipboard.setData(ClipboardData(text: postLink));
 
@@ -278,9 +278,9 @@ class PostInteractionService {
     buffer.writeln('By ${post.authorName}');
     buffer.writeln();
 
-    // Add app link (replace with your actual link)
+    // Add VerseWing Play Store link
     buffer.writeln(
-      'Read more on Poetic: https://poetic.app/post/${post.docId}',
+      'Read more on VerseWing: https://play.google.com/store/apps/details?id=com.versewing.app',
     );
 
     return buffer.toString();
