@@ -129,6 +129,24 @@ service cloud.firestore {
         // Only the user can access their own drafts
         allow read, write: if isOwner(userId);
       }
+
+      // ------------------------------------------
+      // BADGES SUBCOLLECTION
+      // ------------------------------------------
+      match /badges/{badgeId} {
+        // Anyone can read badges
+        allow read: if true;
+
+        // Only Cloud Functions can award badges
+        allow create: if false;
+
+        // Users can update isPrimary field only
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPrimary']);
+
+        // Badges cannot be deleted
+        allow delete: if false;
+      }
     }
 
 
@@ -147,9 +165,11 @@ service cloud.firestore {
         // Author can update content
         (resource.data.createdBy == request.auth.uid)
         ||
-        // Anyone can update ONLY counters
+        // Anyone can update ONLY counters (including view tracking fields)
         (request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['likeCount', 'commentCount', 'shareCount', 'viewCount', 'updatedAt']))
+          .hasOnly(['likeCount', 'commentCount', 'shareCount', 'viewCount', 'uniqueReaders', 'lastViewedAt', 'updatedAt'])
+          && request.resource.data.viewCount >= resource.data.viewCount
+          && request.resource.data.uniqueReaders >= resource.data.uniqueReaders)
       );
 
       allow delete: if resource.data.createdBy == request.auth.uid;
@@ -161,6 +181,26 @@ service cloud.firestore {
       match /likes/{userId} {
         allow read: if isAuthenticated();
         allow create, delete: if isAuthenticated();
+      }
+
+
+      // ------------------------------------------
+      // POST VIEWS SUBCOLLECTION
+      // ------------------------------------------
+      match /post_views/{userId} {
+        // Anyone authenticated can read view stats
+        allow read: if isAuthenticated();
+
+        // Users can create their own view record
+        allow create: if isAuthenticated()
+          && userId == request.auth.uid;
+
+        // Users can update their own view record
+        allow update: if isAuthenticated()
+          && userId == request.auth.uid;
+
+        // View records cannot be deleted (for analytics integrity)
+        allow delete: if false;
       }
 
 
@@ -228,6 +268,19 @@ service cloud.firestore {
         && isValidString(request.resource.data.reason);
 
       allow update, delete: if false;
+    }
+
+
+    // ==========================================
+    // BADGE CONFIGURATIONS COLLECTION
+    // ==========================================
+
+    match /badges_config/{badgeId} {
+      // Anyone can read badge configurations
+      allow read: if true;
+
+      // Only admins/backend can write (effectively read-only for users)
+      allow write: if false;
     }
 
 
