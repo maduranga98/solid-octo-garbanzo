@@ -20,6 +20,7 @@ class PostRepository {
   Stream<List<PostModel>> getPost() {
     return firestore
         .collection('posts')
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
           (snapshot) =>
@@ -32,6 +33,7 @@ class PostRepository {
     return firestore
         .collection("posts")
         .where('createdBy', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
           (snapshot) =>
