@@ -28,8 +28,8 @@ class PostViewService {
       }
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to track view for post $postId',
       );
       print('Error tracking view: $e');
@@ -120,8 +120,8 @@ class PostViewService {
       print('✅ View recorded for post $postId');
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to record view for post $postId',
       );
       print('Error recording view: $e');
@@ -153,8 +153,8 @@ class PostViewService {
       );
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to get view stats for post $postId',
       );
       return ViewStats(
@@ -192,8 +192,8 @@ class PostViewService {
       );
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to get user view stats for post $postId',
       );
       return null;
@@ -262,8 +262,8 @@ class PostViewService {
       }).toList();
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to get trending posts',
       );
       return [];
@@ -286,8 +286,8 @@ class PostViewService {
       }).toList();
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to get top viewed posts',
       );
       return [];

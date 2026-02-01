@@ -69,8 +69,8 @@ class BadgeService {
       return true;
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to award badge $badgeId to user $userId',
       );
       print('Error awarding badge: $e');
@@ -104,8 +104,8 @@ class BadgeService {
       return snapshot.docs.map((doc) => Badge.fromFirestore(doc)).toList();
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to get badges for user $userId',
       );
       return [];
@@ -142,8 +142,8 @@ class BadgeService {
       return Badge.fromFirestore(snapshot.docs.first);
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to get primary badge for user $userId',
       );
       return null;
@@ -180,8 +180,8 @@ class BadgeService {
       print('✅ Set badge $badgeId as primary for user $userId');
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to set primary badge $badgeId for user $userId',
       );
       print('Error setting primary badge: $e');
@@ -221,8 +221,8 @@ class BadgeService {
       return snapshot.docs.map((doc) => Badge.fromFirestore(doc)).toList();
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to get top badges for user $userId',
       );
       return [];
@@ -238,8 +238,8 @@ class BadgeService {
           .toList();
     } catch (e, stackTrace) {
       await CrashlyticsHelper.recordError(
-        error: e,
-        stackTrace: stackTrace,
+        e,
+        stackTrace,
         reason: 'Failed to get badge configs',
       );
       return [];
