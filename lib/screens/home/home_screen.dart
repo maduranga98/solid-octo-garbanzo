@@ -22,6 +22,7 @@ import 'package:versewing/screens/search/user_search_screen.dart';
 import 'package:versewing/widgets/commentsBottomSheet.dart';
 import 'package:versewing/widgets/fullPostBottomSheet.dart';
 import 'package:versewing/widgets/theme_switcher.dart';
+import 'package:versewing/widgets/profile_picture_with_badge.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -530,21 +531,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // Avatar with tap gesture
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              UserProfile(userId: post.createdBy),
-                        ),
-                      );
-                    },
-                    child: userAsync.when(
-                      data: (user) {
-                        if (user == null) {
-                          return CircleAvatar(
+                  // Avatar with badge
+                  userAsync.when(
+                    data: (user) {
+                      if (user == null) {
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    UserProfile(userId: post.createdBy),
+                              ),
+                            );
+                          },
+                          child: CircleAvatar(
                             radius: 20,
                             backgroundColor: colorScheme.primaryContainer,
                             child: Icon(
@@ -552,40 +553,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               color: colorScheme.onPrimaryContainer,
                               size: 20,
                             ),
-                          );
-                        }
-                        return CircleAvatar(
-                          radius: 20,
-                          backgroundColor: colorScheme.primaryContainer,
-                          backgroundImage:
-                              user.photoURl != null && user.photoURl!.isNotEmpty
-                              ? NetworkImage(user.photoURl!)
-                              : null,
-                          child: user.photoURl == null || user.photoURl!.isEmpty
-                              ? Text(
-                                  user.userName.isNotEmpty
-                                      ? user.userName[0].toUpperCase()
-                                      : '?',
-                                  style: TextStyle(
-                                    color: colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                )
-                              : null,
+                          ),
                         );
-                      },
-                      loading: () => CircleAvatar(
-                        radius: 20,
-                        backgroundColor: colorScheme.surfaceContainerHighest,
-                      ),
-                      error: (_, __) => CircleAvatar(
-                        radius: 20,
-                        backgroundColor: colorScheme.errorContainer,
-                        child: Icon(
-                          Icons.error_outline,
-                          color: colorScheme.onErrorContainer,
-                          size: 20,
-                        ),
+                      }
+                      return ProfilePictureWithBadge(
+                        userId: post.createdBy,
+                        profileImageUrl: user.photoURl,
+                        size: 40,
+                        showBadgeIcon: true,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  UserProfile(userId: post.createdBy),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    loading: () => CircleAvatar(
+                      radius: 20,
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                    ),
+                    error: (_, __) => CircleAvatar(
+                      radius: 20,
+                      backgroundColor: colorScheme.errorContainer,
+                      child: Icon(
+                        Icons.error_outline,
+                        color: colorScheme.onErrorContainer,
+                        size: 20,
                       ),
                     ),
                   ),
