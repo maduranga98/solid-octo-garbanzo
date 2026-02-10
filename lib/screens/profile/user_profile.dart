@@ -13,6 +13,8 @@ import 'package:versewing/widgets/draft.dart';
 import 'package:versewing/widgets/ideas.dart';
 import 'package:versewing/widgets/posted.dart';
 import 'package:versewing/widgets/report_dialog.dart';
+import 'package:versewing/widgets/profile_picture_with_badge.dart';
+import 'package:versewing/widgets/badge_grid.dart';
 
 final isFollowingProvider = StreamProvider.family<bool, String>((ref, userId) {
   final currentUser = ref.watch(firebaseAuthProvider).currentUser;
@@ -93,7 +95,7 @@ class UserProfile extends ConsumerWidget {
     final userAsync = ref.watch(userDataStreamProvider(profileUserId));
 
     return DefaultTabController(
-      length: isOwnProfile ? 3 : 1,
+      length: isOwnProfile ? 4 : 2,
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         body: userAsync.when(
@@ -216,6 +218,7 @@ class UserProfile extends ConsumerWidget {
                             Tab(text: "Posted"),
                             Tab(text: "Draft"),
                             Tab(text: "Ideas"),
+                            Tab(text: "Badges"),
                           ],
                         )
                       : TabBar(
@@ -235,7 +238,10 @@ class UserProfile extends ConsumerWidget {
                             fontSize: 15,
                           ),
                           indicatorWeight: 3,
-                          tabs: const [Tab(text: "Posted")],
+                          tabs: const [
+                            Tab(text: "Posted"),
+                            Tab(text: "Badges"),
+                          ],
                         ),
                 ),
               ],
@@ -245,8 +251,16 @@ class UserProfile extends ConsumerWidget {
                         Posted(currentUser.uid, user.userName),
                         Draft(userName: user.userName),
                         const Ideas(),
+                        SingleChildScrollView(
+                          child: BadgeGrid(userId: profileUserId),
+                        ),
                       ]
-                    : [Posted(profileUserId, user.userName)],
+                    : [
+                        Posted(profileUserId, user.userName),
+                        SingleChildScrollView(
+                          child: BadgeGrid(userId: profileUserId),
+                        ),
+                      ],
               ),
             );
           },
@@ -270,7 +284,6 @@ class UserProfile extends ConsumerWidget {
   ) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final primaryColor = theme.primaryColor;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -278,48 +291,11 @@ class UserProfile extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isDark
-                    ? Colors.grey.shade600
-                    : primaryColor.withValues(alpha: 0.5),
-                width: 3,
-              ),
-              boxShadow: isDark
-                  ? [
-                      BoxShadow(
-                        color: Colors.grey.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: CircleAvatar(
-              radius: 42,
-              backgroundColor: isDark
-                  ? Colors.grey.shade800
-                  : primaryColor.withValues(alpha: 0.15),
-              backgroundImage:
-                  user.photoURl != null && user.photoURl!.isNotEmpty
-                  ? NetworkImage(user.photoURl!)
-                  : null,
-              child: user.photoURl == null || user.photoURl!.isEmpty
-                  ? Text(
-                      user.firstname != null && user.firstname.isNotEmpty
-                          ? user.firstname[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : primaryColor,
-                      ),
-                    )
-                  : null,
-            ),
+          ProfilePictureWithBadge(
+            userId: profileUserId,
+            profileImageUrl: user.photoURl,
+            size: 88,
+            showBadgeIcon: true,
           ),
           const SizedBox(height: 14),
           Text(

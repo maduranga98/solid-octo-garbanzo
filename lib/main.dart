@@ -19,6 +19,7 @@ import 'package:versewing/screens/home/home_screen.dart';
 import 'package:versewing/screens/splash_screen.dart';
 import 'package:versewing/services/fcm_service.dart';
 import 'package:versewing/utils/crashlytics_helper.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'firebase_options.dart';
 
 // Background message handler for Firebase Cloud Messaging
@@ -47,7 +48,37 @@ void main() async {
     return true;
   };
 
+  // Initialize badge configs and retroactively award badges (fire-and-forget, one-time)
+  _initializeBadgeSystem();
+
   runApp(const ProviderScope(child: MyApp()));
+}
+
+/// One-time badge system initialization (fire-and-forget)
+/// Populates badges_config and awards badges to existing users
+void _initializeBadgeSystem() async {
+  try {
+    final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+
+    // Check if badge configs already exist
+    final configSnapshot = await FirebaseFirestore.instance
+        .collection('badges_config')
+        .limit(1)
+        .get();
+
+    if (configSnapshot.docs.isEmpty) {
+      // Initialize badge configurations
+      await functions.httpsCallable('initializeBadgeConfigs').call();
+      print('Badge configs initialized');
+
+      // Retroactively award badges to existing users
+      await functions.httpsCallable('retroactivelyAwardBadges').call();
+      print('Retroactive badges awarded');
+    }
+  } catch (e) {
+    // Non-critical, don't crash the app
+    print('Badge initialization skipped: $e');
+  }
 }
 
 class MyApp extends ConsumerWidget {

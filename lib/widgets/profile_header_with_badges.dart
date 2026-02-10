@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 import '../models/badge_model.dart';
 import '../services/badge_service.dart';
 import 'profile_picture_with_badge.dart';
@@ -78,10 +78,7 @@ class _ProfileHeaderWithBadgesState extends State<ProfileHeaderWithBadges> {
         // Username
         Text(
           widget.username,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
       ],
@@ -98,10 +95,7 @@ class _ProfileHeaderWithBadgesState extends State<ProfileHeaderWithBadges> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.white,
-          border: Border.all(
-            color: _getBadgeColor(badge.category),
-            width: 2,
-          ),
+          border: Border.all(color: _getBadgeColor(badge.category), width: 2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -111,10 +105,7 @@ class _ProfileHeaderWithBadgesState extends State<ProfileHeaderWithBadges> {
           ],
         ),
         child: Center(
-          child: Text(
-            badge.icon,
-            style: const TextStyle(fontSize: 16),
-          ),
+          child: Text(badge.icon, style: const TextStyle(fontSize: 16)),
         ),
       ),
     );
@@ -138,10 +129,8 @@ class _ProfileHeaderWithBadgesState extends State<ProfileHeaderWithBadges> {
   void _showBadgeDetails(Badge badge) {
     showDialog(
       context: context,
-      builder: (context) => BadgeDetailModal(
-        badge: badge,
-        userId: widget.userId,
-      ),
+      builder: (context) =>
+          BadgeDetailModal(badge: badge, userId: widget.userId),
     );
   }
 }

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Bash(firebase functions:list:*)",
+      "Bash(npm install:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(firebase functions:call:*)",
+      "Bash(where gcloud:*)",
+      "Bash(flutter pub add:*)",
+      "Bash(flutter pub get:*)"
+    ]
+  }
+}

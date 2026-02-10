@@ -44,26 +44,26 @@ service cloud.firestore {
     // ==========================================
 
     match /users/{userId} {
-      // FIX: Allow reading for username availability check during signup
-      // Anyone can read user profiles (even during signup for username check)
       allow read: if true;
 
-      allow create: if isOwner(userId)
+      allow create: if isAuthenticated()
+        && request.auth.uid == userId
         && isValidString(request.resource.data.firstname)
         && isValidString(request.resource.data.lastname)
         && isValidEmail(request.resource.data.email)
         && isValidUsername(request.resource.data.userName)
         && request.resource.data.uid == userId;
 
-      // Allow updating followingCount and followersCount + profile updates
+      // MERGED: Single update rule with all counter fields
       allow update: if isAuthenticated() && (
         // Owner can update their profile
         (isOwner(userId)
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.email == resource.data.email)
         ||
-        // Anyone authenticated can update ONLY the counter fields (for follow/unfollow)
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followingCount', 'followersCount', 'updatedAt']))
+        // Anyone authenticated can update ONLY counter fields
+        (request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['followingCount', 'followersCount', 'badgeCount', 'postCount', 'updatedAt']))
       );
 
       allow delete: if isOwner(userId);
@@ -122,25 +122,35 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
+
       // ------------------------------------------
-      // DRAFTS SUBCOLLECTION
+      // DRAFTS SUBCOLLECTION (Post Drafts)
       // ------------------------------------------
       match /drafts/{draftId} {
-        // Only the user can access their own drafts
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && request.resource.data.createdBy == userId;
+
+        allow update: if isOwner(userId)
+          && resource.data.createdBy == userId;
+
+        allow delete: if isOwner(userId)
+          && resource.data.createdBy == userId;
       }
+
 
       // ------------------------------------------
       // BADGES SUBCOLLECTION
       // ------------------------------------------
       match /badges/{badgeId} {
-        // Anyone can read badges
+        // Anyone can read badges (for profile display)
         allow read: if true;
 
         // Only Cloud Functions can award badges
         allow create: if false;
 
-        // Users can update isPrimary field only
+        // Users can update only isPrimary field
         allow update: if isOwner(userId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPrimary']);
 
@@ -160,16 +170,13 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && request.resource.data.createdBy == request.auth.uid;
 
-      // Allow counters to be updated by anyone
       allow update: if isAuthenticated() && (
         // Author can update content
         (resource.data.createdBy == request.auth.uid)
         ||
         // Anyone can update ONLY counters (including view tracking fields)
         (request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['likeCount', 'commentCount', 'shareCount', 'viewCount', 'uniqueReaders', 'lastViewedAt', 'updatedAt'])
-          && request.resource.data.viewCount >= resource.data.viewCount
-          && request.resource.data.uniqueReaders >= resource.data.uniqueReaders)
+          .hasOnly(['likeCount', 'commentCount', 'shareCount', 'viewCount', 'uniqueReaders', 'lastViewedAt', 'updatedAt']))
       );
 
       allow delete: if resource.data.createdBy == request.auth.uid;
@@ -187,19 +194,10 @@ service cloud.firestore {
       // ------------------------------------------
       // POST VIEWS SUBCOLLECTION
       // ------------------------------------------
-      match /post_views/{userId} {
-        // Anyone authenticated can read view stats
+      match /post_views/{viewUserId} {
         allow read: if isAuthenticated();
-
-        // Users can create their own view record
-        allow create: if isAuthenticated()
-          && userId == request.auth.uid;
-
-        // Users can update their own view record
-        allow update: if isAuthenticated()
-          && userId == request.auth.uid;
-
-        // View records cannot be deleted (for analytics integrity)
+        allow create: if isAuthenticated() && viewUserId == request.auth.uid;
+        allow update: if isAuthenticated() && viewUserId == request.auth.uid;
         allow delete: if false;
       }
 
@@ -248,7 +246,7 @@ service cloud.firestore {
 
     match /commentLikes/{likeId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() 
+      allow create: if isAuthenticated()
         && request.resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated()
         && resource.data.userId == request.auth.uid;
@@ -260,12 +258,12 @@ service cloud.firestore {
     // ==========================================
 
     match /reports/{reportId} {
-      allow read: if isAuthenticated()
-        && resource.data.reportedBy == request.auth.uid;
+      allow read: if isAuthenticated();
 
       allow create: if isAuthenticated()
         && request.resource.data.reportedBy == request.auth.uid
-        && isValidString(request.resource.data.reason);
+        && isValidString(request.resource.data.reason)
+        && request.resource.data.keys().hasAll(['reportedBy', 'reason', 'reportedAt']);
 
       allow update, delete: if false;
     }
@@ -276,10 +274,7 @@ service cloud.firestore {
     // ==========================================
 
     match /badges_config/{badgeId} {
-      // Anyone can read badge configurations
       allow read: if true;
-
-      // Only admins/backend can write (effectively read-only for users)
       allow write: if false;
     }
 
