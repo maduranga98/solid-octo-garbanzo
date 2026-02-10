@@ -13,7 +13,7 @@ const {
   onDocumentUpdated,
 } = require("firebase-functions/v2/firestore");
 const {initializeApp} = require("firebase-admin/app");
-const {getFirestore} = require("firebase-admin/firestore");
+const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
 const {logger} = require("firebase-functions");
 
@@ -672,13 +672,72 @@ exports.cleanupFCMToken = onDocumentDeleted(
  */
 
 /**
+ * Hardcoded badge configurations (fallback when badges_config collection is empty)
+ */
+const BADGE_CONFIGS = {
+  pioneer: {
+    name: "Pioneer",
+    description: "First 100 members to join VerseWing",
+    icon: "🌟",
+    category: "achievement",
+  },
+  first_words: {
+    name: "First Words",
+    description: "Published your first post",
+    icon: "✍️",
+    category: "achievement",
+  },
+  fresh_ink: {
+    name: "Fresh Ink",
+    description: "Welcome to VerseWing, fresher!",
+    icon: "🆕",
+    category: "achievement",
+  },
+  prolific_writer: {
+    name: "Prolific Writer",
+    description: "Published 50+ posts",
+    icon: "📚",
+    category: "achievement",
+  },
+  engaged_reader: {
+    name: "Engaged Reader",
+    description: "Left 100+ comments",
+    icon: "💬",
+    category: "achievement",
+  },
+  rising_star: {
+    name: "Rising Star",
+    description: "Gained 1000+ likes within first month",
+    icon: "⭐",
+    category: "recognition",
+  },
+  community_favorite: {
+    name: "Community Favorite",
+    description: "Your post reached top 10 trending",
+    icon: "❤️",
+    category: "recognition",
+  },
+  consistent_creator: {
+    name: "Consistent Creator",
+    description: "Posted for 30 consecutive days",
+    icon: "🔥",
+    category: "recognition",
+  },
+  versewing_team: {
+    name: "VerseWing Team",
+    description: "Official VerseWing team member",
+    icon: "👑",
+    category: "special",
+  },
+};
+
+/**
  * Helper function to award a badge to a user
  */
 async function awardBadge(userId, badgeId) {
   const db = getFirestore();
 
   try {
-    // Check if user already has this badge
     const existingBadge = await db
         .collection("users")
         .doc(userId)
@@ -691,20 +750,20 @@ async function awardBadge(userId, badgeId) {
       return false;
     }
 
-    // Get badge configuration
-    const badgeConfig = await db
-        .collection("badges_config")
-        .doc(badgeId)
-        .get();
+    // Try Firestore config first, fall back to hardcoded config
+    let badgeData;
+    const badgeConfig = await db.collection("badges_config").doc(badgeId).get();
 
-    if (!badgeConfig.exists) {
+    if (badgeConfig.exists) {
+      badgeData = badgeConfig.data();
+    } else if (BADGE_CONFIGS[badgeId]) {
+      badgeData = BADGE_CONFIGS[badgeId];
+      logger.info(`Using fallback config for badge ${badgeId}`);
+    } else {
       logger.error(`Badge config not found for ${badgeId}`);
       return false;
     }
 
-    const badgeData = badgeConfig.data();
-
-    // Create badge in user's badges subcollection
     const batch = db.batch();
 
     const badgeRef = db
@@ -719,14 +778,13 @@ async function awardBadge(userId, badgeId) {
       description: badgeData.description,
       icon: badgeData.icon,
       category: badgeData.category,
-      earnedAt: getFirestore.FieldValue.serverTimestamp(),
+      earnedAt: FieldValue.serverTimestamp(),
       isPrimary: false,
     });
 
-    // Increment user's badge count
     const userRef = db.collection("users").doc(userId);
     batch.update(userRef, {
-      badgeCount: getFirestore.FieldValue.increment(1),
+      badgeCount: FieldValue.increment(1),
     });
 
     await batch.commit();
@@ -739,6 +797,91 @@ async function awardBadge(userId, badgeId) {
   }
 }
 
+/**
+ * Initialize badge configurations in Firestore (callable by admin)
+ * This populates the badges_config collection using Admin SDK (bypasses rules)
+ */
+exports.initializeBadgeConfigs = onCall(
+    {region: "us-central1"},
+    async () => {
+      const db = getFirestore();
+      const batch = db.batch();
+      let count = 0;
+
+      for (const [badgeId, config] of Object.entries(BADGE_CONFIGS)) {
+        const docRef = db.collection("badges_config").doc(badgeId);
+        batch.set(docRef, {
+          id: badgeId,
+          ...config,
+          criteria: {},
+        });
+        count++;
+      }
+
+      await batch.commit();
+      logger.info(`✅ Initialized ${count} badge configurations`);
+      return {success: true, count};
+    },
+);
+
+/**
+ * One-time callable: Retroactively award badges to all existing users
+ * Call once, then remove
+ */
+exports.retroactivelyAwardBadges = onCall(
+    {region: "us-central1"},
+    async (request) => {
+      const db = getFirestore();
+      const results = {
+        pioneer: 0,
+        first_words: 0,
+        errors: [],
+      };
+
+      try {
+      // Get all users ordered by creation date
+        const usersSnapshot = await db
+            .collection("users")
+            .orderBy("createdAt", "asc")
+            .get();
+
+        let userIndex = 0;
+
+        for (const userDoc of usersSnapshot.docs) {
+          userIndex++;
+          const userId = userDoc.id;
+
+          try {
+          // Award Pioneer badge to first 100 users
+            if (userIndex <= 100) {
+              const awarded = await awardBadge(userId, "pioneer");
+              if (awarded) results.pioneer++;
+            }
+
+            // Check if user has any posts -> award First Words
+            const postsSnapshot = await db
+                .collection("posts")
+                .where("createdBy", "==", userId)
+                .limit(1)
+                .get();
+
+            if (!postsSnapshot.empty) {
+              const awarded = await awardBadge(userId, "first_words");
+              if (awarded) results.first_words++;
+            }
+          } catch (err) {
+            results.errors.push(`${userId}: ${err.message}`);
+          }
+        }
+
+        logger.info("Retroactive badge results:", results);
+        return results;
+      } catch (error) {
+        logger.error("Error in retroactive badges:", error);
+        throw new HttpsError("internal", error.message);
+      }
+    },
+);
 /**
  * ✅ ACTIVE: Award Pioneer badge to first 100 users
  */
@@ -767,7 +910,9 @@ exports.checkPioneerBadge = onDocumentCreated(
         // Award Pioneer badge if user is within first 100
         if (userCount <= 100) {
           await awardBadge(userId, "pioneer");
-          logger.info(`✅ Pioneer badge awarded to user ${userId} (user #${userCount})`);
+          logger.info(
+              `✅ Pioneer badge awarded to user ${userId} (user #${userCount})`,
+          );
         } else {
           logger.info(`User ${userId} is not in first 100 (user #${userCount})`);
         }
@@ -983,10 +1128,13 @@ exports.checkRisingStarBadge = onDocumentCreated(
         }
 
         // Check if user is within first 30 days
-        const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+        const daysSinceCreation =
+        (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
 
         if (daysSinceCreation > 30) {
-          logger.info(`User ${userId} is beyond first month (${daysSinceCreation.toFixed(0)} days)`);
+          logger.info(
+              `User ${userId} is beyond first month (${daysSinceCreation.toFixed(0)} days)`,
+          );
           return null;
         }
 
@@ -1011,7 +1159,9 @@ exports.checkRisingStarBadge = onDocumentCreated(
           if (totalLikes >= 1000) break;
         }
 
-        logger.info(`User ${userId} has ${totalLikes} total likes (within first ${daysSinceCreation.toFixed(0)} days)`);
+        logger.info(
+            `User ${userId} has ${totalLikes} total likes (within first ${daysSinceCreation.toFixed(0)} days)`,
+        );
 
         // Award Rising Star badge at exactly 1000 likes within first month
         if (totalLikes === 1000 && daysSinceCreation <= 30) {

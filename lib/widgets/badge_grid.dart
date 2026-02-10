@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 import '../models/badge_model.dart';
 import '../services/badge_service.dart';
 import 'badge_detail_modal.dart';
@@ -75,10 +75,7 @@ class _BadgeGridState extends State<BadgeGrid> {
                   const SizedBox(height: 8),
                   Text(
                     'Start creating content to earn badges!',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -147,10 +144,7 @@ class _BadgeGridState extends State<BadgeGrid> {
                 color: _getBadgeColor(badge.category).withOpacity(0.1),
               ),
               child: Center(
-                child: Text(
-                  badge.icon,
-                  style: const TextStyle(fontSize: 24),
-                ),
+                child: Text(badge.icon, style: const TextStyle(fontSize: 24)),
               ),
             ),
 
@@ -176,8 +170,10 @@ class _BadgeGridState extends State<BadgeGrid> {
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: _getBadgeColor(badge.category).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -216,10 +212,8 @@ class _BadgeGridState extends State<BadgeGrid> {
   void _showBadgeDetails(Badge badge) {
     showDialog(
       context: context,
-      builder: (context) => BadgeDetailModal(
-        badge: badge,
-        userId: widget.userId,
-      ),
+      builder: (context) =>
+          BadgeDetailModal(badge: badge, userId: widget.userId),
     );
   }
 }

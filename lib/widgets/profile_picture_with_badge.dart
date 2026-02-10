@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/badge_model.dart';
 import '../services/badge_service.dart';
@@ -61,7 +61,8 @@ class _ProfilePictureWithBadgeState extends State<ProfilePictureWithBadge> {
                     color: Colors.grey.shade200,
                   ),
                   child: ClipOval(
-                    child: widget.profileImageUrl != null &&
+                    child:
+                        widget.profileImageUrl != null &&
                             widget.profileImageUrl!.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: widget.profileImageUrl!,
@@ -110,9 +111,7 @@ class _ProfilePictureWithBadgeState extends State<ProfilePictureWithBadge> {
                       child: Center(
                         child: Text(
                           badge.icon,
-                          style: TextStyle(
-                            fontSize: widget.size * 0.2,
-                          ),
+                          style: TextStyle(fontSize: widget.size * 0.2),
                         ),
                       ),
                     ),
@@ -141,11 +140,7 @@ class _ProfilePictureWithBadgeState extends State<ProfilePictureWithBadge> {
   LinearGradient _getBadgeGradient(String category) {
     final color = _getBadgeColor(category);
     return LinearGradient(
-      colors: [
-        color.withOpacity(0.6),
-        color,
-        color.withOpacity(0.6),
-      ],
+      colors: [color.withOpacity(0.6), color, color.withOpacity(0.6)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
@@ -169,10 +164,8 @@ class _ProfilePictureWithBadgeState extends State<ProfilePictureWithBadge> {
   void _showBadgeDetails(BuildContext context, Badge badge) {
     showDialog(
       context: context,
-      builder: (context) => BadgeDetailModal(
-        badge: badge,
-        userId: widget.userId,
-      ),
+      builder: (context) =>
+          BadgeDetailModal(badge: badge, userId: widget.userId),
     );
   }
 }

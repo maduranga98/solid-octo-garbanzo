@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 import 'package:intl/intl.dart';
 import '../models/badge_model.dart';
 import '../services/badge_service.dart';
@@ -27,9 +27,7 @@ class _BadgeDetailModalState extends State<BadgeDetailModal> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(24),
         constraints: const BoxConstraints(maxWidth: 400),
@@ -61,8 +59,9 @@ class _BadgeDetailModalState extends State<BadgeDetailModal> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: _getBadgeColor(widget.badge.category)
-                        .withOpacity(0.3),
+                    color: _getBadgeColor(
+                      widget.badge.category,
+                    ).withOpacity(0.3),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),
@@ -81,10 +80,7 @@ class _BadgeDetailModalState extends State<BadgeDetailModal> {
             // Badge name
             Text(
               widget.badge.name,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
 
@@ -112,10 +108,7 @@ class _BadgeDetailModalState extends State<BadgeDetailModal> {
             // Description
             Text(
               widget.badge.description,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade700,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
               textAlign: TextAlign.center,
             ),
 
@@ -133,10 +126,7 @@ class _BadgeDetailModalState extends State<BadgeDetailModal> {
                 const SizedBox(width: 6),
                 Text(
                   'Earned ${DateFormat.yMMMd().format(widget.badge.earnedAt)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -163,8 +153,9 @@ class _BadgeDetailModalState extends State<BadgeDetailModal> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Text(
@@ -185,10 +176,7 @@ class _BadgeDetailModalState extends State<BadgeDetailModal> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF00D4E8).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF00D4E8),
-                    width: 2,
-                  ),
+                  border: Border.all(color: const Color(0xFF00D4E8), width: 2),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
